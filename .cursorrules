@@ -1,0 +1,200 @@
+# Cursor Rules for WhatsApp Cashflow Reporting Chatbot
+
+## Project Context
+
+You are an expert in TypeScript, Node.js, Prisma, PostgreSQL, Jest, Docker, and WhatsApp bot development.
+
+**Tech Stack**:
+- TypeScript 5.x with Node.js 20 LTS
+- Prisma 5.x ORM with PostgreSQL 15+ (TimescaleDB extension)
+- Redis 7.x for session state and caching
+- whatsapp-web.js (wwebjs.dev) v1.23.0+ for WhatsApp integration
+- Jest v29.x for unit/integration testing
+- Playwright v1.4+ for E2E testing
+- Docker for containerization
+- Winston v3.x for logging
+- node-cron v3.0+ for scheduling
+- PDFKit v0.13+ for PDF generation
+
+**Project Type**: Node.js backend service (single project, not Next.js)
+
+## Code Style and Structure
+
+- Write concise, technical TypeScript code with accurate examples
+- Use functional and declarative programming patterns; avoid classes unless necessary
+- Prefer iteration and modularization over code duplication
+- Use descriptive variable names with auxiliary verbs (e.g., `isLoading`, `hasError`, `canEdit`)
+- Structure files: exports, helpers, types, implementation
+- Use ES module syntax (`import`/`export`)
+- Favor using the latest ES and Node.js features
+
+## TypeScript Usage
+
+- Use TypeScript for all code; prefer `interface` over `type` for object shapes
+- Avoid enums; use const objects or union types instead
+- Use strict mode TypeScript configuration
+- Define types/interfaces in separate files when shared across modules
+- Use type inference where possible, explicit types where clarity is needed
+- Use `unknown` instead of `any` when type is truly unknown
+
+## Naming Conventions
+
+- Use camelCase for variables, functions, and methods
+- Use PascalCase for classes, interfaces, and types
+- Use UPPER_SNAKE_CASE for constants
+- Use kebab-case for file and directory names (e.g., `user-service.ts`, `bot-handlers/`)
+- Favor named exports over default exports
+- Use descriptive names: `getUserById` not `getUser`, `calculateDailyTotal` not `calc`
+
+## File Organization
+
+```
+src/
+├── bot/              # WhatsApp bot core
+├── services/         # Business logic services
+├── models/           # Prisma model operations
+├── lib/              # Shared utilities
+└── config/           # Configuration
+```
+
+- One main export per file
+- Group related functionality in subdirectories
+- Keep files focused and under 300 lines when possible
+
+## Node.js Best Practices
+
+- Use ES modules (`import`/`export`)
+- Use async/await for asynchronous operations
+- Handle errors with try/catch blocks
+- Use proper error types (custom Error classes)
+- Implement proper logging with Winston (structured JSON logs)
+- Use environment variables for configuration (via `dotenv`)
+- Implement health check endpoints
+- Use connection pooling for database connections
+
+## Prisma & Database
+
+- Use Prisma Client for all database operations
+- Always use parameterized queries (Prisma handles this automatically)
+- Use transactions for multi-step operations
+- Implement proper error handling for database operations
+- Use Prisma migrations for schema changes
+- Optimize queries with proper indexes (defined in schema)
+- Use TimescaleDB hypertables for time-series data (Transactions table)
+- Implement connection pooling (min 5, max 50 connections)
+
+## Testing with Jest
+
+- Write unit tests for business logic, validation, and calculations
+- Mock dependencies before imports using `jest.mock()`
+- Test various data scenarios: valid inputs, invalid inputs, edge cases
+- Use descriptive test names indicating expected behavior
+- Group related tests in `describe` blocks
+- Test edge cases: null, undefined, empty arrays, boundary values
+- Aim for 80%+ code coverage
+- Keep tests focused: 3-5 tests per file for maintainability
+- Use test factories for creating test data
+- Clean up test data after each test
+
+## Error Handling
+
+- Use custom Error classes for different error types
+- Always handle errors with try/catch blocks
+- Log errors with Winston (structured JSON format)
+- Provide user-friendly error messages in Bahasa Indonesia
+- Return appropriate HTTP status codes for API errors
+- Don't expose internal error details to users
+
+## Security
+
+- Validate all user inputs (type, format, length, range)
+- Use Prisma parameterized queries (automatic, but verify)
+- Implement RBAC (Role-Based Access Control) checks before sensitive operations
+- Encrypt sensitive data (JWT tokens in Redis, database encryption at rest)
+- Mask sensitive data in logs (amounts, phone numbers)
+- Implement rate limiting for API endpoints
+- Use environment variables for secrets (never hardcode)
+
+## Performance
+
+- Optimize database queries (<500ms at 95th percentile)
+- Use Redis caching for frequently accessed data (user roles, categories, daily totals)
+- Implement connection pooling for database
+- Use async/await properly (avoid blocking operations)
+- Implement debouncing for button interactions (3-second cooldown)
+- Rate limit message sending (15-20 messages/minute per chat)
+
+## WhatsApp Bot Development
+
+- Use whatsapp-web.js (wwebjs.dev) library
+- Implement LocalAuth for session persistence
+- Handle WhatsApp session disconnection and reconnection
+- Use button interfaces (max 3 buttons per row, max 20 character labels)
+- Use List Messages for category selection (up to 100 options)
+- Implement text command fallbacks (/start, /help, /menu, /laporan, /catat)
+- Handle media messages gracefully (ignore non-text media)
+- Implement session timeout (10 minutes inactivity)
+
+## Code Comments
+
+- Comments should explain "why", not "what"
+- Add comments where the operation isn't clear from the code
+- Document complex business logic
+- Add JSDoc comments for public functions
+- Code must start with path/filename as a one-line comment when creating new files
+- Comments should describe purpose, not effect
+
+## General Guidelines
+
+- Follow best practices, lean towards agile methodologies
+- Prioritize modularity, DRY (Don't Repeat Yourself), performance, and security
+- Break tasks into distinct prioritized steps
+- Don't apologize for errors: fix them
+- If you can't finish code, add `TODO:` comments
+- Keep responses concise unless verbose mode is requested
+- Suggest refactorings and code improvements where appropriate
+
+## Project-Specific Rules
+
+- All user-facing messages must be in Bahasa Indonesia (primary) with English fallback
+- Use WITA timezone (UTC+8) for all scheduling and reports
+- Store timestamps in UTC, display/calculate in WITA
+- Format currency as Indonesian Rupiah (Rp notation)
+- Implement role-based access control (Dev, Boss, Employee, Investor)
+- All sensitive actions must be logged to audit log
+- Implement 7-year data retention for compliance
+
+## Docker & Deployment
+
+- Use Docker for containerization
+- Create production-ready Dockerfile
+- Use docker-compose.yml for local development
+- Store `.wwebjs_auth/` directory in Docker volume
+- Use environment variables for configuration
+- Implement health check endpoints for container monitoring
+
+## Testing Strategy
+
+- **Unit Tests (70%)**: Business logic, validation, calculations
+- **Integration Tests (20%)**: Database operations, Redis, WhatsApp client
+- **E2E Tests (10%)**: Critical user paths (User Stories 1-3)
+- Run tests before committing code
+- Use test database for integration tests
+- Mock external services (WhatsApp, external APIs)
+
+## Code Quality
+
+- Use ESLint with TypeScript rules
+- Follow Node.js style guide
+- Keep functions small and focused (single responsibility)
+- Avoid deep nesting (max 3 levels)
+- Use early returns to reduce nesting
+- Extract complex logic into separate functions
+
+## References
+
+- [awesome-cursorrules](https://github.com/PatrickJS/awesome-cursorrules) - TypeScript, Node.js, Jest rules
+- [Prisma Best Practices](https://www.prisma.io/docs/guides/performance-and-optimization)
+- [Node.js Best Practices](https://github.com/goldbergyoni/nodebestpractices)
+- [WhatsApp Web.js Documentation](https://wwebjs.dev/)
+
