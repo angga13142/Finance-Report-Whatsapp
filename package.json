@@ -1,0 +1,77 @@
+{
+  "name": "whatsapp-cashflow-bot",
+  "version": "1.0.0",
+  "description": "WhatsApp Cashflow Reporting Chatbot with role-based access control",
+  "main": "dist/index.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "jest",
+    "test:unit": "jest --testPathPattern=tests/unit",
+    "test:integration": "jest --testPathPattern=tests/integration",
+    "test:e2e": "playwright test",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src tests --ext .ts",
+    "lint:fix": "eslint src tests --ext .ts --fix",
+    "type-check": "tsc --noEmit",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:seed": "tsx prisma/seed.ts",
+    "prisma:studio": "prisma studio"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/angga13142/Finance-Report-Whatsapp.git"
+  },
+  "keywords": [
+    "whatsapp",
+    "chatbot",
+    "cashflow",
+    "financial-reporting",
+    "typescript"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/angga13142/Finance-Report-Whatsapp/issues"
+  },
+  "homepage": "https://github.com/angga13142/Finance-Report-Whatsapp#readme",
+  "dependencies": {
+    "@prisma/client": "^5.0.0",
+    "dotenv": "^16.3.1",
+    "luxon": "^3.7.2",
+    "node-cron": "^3.0.0",
+    "pdfkit": "^0.13.0",
+    "prisma": "^5.0.0",
+    "puppeteer": "^21.0.0",
+    "redis": "^4.6.0",
+    "whatsapp-web.js": "^1.23.0",
+    "winston": "^3.11.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.0.0",
+    "@types/luxon": "^3.7.1",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.50.0",
+    "eslint-config-prettier": "^9.0.0",
+    "jest": "^29.0.0",
+    "playwright": "^1.40.0",
+    "prettier": "^3.0.0",
+    "ts-jest": "^29.1.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  }
+}

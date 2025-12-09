@@ -168,7 +168,7 @@ Multiple users (up to 50 concurrent) can simultaneously use the chatbot without 
 - **What happens during automated report delivery if WhatsApp account is temporarily blocked?** → Report queued in persistent Redis queue, system automatically retries at 5-minute intervals up to 3 times, Dev receives alert notification if 3 retries fail, manual resend available from admin dashboard
 - **How does system prevent duplicate transactions if user presses button twice rapidly?** → Button interactions debounced with 3-second cooldown; duplicate submissions detected by timestamp + amount + category matching within 1-minute window, user notified and shown existing transaction
 - **What happens when employee's role changes from Employee to Boss mid-day?** → New permissions take effect immediately on next message interaction; updated button menu sent; previous session state cleared to prevent permission inconsistencies
-- **How does system handle timezone edge cases (user traveling, DST transitions)?** → All timestamps stored in UTC, displayed/calculated in WITA (UTC+8), cron jobs use WITA timezone; if user travels and changes device timezone, system checks location-based timezone detection with manual override option for Dev
+- **How does system handle timezone edge cases (user traveling, DST transitions)?** → All timestamps stored in UTC, displayed/calculated in WITA (UTC+8), cron jobs use WITA timezone; if user travels and changes device timezone, system uses WITA timezone for all calculations (no automatic location-based detection). Dev can manually override user timezone preference if needed, but all financial reports and calculations remain in WITA timezone for consistency
 - **What happens if PDF report file exceeds WhatsApp's 16MB attachment limit?** → System detects file size during generation, splits into multiple PDF files if necessary, sends sequentially with summary message
 - **How does system handle network interruption mid-transaction save?** → Transaction data held in Redis temporary store until confirmed by database, automatic retry every 30 seconds up to 5 times, user shown pending status with retry option
 - **What happens when user sends media (image, voice) instead of text/buttons?** → System gracefully ignores non-text media, responds with: "Maaf, saya hanya memproses teks. Silakan gunakan tombol di atas atau ketik menu." with menu buttons offered
@@ -235,13 +235,13 @@ Multiple users (up to 50 concurrent) can simultaneously use the chatbot without 
 - **FR-042** (Critical): System MUST deliver role-specific report versions at exactly 24:00 WITA to all active users, with appropriate data filtering per role
 - **FR-043** (Critical): System MUST send Dev role comprehensive report including: full transaction log, system health metrics, delivery success rate, all recommendations with confidence scores, alert summary
 - **FR-044** (Critical): System MUST send Boss role executive summary including: total income/expenses/cashflow with % change, top 5 transactions, category pie chart, 7-day trend line, employee performance summary, top 3 recommendations
-- **FR-045** (Critical): System MUST send Investor role financial analysis at 24:00 WITA including: aggregated revenue/expenses, profit margin %, top 5 categories by amount/%, 7-day trend line, investment insights, zero individual transaction details or employee names; additional comprehensive monthly analysis sent on month boundary (month-end/month-start) with deeper ratios and variance analysis
+- **FR-045** (Critical): System MUST send Investor role financial analysis at 24:00 WITA including: aggregated revenue/expenses, profit margin %, top 5 categories by amount/%, 7-day trend line, investment insights, zero individual transaction details or employee names; additional comprehensive monthly analysis sent at 24:00 WITA on the first day of each month (e.g., Jan 1 24:00 WITA for December report) with deeper ratios and variance analysis
 - **FR-046** (Critical): System MUST send Employee role personal summary including: personal transactions entered + company totals aggregated, personal ranking among employees, motivational message
 - **FR-047** (High): System MUST generate PDF reports with charts (pie charts for categories, line graphs for trends, tables for transactions) using PDFKit or Puppeteer
 - **FR-048** (High): System MUST include text summary alongside PDF attachment, allowing user to read key metrics within WhatsApp without downloading file
 - **FR-049** (High): System MUST include action buttons with daily report ([📊 Detail Lengkap], [📥 Download Excel], [✅ Tanda Sudah Dibaca], role-specific options)
-- **FR-050** (High): System MUST implement retry logic for failed report deliveries (3 retries at 5-minute intervals), with failed deliveries logged and alerted to Dev
-- **FR-051** (Medium): System MUST rate-limit automated report delivery (max 1 message per 3 seconds per chat) to avoid WhatsApp throttling blocks
+- **FR-050** (High): System MUST implement retry logic for failed report deliveries (3 retries at 5-minute intervals), with failed deliveries logged and alerted to Dev. After 3 failed retries, system MUST alert Dev via notification and log to audit log; manual resend available via FR-054
+- **FR-051** (Medium): System MUST rate-limit automated report delivery (max 1 message per 3 seconds per chat) to avoid WhatsApp throttling blocks. Note: This rate limit applies to automated daily reports only; user-initiated messages are rate-limited separately at 15-20 messages/minute per chat (see FR-009 for button debouncing)
 - **FR-052** (Medium): System MUST validate report content completeness before delivery, ensuring no null/undefined values appear in formatted report
 - **FR-053** (High): System MUST track report delivery status (success/failure/pending) for each user, enabling Dev to view delivery history dashboard
 - **FR-054** (Medium): System MUST support manual report resend via Dev command if automated delivery failed for specific user
@@ -269,7 +269,7 @@ Multiple users (up to 50 concurrent) can simultaneously use the chatbot without 
 - **FR-070** (High): System MUST show confirmation screen displaying all entered data (formatted amount in Rp, category, date, time) with edit buttons before final submission
 - **FR-071** (High): System MUST allow user to edit any field (amount, category, optional notes) from confirmation screen without restarting flow
 - **FR-072** (Medium): System MUST support optional transaction notes/description input (e.g., "Sale to Customer XYZ", "Monthly rent payment"), max 100 characters
-- **FR-073** (Medium): System MUST auto-categorize frequently entered amounts (if user enters 500000 for Produk A 5 times, system suggests Produk A next time)
+- **FR-073** (Medium): System MUST auto-categorize frequently entered amounts (if user enters same amount for same category 5 times within 7-day rolling window, system suggests that category next time user enters that amount)
 - **FR-074** (Low): System MUST support bulk transaction entry for Power Users (Dev/Boss), allowing multiple transactions in single flow
 - **FR-075** (Medium): System MUST support OPTIONAL transaction approval workflow; Employee transactions auto-approve immediately, while suspicious transactions (duplicates, unrealistic amounts, anomalous patterns) are flagged for Boss review and approval
 - **FR-076** (Medium): System MUST track transaction approval status with three states: auto-approved (Employee inputs), flagged-pending (suspicious transactions awaiting Boss review), manually-approved/rejected (Boss decision), with audit trail for all status changes
@@ -280,8 +280,8 @@ Multiple users (up to 50 concurrent) can simultaneously use the chatbot without 
 
 #### Recommendation Engine (FR-081 to FR-090)
 
-- **FR-081** (High): System MUST implement rule-based recommendation engine detecting: expense spike (>30% increase), revenue decline (>15%), negative cashflow (3+ days), employee inactivity (>2 days), and calculate confidence scores (0-100%) reflecting system certainty about each anomaly
-- **FR-082** (High): System MUST assign recommendations priority levels (critical, high, medium, low) based on financial impact, and calculate confidence scores (0-100%) reflecting certainty of anomaly detection
+- **FR-081** (High): System MUST implement rule-based recommendation engine detecting: expense spike (>30% increase), revenue decline (>15%), negative cashflow (3+ days), employee inactivity (>2 days), and calculate confidence scores (0-100%) reflecting system certainty about each anomaly. Confidence score calculation: Based on deviation magnitude (larger deviation = higher confidence), historical pattern match (similar past anomalies = higher confidence), and data completeness (more data points = higher confidence). Formula: `confidence = min(100, (deviation_percentage * 2) + (pattern_match_score * 30) + (data_completeness * 20))`
+- **FR-082** (High): System MUST assign recommendations priority levels (critical, high, medium, low) based on financial impact, and calculate confidence scores (0-100%) reflecting certainty of anomaly detection. Priority assignment: Critical = cashflow negative 3+ days OR expense spike >50%; High = revenue decline >20% OR expense spike 30-50%; Medium = expense spike 20-30% OR revenue decline 10-20%; Low = all other anomalies.
 - **FR-083** (High): System MUST use confidence scores (0-100%) to gate alert delivery: ONLY Critical priority recommendations with ≥80% confidence are sent as proactive alerts within 2 hours; all other recommendations (High/Medium/Low or <80% confidence) are included in the scheduled 24:00 daily report
 - **FR-084** (High): System MUST store all recommendations (all priority/confidence levels) with timestamps for daily report delivery, even if not sent as proactive alerts; recommendations display confidence score to help users evaluate severity
 - **FR-085** (Low): System MUST support recommendation dismissal by users, tracking which recommendations have been acknowledged to avoid duplicate notifications
@@ -307,7 +307,7 @@ Multiple users (up to 50 concurrent) can simultaneously use the chatbot without 
 ### Key Entities *(include if feature involves data)*
 
 - **Users**: phone_number (unique identifier), name, role (enum: dev/boss/employee/investor), created_at, last_active, is_active (boolean), auth_token_hash
-- **Transactions**: id, user_id (foreign key), type (enum: income/expense), category, amount (decimal, must be > 0), description (optional), timestamp (UTC), approval_status (enum: approved/pending/rejected), approval_by (nullable)
+- **Transactions**: id, user_id (foreign key), type (enum: income/expense), category (VARCHAR, references Categories.name), amount (decimal, must be > 0), description (optional), timestamp (UTC), approval_status (enum: approved/pending/rejected), approval_by (nullable), approved_at (nullable), version (integer, for optimistic locking)
 - **Reports**: id, report_date, generated_at, report_type (enum: daily/weekly/monthly/custom), file_path, json_summary, total_income, total_expense, net_cashflow
 - **UserSessions**: id, user_id, phone_number, state (JSON: current menu, conversation context), context_data (JSON: temporary input data), created_at, expires_at
 - **Categories**: id, name, type (enum: income/expense), icon (emoji), is_active, created_by_user_id
@@ -386,8 +386,8 @@ Multiple users (up to 50 concurrent) can simultaneously use the chatbot without 
 
 ### Performance
 
-- **NF-P01**: Button interaction latency MUST be <1 second (99th percentile) from button press to response message
-- **NF-P02**: Text message response MUST be <2 seconds (95th percentile) from message sent to bot response
+- **NF-P01**: Button interaction latency MUST be <1 second (99th percentile) from button press to response message. Measured over 24-hour period with minimum 1000 samples per endpoint.
+- **NF-P02**: Text message response MUST be <2 seconds (95th percentile) from message sent to bot response. Measured over 24-hour period with minimum 1000 samples per endpoint.
 - **NF-P03**: Report generation MUST complete within 30 seconds for daily report of any size (up to 1000 transactions)
 - **NF-P04**: Database queries MUST execute within 500ms (95th percentile) for any single operation
 - **NF-P05**: System MUST support 50 concurrent users with sustained performance, no degradation below 95th percentile latency targets
@@ -430,7 +430,7 @@ Multiple users (up to 50 concurrent) can simultaneously use the chatbot without 
 
 ### Scalability
 
-- **NF-SC01**: System architecture MUST support scaling to 100+ users without database changes; horizontal scaling via multi-instance deployment
+- **NF-SC01**: System architecture MUST support scaling to 100+ concurrent users without database changes; horizontal scaling via multi-instance deployment. At 100+ concurrent users, system must maintain <2s response time (95th percentile) and <5% error rate.
 - **NF-SC02**: Transactions table MUST be optimized for growth; partition by month after 100K transactions (TimescaleDB)
 - **NF-SC03**: Redis caching MUST be implemented for frequently accessed data (daily totals, user roles, category lists)
 - **NF-SC04**: Message queue (Bull/RabbitMQ) MUST be introduced for processing at 500+ concurrent users
@@ -491,7 +491,7 @@ Multiple users (up to 50 concurrent) can simultaneously use the chatbot without 
 
 ### Technology Stack
 
-- **Runtime**: Node.js 18+ LTS (EOL April 2025; plan upgrade to 20 LTS)
+- **Runtime**: Node.js 20 LTS (upgraded from 18+ LTS which reached EOL April 2025)
 - **WhatsApp Library**: wwebjs.dev (whatsapp-web.js) v1.23.0+
 - **Browser Engine**: Puppeteer (via wwebjs dependency) for WhatsApp Web automation
 - **Database**: PostgreSQL 15+ (TimescaleDB extension for time-series transaction data optimization)

@@ -1,200 +1,528 @@
-# Cursor Rules for WhatsApp Cashflow Reporting Chatbot
+# Finance WhatsApp Cashflow Bot - Cursor Rules
 
-## Project Context
+You are an expert Node.js/TypeScript developer specializing in financial applications, real-time systems, and database optimization.
 
-You are an expert in TypeScript, Node.js, Prisma, PostgreSQL, Jest, Docker, and WhatsApp bot development.
+## Tech Stack
 
-**Tech Stack**:
-- TypeScript 5.x with Node.js 20 LTS
-- Prisma 5.x ORM with PostgreSQL 15+ (TimescaleDB extension)
-- Redis 7.x for session state and caching
-- whatsapp-web.js (wwebjs.dev) v1.23.0+ for WhatsApp integration
-- Jest v29.x for unit/integration testing
-- Playwright v1.4+ for E2E testing
-- Docker for containerization
-- Winston v3.x for logging
-- node-cron v3.0+ for scheduling
-- PDFKit v0.13+ for PDF generation
-
-**Project Type**: Node.js backend service (single project, not Next.js)
+**Backend:** Node.js 18+ with Express.js
+**Database:** PostgreSQL 15+ with TimescaleDB extension
+**ORM:** Prisma 5.x (type-safe database operations)
+**Cache/Session:** Redis 7.x (caching, sessions, rate limiting)
+**Authentication:** JWT (JSON Web Tokens)
+**Testing:** Jest (unit tests), Cypress (API tests)
+**Deployment:** Docker & Docker Compose
 
 ## Code Style and Structure
 
 - Write concise, technical TypeScript code with accurate examples
-- Use functional and declarative programming patterns; avoid classes unless necessary
+- Use functional and declarative programming; avoid unnecessary classes
 - Prefer iteration and modularization over code duplication
-- Use descriptive variable names with auxiliary verbs (e.g., `isLoading`, `hasError`, `canEdit`)
-- Structure files: exports, helpers, types, implementation
-- Use ES module syntax (`import`/`export`)
-- Favor using the latest ES and Node.js features
+- Use descriptive variable names with auxiliary verbs (e.g., `isApproved`, `hasPermission`, `userBalance`)
+- Structure files: exported functions, helpers, utilities, types
+- Use lowercase with underscores for directories (e.g., `routes/transactions.ts`)
+- Favor named exports for routes and utility functions
 
-## TypeScript Usage
+## TypeScript Requirements
 
-- Use TypeScript for all code; prefer `interface` over `type` for object shapes
-- Avoid enums; use const objects or union types instead
-- Use strict mode TypeScript configuration
-- Define types/interfaces in separate files when shared across modules
-- Use type inference where possible, explicit types where clarity is needed
-- Use `unknown` instead of `any` when type is truly unknown
+- Use TypeScript for all code; prefer interfaces over types
+- Avoid enums; use maps instead
+- Use strict mode enabled in `tsconfig.json`
+- Auto-generate Prisma types from schema with `prisma generate`
+- Use Decimal type from Prisma for all financial amounts (never use float/number)
 
-## Naming Conventions
+## Database Layer - Prisma 5.x
 
-- Use camelCase for variables, functions, and methods
-- Use PascalCase for classes, interfaces, and types
-- Use UPPER_SNAKE_CASE for constants
-- Use kebab-case for file and directory names (e.g., `user-service.ts`, `bot-handlers/`)
-- Favor named exports over default exports
-- Use descriptive names: `getUserById` not `getUser`, `calculateDailyTotal` not `calc`
+### Schema Standards
 
-## File Organization
+- Use Prisma as the primary ORM for PostgreSQL
+- Define all models in `prisma/schema.prisma`
+- Use `Decimal` type for financial amounts: `@db.Decimal(12, 2)`
+- Enable timestamps with `@default(now())` and `@updatedAt`
+- Index frequently queried fields (userId, timestamps, categories)
+- Use `@@index([field])` for performance-critical queries
+- Include `@@map()` for explicit database table names
+- Implement soft deletes where applicable using `deletedAt DateTime?`
 
+### Migration Management
+
+- Run `prisma migrate dev` for local development
+- Use `prisma migrate deploy` in production
+- Always review generated SQL before applying migrations
+- Test migrations on staging before production deployment
+
+### Query Patterns
+
+```typescript
+// Type-safe transaction creation with Decimal
+const transaction = await prisma.transaction.create({
+  data: {
+    userId: 'user123',
+    amount: new Decimal('1000.50'),
+    type: 'inflow',
+    category: 'salary',
+  },
+});
+
+// Efficient relation queries with filtering
+const userWithTransactions = await prisma.user.findUnique({
+  where: { id: userId },
+  include: {
+    transactions: {
+      where: { createdAt: { gte: startDate } },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    },
+  },
+});
+
+// Aggregations for analytics
+const monthlyStats = await prisma.transaction.groupBy({
+  by: ['type'],
+  where: { createdAt: { gte: monthStart } },
+  _sum: { amount: true },
+  _count: true,
+});
 ```
-src/
-├── bot/              # WhatsApp bot core
-├── services/         # Business logic services
-├── models/           # Prisma model operations
-├── lib/              # Shared utilities
-└── config/           # Configuration
+
+## Database Layer - PostgreSQL + TimescaleDB
+
+### TimescaleDB Hypertables
+
+- Enable TimescaleDB extension: `CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;`
+- Convert transaction tables to hypertables for time-series optimization
+- Use `time_bucket()` for aggregations: `time_bucket('1 day', time)`
+- Create continuous aggregates for frequently accessed analytics
+- Set retention policies for historical data management
+
+### Decimal Arithmetic
+
+- Always use `Decimal` type from Prisma for financial values
+- Perform all calculations with Decimal, never convert to float
+- Example: `new Decimal('100.50').plus(new Decimal('50.25'))`
+- Store amounts as `NUMERIC` in PostgreSQL (prevents precision loss)
+
+### ACID Compliance
+
+- All financial transactions must be wrapped in `prisma.$transaction()`
+- Implement rollback logic on any validation failure
+- Log all transaction attempts for audit purposes
+- Example:
+
+```typescript
+await prisma.$transaction(async (tx) => {
+  const transaction = await tx.transaction.create({
+    data: { userId, amount, type, category },
+  });
+  
+  await tx.user.update({
+    where: { id: userId },
+    data: { balance: { increment: amount } },
+  });
+  
+  return transaction;
+});
 ```
 
-- One main export per file
-- Group related functionality in subdirectories
-- Keep files focused and under 300 lines when possible
+## Caching Layer - Redis 7.x
 
-## Node.js Best Practices
+### Redis Connection
 
-- Use ES modules (`import`/`export`)
-- Use async/await for asynchronous operations
-- Handle errors with try/catch blocks
-- Use proper error types (custom Error classes)
-- Implement proper logging with Winston (structured JSON logs)
-- Use environment variables for configuration (via `dotenv`)
-- Implement health check endpoints
-- Use connection pooling for database connections
+```typescript
+import Redis from 'ioredis';
 
-## Prisma & Database
+export const redis = new Redis({
+  host: process.env.REDIS_HOST || 'localhost',
+  port: parseInt(process.env.REDIS_PORT || '6379'),
+  password: process.env.REDIS_PASSWORD,
+  db: parseInt(process.env.REDIS_DB || '0'),
+  retryStrategy: (times) => Math.min(times * 50, 2000),
+});
 
-- Use Prisma Client for all database operations
-- Always use parameterized queries (Prisma handles this automatically)
-- Use transactions for multi-step operations
-- Implement proper error handling for database operations
-- Use Prisma migrations for schema changes
-- Optimize queries with proper indexes (defined in schema)
-- Use TimescaleDB hypertables for time-series data (Transactions table)
-- Implement connection pooling (min 5, max 50 connections)
+redis.on('error', (err) => console.error('Redis error:', err));
+redis.on('connect', () => console.log('Redis connected'));
+```
 
-## Testing with Jest
+### Session Management
 
-- Write unit tests for business logic, validation, and calculations
-- Mock dependencies before imports using `jest.mock()`
-- Test various data scenarios: valid inputs, invalid inputs, edge cases
+- Store WhatsApp conversation state with 1-hour TTL
+- Key pattern: `session:{userId}`
+- Include conversation flow state, pending actions, temporary data
+- Example: `await redis.setex('session:user123', 3600, JSON.stringify(state))`
+
+### Balance Caching
+
+- Cache user balance with 5-minute TTL
+- Invalidate on every transaction
+- Key pattern: `balance:{userId}`
+- Example: `await redis.setex('balance:user123', 300, balance.toString())`
+
+### Rate Limiting
+
+- Implement token bucket algorithm per user
+- Key pattern: `ratelimit:{userId}:{hour}`
+- Limit transaction endpoints to 100 requests/hour per user
+- Example:
+
+```typescript
+const rateLimitKey = `ratelimit:${userId}:${new Date().getHours()}`;
+const requestCount = await redis.incr(rateLimitKey);
+if (requestCount === 1) await redis.expire(rateLimitKey, 3600);
+if (requestCount > 100) throw new Error('Rate limit exceeded');
+```
+
+### Pub/Sub for Real-time Updates
+
+- Publish balance change events after transactions
+- Channel pattern: `user:{userId}:balance-changed`
+- Example:
+
+```typescript
+await redis.publish(`user:${userId}:balance-changed`, JSON.stringify({
+  newBalance: updatedUser.balance,
+  transaction: transaction,
+  timestamp: new Date(),
+}));
+```
+
+### Graceful Degradation
+
+- Wrap Redis operations in try-catch
+- Fall back to database queries if Redis unavailable
+- Don't fail requests due to cache layer issues
+
+## API Development - Express.js
+
+### RESTful Design
+
+- Use standard HTTP methods: GET, POST, PUT, DELETE
+- Resource-based URL structure: `/api/transactions`, `/api/users/{id}`
+- Return appropriate status codes: 200 (success), 400 (validation), 401 (auth), 404 (not found), 500 (error)
+- Always return JSON responses with consistent structure
+
+### Endpoint Structure
+
+```typescript
+// routes/transactions.ts
+import { Router } from 'express';
+import { prisma } from '../lib/prisma';
+import { redis } from '../lib/redis';
+import { Decimal } from '@prisma/client/runtime/library';
+
+const router = Router();
+
+router.post('/api/transactions', async (req, res) => {
+  try {
+    const { userId, amount, type, category } = req.body;
+
+    // Create transaction with ACID compliance
+    const transaction = await prisma.$transaction(async (tx) => {
+      const txn = await tx.transaction.create({
+        data: {
+          userId,
+          amount: new Decimal(amount),
+          type,
+          category,
+        },
+      });
+
+      // Update user balance
+      const updatedUser = await tx.user.update({
+        where: { id: userId },
+        data: {
+          balance: {
+            increment: type === 'inflow' ? amount : -amount,
+          },
+        },
+      });
+
+      return { txn, updatedUser };
+    });
+
+    // Invalidate cache
+    await redis.del(`balance:${userId}`);
+    
+    // Publish real-time update
+    await redis.publish(`user:${userId}:balance-changed`, JSON.stringify({
+      newBalance: transaction.updatedUser.balance,
+      transaction: transaction.txn,
+    }));
+
+    res.json({ 
+      success: true, 
+      transaction: transaction.txn, 
+      balance: transaction.updatedUser.balance 
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+export default router;
+```
+
+### Input Validation
+
+- Validate all request inputs before processing
+- Use type-safe validation (Zod, Joi, or manual checks)
+- Validate amounts are positive decimals
+- Validate userId exists and belongs to authenticated user
+- Return 400 with clear error message on validation failure
+
+### Error Handling
+
+- Never expose sensitive database errors to client
+- Return generic error messages for security
+- Log full error details server-side for debugging
+- Use try-catch for async operations
+- Always include proper HTTP status codes
+
+```typescript
+try {
+  // operation
+} catch (error) {
+  console.error('Transaction creation failed:', error);
+  res.status(500).json({ error: 'Failed to process transaction' });
+}
+```
+
+### JWT Authentication
+
+- Verify JWT token on all protected routes
+- Extract userId from token claims
+- Validate token signature and expiration
+- Reject requests with invalid/expired tokens (401)
+- Example middleware:
+
+```typescript
+export const authMiddleware = (req, res, next) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+  
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.userId = decoded.userId;
+    next();
+  } catch (error) {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+};
+```
+
+## Testing
+
+### Jest Unit Testing
+
+- Test critical business logic and utility functions
+- Mock Prisma client before importing functions to test
+- Cover valid inputs, invalid inputs, and edge cases
+- Mock external dependencies (Prisma, Redis)
 - Use descriptive test names indicating expected behavior
-- Group related tests in `describe` blocks
-- Test edge cases: null, undefined, empty arrays, boundary values
-- Aim for 80%+ code coverage
-- Keep tests focused: 3-5 tests per file for maintainability
-- Use test factories for creating test data
-- Clean up test data after each test
+- Organize tests in describe blocks by feature/module
+- Example:
 
-## Error Handling
+```typescript
+jest.mock('../lib/prisma');
 
-- Use custom Error classes for different error types
-- Always handle errors with try/catch blocks
-- Log errors with Winston (structured JSON format)
-- Provide user-friendly error messages in Bahasa Indonesia
-- Return appropriate HTTP status codes for API errors
-- Don't expose internal error details to users
+import { processTransaction } from '../services/transaction';
+import { prisma } from '../lib/prisma';
 
-## Security
+describe('Transaction Service', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
 
-- Validate all user inputs (type, format, length, range)
-- Use Prisma parameterized queries (automatic, but verify)
-- Implement RBAC (Role-Based Access Control) checks before sensitive operations
-- Encrypt sensitive data (JWT tokens in Redis, database encryption at rest)
-- Mask sensitive data in logs (amounts, phone numbers)
-- Implement rate limiting for API endpoints
-- Use environment variables for secrets (never hardcode)
+  it('should process transaction with valid data', async () => {
+    const mockTransaction = { id: '1', amount: new Decimal('100') };
+    (prisma.transaction.create as jest.Mock).mockResolvedValue(mockTransaction);
 
-## Performance
+    const result = await processTransaction({ 
+      userId: 'user123', 
+      amount: '100', 
+      type: 'inflow' 
+    });
 
-- Optimize database queries (<500ms at 95th percentile)
-- Use Redis caching for frequently accessed data (user roles, categories, daily totals)
-- Implement connection pooling for database
-- Use async/await properly (avoid blocking operations)
-- Implement debouncing for button interactions (3-second cooldown)
-- Rate limit message sending (15-20 messages/minute per chat)
+    expect(result).toEqual(mockTransaction);
+    expect(prisma.transaction.create).toHaveBeenCalled();
+  });
 
-## WhatsApp Bot Development
+  it('should reject negative amounts', async () => {
+    expect(() => processTransaction({ amount: '-100' }))
+      .toThrow('Amount must be positive');
+  });
 
-- Use whatsapp-web.js (wwebjs.dev) library
-- Implement LocalAuth for session persistence
-- Handle WhatsApp session disconnection and reconnection
-- Use button interfaces (max 3 buttons per row, max 20 character labels)
-- Use List Messages for category selection (up to 100 options)
-- Implement text command fallbacks (/start, /help, /menu, /laporan, /catat)
-- Handle media messages gracefully (ignore non-text media)
-- Implement session timeout (10 minutes inactivity)
+  it('should handle missing required fields', async () => {
+    expect(() => processTransaction({ type: 'inflow' }))
+      .toThrow('Missing required fields: userId, amount');
+  });
+});
+```
 
-## Code Comments
+### Cypress API Testing
 
-- Comments should explain "why", not "what"
-- Add comments where the operation isn't clear from the code
-- Document complex business logic
-- Add JSDoc comments for public functions
-- Code must start with path/filename as a one-line comment when creating new files
-- Comments should describe purpose, not effect
+- Test critical API endpoints with schema validation
+- Verify correct status codes for success and error scenarios
+- Test authenticated and unauthenticated requests
+- Validate error messages and response formats
+- Ensure test independence (no reliance on other tests)
+- Limit to 3-5 focused tests per endpoint
+- Example:
 
-## General Guidelines
+```typescript
+describe('Transactions API', () => {
+  const baseUrl = 'http://localhost:3000/api';
 
-- Follow best practices, lean towards agile methodologies
-- Prioritize modularity, DRY (Don't Repeat Yourself), performance, and security
-- Break tasks into distinct prioritized steps
-- Don't apologize for errors: fix them
-- If you can't finish code, add `TODO:` comments
-- Keep responses concise unless verbose mode is requested
-- Suggest refactorings and code improvements where appropriate
+  it('should create transaction with valid data', () => {
+    cy.request('POST', `${baseUrl}/transactions`, {
+      userId: 'user123',
+      amount: '100.50',
+      type: 'inflow',
+      category: 'salary',
+    }).then((response) => {
+      expect(response.status).to.eq(200);
+      expect(response.body).to.have.property('transaction');
+      expect(response.body.transaction.amount).to.eq('100.50');
+    });
+  });
 
-## Project-Specific Rules
+  it('should reject negative amounts', () => {
+    cy.request({
+      method: 'POST',
+      url: `${baseUrl}/transactions`,
+      body: { userId: 'user123', amount: '-100' },
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status).to.eq(400);
+      expect(response.body.error).to.include('positive');
+    });
+  });
+});
+```
 
-- All user-facing messages must be in Bahasa Indonesia (primary) with English fallback
-- Use WITA timezone (UTC+8) for all scheduling and reports
-- Store timestamps in UTC, display/calculate in WITA
-- Format currency as Indonesian Rupiah (Rp notation)
-- Implement role-based access control (Dev, Boss, Employee, Investor)
-- All sensitive actions must be logged to audit log
-- Implement 7-year data retention for compliance
+## Security Standards
 
-## Docker & Deployment
+### Authentication
 
-- Use Docker for containerization
-- Create production-ready Dockerfile
-- Use docker-compose.yml for local development
-- Store `.wwebjs_auth/` directory in Docker volume
-- Use environment variables for configuration
-- Implement health check endpoints for container monitoring
+- Use JWT for all API authentication
+- Include userId in JWT claims
+- Validate JWT signature and expiration on every request
+- Return 401 for invalid/expired tokens
+- Use HTTPS only in production
 
-## Testing Strategy
+### Input Validation
 
-- **Unit Tests (70%)**: Business logic, validation, calculations
-- **Integration Tests (20%)**: Database operations, Redis, WhatsApp client
-- **E2E Tests (10%)**: Critical user paths (User Stories 1-3)
-- Run tests before committing code
-- Use test database for integration tests
-- Mock external services (WhatsApp, external APIs)
+- Validate all user inputs before processing
+- Sanitize strings to prevent injection
+- Use Prisma parameterized queries (prevents SQL injection)
+- Validate decimal amounts are positive
+- Validate userId matches authenticated user
 
-## Code Quality
+### Error Messages
 
-- Use ESLint with TypeScript rules
-- Follow Node.js style guide
-- Keep functions small and focused (single responsibility)
-- Avoid deep nesting (max 3 levels)
-- Use early returns to reduce nesting
-- Extract complex logic into separate functions
+- Never expose database errors to client
+- Don't include sensitive information in error responses
+- Return generic error messages (e.g., "Invalid request")
+- Log full error details server-side for debugging
 
-## References
+### Rate Limiting
 
-- [awesome-cursorrules](https://github.com/PatrickJS/awesome-cursorrules) - TypeScript, Node.js, Jest rules
-- [Prisma Best Practices](https://www.prisma.io/docs/guides/performance-and-optimization)
-- [Node.js Best Practices](https://github.com/goldbergyoni/nodebestpractices)
-- [WhatsApp Web.js Documentation](https://wwebjs.dev/)
+- Implement token bucket rate limiting via Redis
+- Limit transaction endpoints: 100 requests/hour per user
+- Limit authentication endpoints: 10 attempts/hour per IP
+- Return 429 status when limit exceeded
 
+### Audit Logging
+
+- Log all financial transactions (create, update)
+- Include userId, timestamp, amount, type, category
+- Store audit logs in database for compliance
+- Example:
+
+```typescript
+await prisma.auditLog.create({
+  data: {
+    userId,
+    action: 'transaction_created',
+    amount,
+    timestamp: new Date(),
+  },
+});
+```
+
+### Data Protection
+
+- Use transactions for financial operations (ACID compliance)
+- Implement rollback on validation failures
+- Never store passwords in plain text (use hashing)
+- Encrypt sensitive data at rest if required
+- Use environment variables for secrets (JWT_SECRET, DB_PASSWORD, etc.)
+
+## Project Structure
+
+```
+.
+├── src/
+│   ├── routes/          # Express route handlers
+│   ├── services/        # Business logic
+│   ├── lib/
+│   │   ├── prisma.ts    # Prisma client
+│   │   └── redis.ts     # Redis client
+│   ├── types/           # TypeScript interfaces
+│   ├── middleware/      # Express middleware (auth, logging)
+│   └── index.ts         # Entry point
+├── prisma/
+│   ├── schema.prisma    # Database schema
+│   └── migrations/      # Database migrations
+├── tests/
+│   ├── unit/            # Jest tests
+│   └── api/             # Cypress tests
+├── Dockerfile
+├── docker-compose.yml
+├── package.json
+├── tsconfig.json
+└── .env.example
+```
+
+## Environment Variables
+
+Required environment variables:
+
+```
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/finance_bot
+
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+REDIS_DB=0
+
+# Authentication
+JWT_SECRET=your-secret-key-min-32-chars
+
+# WhatsApp
+WHATSAPP_API_KEY=your-api-key
+
+# Node
+NODE_ENV=development
+PORT=3000
+```
+
+## Development Workflow
+
+- Run `npm install` to install dependencies
+- Run `npx prisma generate` to generate Prisma types
+- Run `npx prisma migrate dev` to create/update database schema
+- Run `npm run dev` to start development server
+- Run `npm test` to run Jest unit tests
+- Run `npm run test:api` to run Cypress API tests
+- Use `docker-compose up` to start full stack (PostgreSQL + Redis + API)
+
+## Key Principles
+
+1. **Type Safety:** Always use Prisma-generated types and TypeScript for compile-time safety
+2. **Financial Accuracy:** Use Decimal for all amounts, never float
+3. **Performance:** Index key fields, use Redis caching, prefer eager loading
+4. **Security:** Validate inputs, use JWT, implement rate limiting, log transactions
+5. **Reliability:** Use transactions (ACID), handle errors gracefully, implement retries
+6. **Testability:** Mock external dependencies, test edge cases, maintain high coverage
+7. **Maintainability:** Clear naming, modular structure, comprehensive documentation

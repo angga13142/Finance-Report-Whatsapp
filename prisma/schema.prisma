@@ -1,0 +1,213 @@
+// Prisma Schema for WhatsApp Cashflow Bot
+// Database: PostgreSQL 15+ with TimescaleDB extension
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User roles enum
+enum UserRole {
+  dev
+  boss
+  employee
+  investor
+}
+
+// Transaction types enum
+enum TransactionType {
+  income
+  expense
+}
+
+// Approval status enum
+enum ApprovalStatus {
+  approved
+  pending
+  rejected
+}
+
+// Report types enum
+enum ReportType {
+  daily
+  weekly
+  monthly
+  custom
+}
+
+// Recommendation types enum
+enum RecommendationType {
+  expense_spike
+  revenue_decline
+  cashflow_warning
+  employee_inactivity
+  target_variance
+}
+
+// Recommendation priority enum
+enum RecommendationPriority {
+  critical
+  high
+  medium
+  low
+}
+
+// Users entity
+model User {
+  id            String    @id @default(uuid()) @db.Uuid
+  phoneNumber   String    @unique @map("phone_number") @db.VarChar(20)
+  name          String?   @db.VarChar(255)
+  role          UserRole  @default(employee)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  lastActive    DateTime? @map("last_active") @db.Timestamptz(6)
+  isActive      Boolean   @default(true) @map("is_active")
+  authTokenHash String?   @map("auth_token_hash") @db.VarChar(255)
+
+  // Relations
+  transactions         Transaction[]
+  sessions             UserSession[]
+  auditLogs            AuditLog[]
+  createdCategories    Category[]    @relation("CategoryCreator")
+  approvedTransactions Transaction[] @relation("TransactionApprover")
+
+  @@index([role])
+  @@index([isActive])
+  @@index([role, isActive])
+  @@map("users")
+}
+
+// Categories entity
+model Category {
+  id              String          @id @default(uuid()) @db.Uuid
+  name            String          @unique @db.VarChar(100)
+  type            TransactionType
+  icon            String?         @db.VarChar(10)
+  isActive        Boolean         @default(true) @map("is_active")
+  createdByUserId String?         @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relations
+  createdBy    User?         @relation("CategoryCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  transactions Transaction[]
+
+  @@index([type])
+  @@index([isActive])
+  @@index([type, isActive])
+  @@map("categories")
+}
+
+// Transactions entity (will be converted to TimescaleDB hypertable)
+model Transaction {
+  id             String          @id @default(uuid()) @db.Uuid
+  userId         String          @map("user_id") @db.Uuid
+  type           TransactionType
+  category       String          @db.VarChar(100)
+  amount         Decimal         @db.Decimal(15, 2)
+  description    String?         @db.VarChar(100)
+  timestamp      DateTime        @default(now()) @db.Timestamptz(6)
+  approvalStatus ApprovalStatus  @default(approved) @map("approval_status")
+  approvalBy     String?         @map("approval_by") @db.Uuid
+  approvedAt     DateTime?       @map("approved_at") @db.Timestamptz(6)
+  version        Int             @default(1)
+
+  // Relations
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  approver   User?     @relation("TransactionApprover", fields: [approvalBy], references: [id], onDelete: SetNull)
+  Category   Category? @relation(fields: [categoryId], references: [id])
+  categoryId String?   @db.Uuid
+
+  @@index([userId])
+  @@index([timestamp])
+  @@index([type])
+  @@index([approvalStatus])
+  @@index([userId, timestamp(sort: Desc)])
+  @@index([timestamp, type])
+  @@map("transactions")
+}
+
+// Reports entity
+model Report {
+  id             String     @id @default(uuid()) @db.Uuid
+  reportDate     DateTime   @map("report_date") @db.Date
+  generatedAt    DateTime   @default(now()) @map("generated_at") @db.Timestamptz(6)
+  reportType     ReportType @map("report_type")
+  filePath       String?    @map("file_path") @db.VarChar(500)
+  jsonSummary    Json?      @map("json_summary") @db.JsonB
+  totalIncome    Decimal    @default(0) @map("total_income") @db.Decimal(15, 2)
+  totalExpense   Decimal    @default(0) @map("total_expense") @db.Decimal(15, 2)
+  netCashflow    Decimal    @map("net_cashflow") @db.Decimal(15, 2)
+  deliveryStatus Json?      @map("delivery_status") @db.JsonB
+
+  @@index([reportDate])
+  @@index([generatedAt])
+  @@index([reportType])
+  @@index([reportDate, reportType])
+  @@map("reports")
+}
+
+// UserSessions entity
+model UserSession {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  phoneNumber String   @map("phone_number") @db.VarChar(20)
+  state       Json     @db.JsonB
+  contextData Json?    @map("context_data") @db.JsonB
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  expiresAt   DateTime @map("expires_at") @db.Timestamptz(6)
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([phoneNumber])
+  @@index([expiresAt])
+  @@index([userId, expiresAt])
+  @@map("user_sessions")
+}
+
+// AuditLogs entity
+model AuditLog {
+  id                 String   @id @default(uuid()) @db.Uuid
+  userId             String?  @map("user_id") @db.Uuid
+  action             String   @db.VarChar(100)
+  details            Json?    @db.JsonB
+  timestamp          DateTime @default(now()) @db.Timestamptz(6)
+  ipAddress          String?  @map("ip_address") @db.VarChar(45)
+  affectedEntityId   String?  @map("affected_entity_id") @db.Uuid
+  affectedEntityType String?  @map("affected_entity_type") @db.VarChar(50)
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([timestamp])
+  @@index([affectedEntityId])
+  @@index([userId, timestamp(sort: Desc)])
+  @@index([action, timestamp(sort: Desc)])
+  @@map("audit_logs")
+}
+
+// Recommendations entity
+model Recommendation {
+  id               String                 @id @default(uuid()) @db.Uuid
+  generatedAt      DateTime               @default(now()) @map("generated_at") @db.Timestamptz(6)
+  type             RecommendationType
+  content          Json                   @db.JsonB
+  priority         RecommendationPriority
+  confidenceScore  Int                    @map("confidence_score")
+  targetRoles      String[]               @map("target_roles")
+  dismissedByUsers String[]               @default([]) @map("dismissed_by_users") @db.Uuid
+  acknowledgedAt   DateTime?              @map("acknowledged_at") @db.Timestamptz(6)
+
+  @@index([generatedAt])
+  @@index([type])
+  @@index([priority])
+  @@index([confidenceScore])
+  @@index([priority, confidenceScore])
+  @@map("recommendations")
+}

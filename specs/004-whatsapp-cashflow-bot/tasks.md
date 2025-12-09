@@ -9,7 +9,7 @@
 
 This document contains actionable, dependency-ordered implementation tasks organized by user story priority. Each task is independently executable and follows the strict checklist format.
 
-**Total Tasks**: 156  
+**Total Tasks**: 197 (156 original + 41 new tasks for coverage gaps)  
 **User Stories**: 8 (3 P1, 4 P2, 1 P3)  
 **MVP Scope**: User Stories 1-3 (P1 stories) - Core transaction input and automated reporting
 
@@ -50,24 +50,24 @@ This document contains actionable, dependency-ordered implementation tasks organ
 
 ### Setup Tasks
 
-- [ ] T001 Create project structure per implementation plan in repository root
-- [ ] T002 Initialize Node.js project with package.json (Node.js 20 LTS, TypeScript 5.x)
-- [ ] T003 Configure TypeScript with strict mode in tsconfig.json
-- [ ] T004 Configure ESLint with TypeScript rules in .eslintrc.js
-- [ ] T005 [P] Create src/ directory structure (bot/, services/, models/, lib/, config/)
-- [ ] T006 [P] Create tests/ directory structure (unit/, integration/, e2e/)
-- [ ] T007 [P] Create prisma/ directory with schema.prisma template
-- [ ] T008 [P] Create docker/ directory with Dockerfile and docker-compose.yml
-- [ ] T009 Install core dependencies: whatsapp-web.js@^1.23.0, prisma@^5.0.0, @prisma/client@^5.0.0
-- [ ] T010 Install supporting dependencies: redis@^4.6.0, winston@^3.11.0, node-cron@^3.0.0, pdfkit@^0.13.0, puppeteer@^21.0.0
-- [ ] T011 Install dev dependencies: typescript@^5.0.0, @types/node@^20.0.0, jest@^29.0.0, @types/jest@^29.0.0, playwright@^1.40.0
-- [ ] T012 Configure Jest test framework in jest.config.js
-- [ ] T013 Configure Playwright for E2E tests in playwright.config.ts
-- [ ] T014 Create .env.example with all required environment variables
-- [ ] T015 Create .gitignore excluding node_modules/, .env, .wwebjs_auth/, dist/
-- [ ] T016 Create README.md with project overview and quickstart instructions
-- [ ] T017 Configure Docker Compose for PostgreSQL 15+ and Redis 7.x in docker/docker-compose.yml
-- [ ] T018 Create application entry point in src/index.ts
+- [x] T001 Create project structure per implementation plan in repository root
+- [x] T002 Initialize Node.js project with package.json (Node.js 20 LTS, TypeScript 5.x)
+- [x] T003 Configure TypeScript with strict mode in tsconfig.json
+- [x] T004 Configure ESLint with TypeScript rules in .eslintrc.js
+- [x] T005 [P] Create src/ directory structure (bot/, services/, models/, lib/, config/)
+- [x] T006 [P] Create tests/ directory structure (unit/, integration/, e2e/)
+- [x] T007 [P] Create prisma/ directory with schema.prisma template
+- [x] T008 [P] Create docker/ directory with Dockerfile and docker-compose.yml
+- [x] T009 Install core dependencies: whatsapp-web.js@^1.23.0, prisma@^5.0.0, @prisma/client@^5.0.0
+- [x] T010 Install supporting dependencies: redis@^4.6.0 (Node.js client library; Redis server version 7.x specified in docker-compose.yml), winston@^3.11.0, node-cron@^3.0.0, pdfkit@^0.13.0, puppeteer@^21.0.0
+- [x] T011 Install dev dependencies: typescript@^5.0.0, @types/node@^20.0.0, jest@^29.0.0, @types/jest@^29.0.0, playwright@^1.40.0
+- [x] T012 Configure Jest test framework in jest.config.js
+- [x] T013 Configure Playwright for E2E tests in playwright.config.ts
+- [x] T014 Create .env.example with all required environment variables
+- [x] T015 Create .gitignore excluding node_modules/, .env, .wwebjs_auth/, dist/
+- [x] T016 Create README.md with project overview and quickstart instructions
+- [x] T017 Configure Docker Compose for PostgreSQL 15+ and Redis 7.x in docker/docker-compose.yml
+- [x] T018 Create application entry point in src/index.ts
 
 ---
 
@@ -79,33 +79,33 @@ This document contains actionable, dependency-ordered implementation tasks organ
 
 ### Database & Schema
 
-- [ ] T019 [P] Define Prisma schema for Users entity in prisma/schema.prisma
-- [ ] T020 [P] Define Prisma schema for Transactions entity in prisma/schema.prisma
-- [ ] T021 [P] Define Prisma schema for Categories entity in prisma/schema.prisma
-- [ ] T022 [P] Define Prisma schema for UserSessions entity in prisma/schema.prisma
-- [ ] T023 [P] Define Prisma schema for Reports entity in prisma/schema.prisma
-- [ ] T024 [P] Define Prisma schema for AuditLogs entity in prisma/schema.prisma
-- [ ] T025 [P] Define Prisma schema for Recommendations entity in prisma/schema.prisma
-- [ ] T026 Configure TimescaleDB extension in Prisma schema for Transactions timestamp hypertable
-- [ ] T027 Create initial database migration with npx prisma migrate dev --name init
-- [ ] T028 Generate Prisma Client with npx prisma generate
+- [x] T019 [P] Define Prisma schema for Users entity in prisma/schema.prisma
+- [x] T020 [P] Define Prisma schema for Transactions entity in prisma/schema.prisma
+- [x] T021 [P] Define Prisma schema for Categories entity in prisma/schema.prisma
+- [x] T022 [P] Define Prisma schema for UserSessions entity in prisma/schema.prisma
+- [x] T023 [P] Define Prisma schema for Reports entity in prisma/schema.prisma
+- [x] T024 [P] Define Prisma schema for AuditLogs entity in prisma/schema.prisma
+- [x] T025 [P] Define Prisma schema for Recommendations entity in prisma/schema.prisma
+- [x] T026 Configure TimescaleDB extension in Prisma schema for Transactions timestamp hypertable
+- [x] T027 Create initial database migration with npx prisma migrate dev --name init
+- [x] T028 Generate Prisma Client with npx prisma generate
 
 ### Core Utilities
 
-- [ ] T029 [P] Implement environment variable validation in src/config/env.ts
-- [ ] T030 [P] Implement application constants in src/config/constants.ts
-- [ ] T031 [P] Implement Winston logger configuration in src/lib/logger.ts
-- [ ] T032 [P] Implement Redis client wrapper in src/lib/redis.ts
-- [ ] T033 [P] Implement currency formatting utilities (Rp) in src/lib/currency.ts
-- [ ] T034 [P] Implement date/time utilities (WITA timezone) in src/lib/date.ts
-- [ ] T035 [P] Implement input validation helpers in src/lib/validation.ts
+- [x] T029 [P] Implement environment variable validation in src/config/env.ts
+- [x] T030 [P] Implement application constants in src/config/constants.ts
+- [x] T031 [P] Implement Winston logger configuration in src/lib/logger.ts
+- [x] T032 [P] Implement Redis client wrapper in src/lib/redis.ts
+- [x] T033 [P] Implement currency formatting utilities (Rp) in src/lib/currency.ts
+- [x] T034 [P] Implement date/time utilities (WITA timezone) in src/lib/date.ts
+- [x] T035 [P] Implement input validation helpers in src/lib/validation.ts
 
 ### WhatsApp Client Foundation
 
-- [ ] T036 Implement LocalAuth session management in src/bot/client/auth.ts
-- [ ] T037 Implement WhatsApp client initialization in src/bot/client/client.ts
-- [ ] T038 Implement event handlers (ready, disconnect, qr) in src/bot/client/events.ts
-- [ ] T039 Implement message event routing in src/bot/client/events.ts
+- [x] T036 Implement LocalAuth session management in src/bot/client/auth.ts
+- [x] T037 Implement WhatsApp client initialization in src/bot/client/client.ts
+- [x] T038 Implement event handlers (ready, disconnect, qr) in src/bot/client/events.ts
+- [x] T039 Implement message event routing in src/bot/client/events.ts
 
 ---
 
@@ -357,6 +357,31 @@ This document contains actionable, dependency-ordered implementation tasks organ
 - [ ] T127 Implement approval workflow service (auto-approve, flagged-pending, manually-approved/rejected) in src/services/transaction/approval.ts
 - [ ] T128 Implement approval status tracking in src/models/transaction.ts
 - [ ] T129 Implement Boss approval/rejection handlers in src/bot/handlers/approval.ts
+- [ ] T129a [US1] Verify approval workflow state machine (auto-approve → flagged-pending → manually-approved/rejected) covers FR-075 and FR-076 requirements
+
+### Low-Priority Features (Phase 2+)
+
+- [ ] T177 [FR-022] Implement user profile viewing (phone, name, role, registration date) in src/bot/handlers/profile.ts
+- [ ] T178 [FR-024] Implement account deletion request workflow in src/bot/handlers/profile.ts
+- [ ] T179 [FR-025] Implement user activity summary display for Boss/Dev in src/bot/handlers/admin.ts
+- [ ] T180 [FR-034] Implement keyboard shortcuts for power users (number shortcuts: 1, 2, 3) in src/bot/handlers/command.ts
+- [ ] T181 [FR-038] Implement button label customization by Dev role in src/services/system/config.ts
+- [ ] T182 [FR-040] Implement full localization support (Indonesian with English fallback) in src/lib/i18n.ts
+- [ ] T183 [FR-064] Implement saved report templates for Boss in src/services/report/templates.ts
+- [ ] T184 [FR-065] Implement custom report scheduling (beyond 24:00) in src/services/scheduler/custom.ts
+- [ ] T185 [FR-074] Implement bulk transaction entry for Power Users (Dev/Boss) in src/bot/handlers/transaction.ts
+- [ ] T186 [FR-078] Implement transaction editing after submission (same-day edits, previous day by Boss/Dev) in src/bot/handlers/transaction.ts
+- [ ] T187 [FR-079] Implement transaction deletion (soft delete) with Boss/Dev permission in src/services/transaction/processor.ts
+- [ ] T188 [FR-080] Implement receipt SMS/WhatsApp confirmation (optional, Dev-enabled) in src/services/notification/receipt.ts
+- [ ] T189 [FR-085] Implement recommendation dismissal tracking in src/models/recommendation.ts
+- [ ] T190 [FR-087] Implement recommendation learning from user acknowledgment patterns in src/services/recommendation/learning.ts
+- [ ] T191 [FR-088] Implement custom recommendation rules creation by Dev/Boss in src/services/recommendation/rules.ts
+- [ ] T192 [FR-089] Implement monthly trending insights generation in src/services/recommendation/trending.ts
+- [ ] T193 [FR-090] Implement recommendation export to email/Slack in src/services/recommendation/export.ts
+- [ ] T194 [FR-098] Implement manual report generation trigger for Dev in src/bot/handlers/admin.ts
+- [ ] T195 [FR-099] Implement database backup/restore via bot commands in src/bot/handlers/admin.ts
+- [ ] T196 [FR-100] Implement graceful shutdown with session preservation in src/bot/client/shutdown.ts
+- [ ] T197 [FR-089] Implement monthly insight generation scheduler (runs at month-end) in src/services/scheduler/monthly-insights.ts
 
 ### Performance & Monitoring
 
@@ -382,6 +407,7 @@ This document contains actionable, dependency-ordered implementation tasks organ
 - [ ] T143 Create production Dockerfile in docker/Dockerfile
 - [ ] T144 Create Azure deployment configuration (Container Apps or App Service) in infra/
 - [ ] T145 Create database backup automation (daily at 01:00 WITA) in src/services/system/backup.ts
+- [ ] T145a [Polish] Implement backup verification and restore testing in tests/integration/system/backup.test.ts
 - [ ] T146 Create quickstart guide updates based on implementation in quickstart.md
 
 ### Testing
@@ -396,6 +422,29 @@ This document contains actionable, dependency-ordered implementation tasks organ
 - [ ] T154 Write E2E tests for User Story 3 (multi-step editing) in tests/e2e/user-stories/us3/
 - [ ] T155 Write E2E tests for role-based access control in tests/e2e/roles/
 - [ ] T156 Write performance tests for 50 concurrent users in tests/integration/load/
+
+### Success Criteria Validation
+
+- [ ] T157 [SC] Validate SC-001: Employee transaction input <5 min per transaction, <2% error rate in tests/e2e/success-criteria/sc001.test.ts
+- [ ] T158 [SC] Validate SC-002: Automated daily reports 99% delivery rate over 30 days in tests/integration/success-criteria/sc002.test.ts
+- [ ] T159 [SC] Validate SC-003: On-demand report generation <5 seconds in tests/integration/success-criteria/sc003.test.ts
+- [ ] T160 [SC] Validate SC-004: 50 concurrent users <2s response time, zero data corruption in tests/integration/load/sc004.test.ts
+- [ ] T161 [SC] Validate SC-005: Button interface 98% render success rate in tests/e2e/success-criteria/sc005.test.ts
+- [ ] T162 [SC] Validate SC-006: Role-based access control 100% unauthorized access prevention in tests/e2e/roles/sc006.test.ts
+- [ ] T163 [SC] Validate SC-007: Recommendation engine 95% anomaly detection within 2 hours in tests/integration/success-criteria/sc007.test.ts
+- [ ] T164 [SC] Validate SC-008: System 99.5% uptime, session recovery <2 minutes in tests/integration/success-criteria/sc008.test.ts
+- [ ] T165 [SC] Validate SC-009: 90% first-time transaction success without help in tests/e2e/success-criteria/sc009.test.ts
+- [ ] T166 [SC] Validate SC-010: 100% transaction audit trail coverage in tests/integration/success-criteria/sc010.test.ts
+- [ ] T167 [SC] Validate SC-011: 7-year data retention compliance in tests/integration/success-criteria/sc011.test.ts
+- [ ] T168 [SC] Validate SC-012: Multi-language support 95% readability in tests/e2e/success-criteria/sc012.test.ts
+- [ ] T169 [SC] Validate SC-013: Cost per transaction <Rp 100 in tests/integration/success-criteria/sc013.test.ts
+- [ ] T170 [SC] Validate SC-014: 85% Boss user satisfaction (requires user survey, mark as manual validation)
+- [ ] T171 [SC] Validate SC-015: Negative cashflow alerts >90% precision in tests/integration/success-criteria/sc015.test.ts
+- [ ] T172 [SC] Validate SC-016: Database backup zero data loss in tests/integration/system/sc016.test.ts
+- [ ] T173 [SC] Validate SC-017: Excel export <10 seconds for 30-day period in tests/integration/success-criteria/sc017.test.ts
+- [ ] T174 [SC] Validate SC-018: Session recovery <1 minute on bot restart in tests/integration/success-criteria/sc018.test.ts
+- [ ] T175 [SC] Validate SC-019: New user registration <5 minutes in tests/e2e/success-criteria/sc019.test.ts
+- [ ] T176 [SC] Validate SC-020: Category addition without code deployment in tests/integration/success-criteria/sc020.test.ts
 
 ---
 
@@ -445,8 +494,10 @@ This document contains actionable, dependency-ordered implementation tasks organ
 | US4 - Investor Analysis | P2 | 8 | T099-T106 |
 | US7 - Recommendations | P3 | 11 | T107-T117 |
 | Polish & Cross-Cutting | - | 40 | T118-T156 |
+| Success Criteria Validation | - | 20 | T157-T176 |
+| Low-Priority Features (Phase 2+) | - | 21 | T177-T197 |
 
-**Total**: 156 tasks
+**Total**: 197 tasks (156 original + 41 new: 20 success criteria validation + 21 low-priority features)
 
 ---
 
