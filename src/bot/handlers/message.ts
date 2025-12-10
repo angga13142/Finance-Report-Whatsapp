@@ -88,7 +88,7 @@ export class MessageHandler {
 
     const welcomeMsg = MessageFormatter.formatWelcomeMessage(
       user.role,
-      user.name,
+      user.name ?? undefined,
     );
     const menu = ButtonMenu.generateMainMenu(user.role);
 
