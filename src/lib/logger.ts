@@ -33,7 +33,7 @@ function maskSensitiveData(data: unknown): unknown {
     let masked = data;
 
     // Mask phone numbers
-    masked = masked.replace(SENSITIVE_PATTERNS.phoneNumber, (match) => {
+    masked = masked.replace(SENSITIVE_PATTERNS.phoneNumber, (match: string) => {
       const lastFour = match.slice(-4);
       return `+62 ****${lastFour}`;
     });
@@ -60,7 +60,7 @@ function maskSensitiveData(data: unknown): unknown {
     // Mask API keys
     masked = masked.replace(
       /(["\s:=]+)([a-zA-Z0-9_-]{16,})/g,
-      (match, prefix, key) => {
+      (match: string, prefix: string, key: string) => {
         const lastFour = key.slice(-4);
         return `${prefix}****${lastFour}`;
       },
