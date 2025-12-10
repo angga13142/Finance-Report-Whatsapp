@@ -404,11 +404,11 @@ This document contains actionable, dependency-ordered implementation tasks organ
 
 ### Security & Compliance
 
-- [ ] T136 Implement input validation for all user inputs (type, format, length, range) in src/lib/validation.ts
-- [ ] T137 Implement SQL injection prevention (Prisma parameterized queries) - verify all queries use Prisma
-- [ ] T138 Implement sensitive data masking in logs (amounts, phone numbers) in src/lib/logger.ts
-- [ ] T139 Implement account lockout after 5 failed attempts (15 minutes) in src/services/user/auth.ts
-- [ ] T140 Implement 7-year data retention archival strategy in src/services/data/archival.ts
+- [x] T136 Implement input validation for all user inputs (type, format, length, range) in src/lib/validation.ts
+- [x] T137 Implement SQL injection prevention (Prisma parameterized queries) - verify all queries use Prisma
+- [x] T138 Implement sensitive data masking in logs (amounts, phone numbers) in src/lib/logger.ts
+- [x] T139 Implement account lockout after 5 failed attempts (15 minutes) in src/services/user/auth.ts
+- [x] T140 Implement 7-year data retention archival strategy in src/services/data/archival.ts
 
 ### Documentation & Deployment
 

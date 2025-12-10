@@ -58,14 +58,17 @@ enum RecommendationPriority {
 
 // Users entity
 model User {
-  id            String    @id @default(uuid()) @db.Uuid
-  phoneNumber   String    @unique @map("phone_number") @db.VarChar(20)
-  name          String?   @db.VarChar(255)
-  role          UserRole  @default(employee)
-  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  lastActive    DateTime? @map("last_active") @db.Timestamptz(6)
-  isActive      Boolean   @default(true) @map("is_active")
-  authTokenHash String?   @map("auth_token_hash") @db.VarChar(255)
+  id                    String    @id @default(uuid()) @db.Uuid
+  phoneNumber           String    @unique @map("phone_number") @db.VarChar(20)
+  name                  String?   @db.VarChar(255)
+  role                  UserRole  @default(employee)
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  lastActive            DateTime? @map("last_active") @db.Timestamptz(6)
+  isActive              Boolean   @default(true) @map("is_active")
+  authTokenHash         String?   @map("auth_token_hash") @db.VarChar(255)
+  failedLoginAttempts   Int       @default(0) @map("failed_login_attempts")
+  lockedUntil           DateTime? @map("locked_until") @db.Timestamptz(6)
+  lastFailedLoginAt     DateTime? @map("last_failed_login_at") @db.Timestamptz(6)
 
   // Relations
   transactions         Transaction[]
@@ -77,6 +80,7 @@ model User {
   @@index([role])
   @@index([isActive])
   @@index([role, isActive])
+  @@index([lockedUntil])
   @@map("users")
 }
 
@@ -113,6 +117,7 @@ model Transaction {
   approvalBy     String?         @map("approval_by") @db.Uuid
   approvedAt     DateTime?       @map("approved_at") @db.Timestamptz(6)
   version        Int             @default(1)
+  archivedAt     DateTime?       @map("archived_at") @db.Timestamptz(6)
 
   // Relations
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -126,6 +131,7 @@ model Transaction {
   @@index([approvalStatus])
   @@index([userId, timestamp(sort: Desc)])
   @@index([timestamp, type])
+  @@index([archivedAt])
   @@map("transactions")
 }
 
@@ -141,11 +147,13 @@ model Report {
   totalExpense   Decimal    @default(0) @map("total_expense") @db.Decimal(15, 2)
   netCashflow    Decimal    @map("net_cashflow") @db.Decimal(15, 2)
   deliveryStatus Json?      @map("delivery_status") @db.JsonB
+  archivedAt     DateTime?  @map("archived_at") @db.Timestamptz(6)
 
   @@index([reportDate])
   @@index([generatedAt])
   @@index([reportType])
   @@index([reportDate, reportType])
+  @@index([archivedAt])
   @@map("reports")
 }
 
@@ -179,6 +187,7 @@ model AuditLog {
   ipAddress          String?  @map("ip_address") @db.VarChar(45)
   affectedEntityId   String?  @map("affected_entity_id") @db.Uuid
   affectedEntityType String?  @map("affected_entity_type") @db.VarChar(50)
+  archivedAt         DateTime? @map("archived_at") @db.Timestamptz(6)
 
   // Relations
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -189,6 +198,7 @@ model AuditLog {
   @@index([affectedEntityId])
   @@index([userId, timestamp(sort: Desc)])
   @@index([action, timestamp(sort: Desc)])
+  @@index([archivedAt])
   @@map("audit_logs")
 }
 

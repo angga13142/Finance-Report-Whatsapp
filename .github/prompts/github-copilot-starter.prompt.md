@@ -1,16 +1,8 @@
 ---
 agent: "agent"
-model: Claude Sonnet 4
+model: Claude Haiku 4.5         
 tools:
-  [
-    "edit",
-    "githubRepo",
-    "changes",
-    "problems",
-    "search",
-    "runCommands",
-    "fetch",
-  ]
+  ['edit', 'runNotebooks', 'search', 'new', 'com.microsoft/azure/search', 'runCommands', 'runTasks', 'usages', 'vscodeAPI', 'problems', 'changes', 'testFailure', 'openSimpleBrowser', 'fetch', 'githubRepo', 'extensions', 'todos', 'runSubagent']
 description: "Set up complete GitHub Copilot configuration for a new project based on technology stack"
 ---
 
@@ -251,7 +243,7 @@ Apply the [general coding guidelines](./general-coding.instructions.md) to all c
 ```yaml
 ---
 agent: 'agent'
-model: Claude Sonnet 4
+model: Claude Sonnet 4.5
 tools: ['githubRepo', 'codebase']
 description: 'Generate a new React form component'
 ---
