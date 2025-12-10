@@ -1,6 +1,7 @@
 import { formatCurrency } from "../../lib/currency";
 import { formatDateWITA } from "../../lib/date";
 import { UserRole } from "@prisma/client";
+import { Decimal } from "@prisma/client/runtime/library";
 import { USER_ROLES } from "../../config/constants";
 
 /**
@@ -51,16 +52,28 @@ export class MessageFormatter {
   /**
    * Format success message
    */
-  static formatSuccessMessage(transaction: any, dailyTotal?: string): string {
+  static formatSuccessMessage(
+    transaction: {
+      amount: string | number | Decimal;
+      type: string;
+      category: string;
+      timestamp: Date | string;
+    },
+    dailyTotal?: string,
+  ): string {
     const amount = formatCurrency(transaction.amount);
     const typeLabel =
       transaction.type === "income" ? "Pemasukan" : "Pengeluaran";
+    const timestamp =
+      transaction.timestamp instanceof Date
+        ? transaction.timestamp
+        : new Date(transaction.timestamp);
 
     let message =
       `✅ Transaksi berhasil disimpan!\n\n` +
       `${typeLabel}: ${transaction.category}\n` +
       `Jumlah: ${amount}\n` +
-      `Tanggal: ${formatDateWITA(transaction.timestamp)}\n`;
+      `Tanggal: ${formatDateWITA(timestamp)}\n`;
 
     if (dailyTotal) {
       message += `\n${dailyTotal}`;

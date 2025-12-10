@@ -78,9 +78,7 @@ export class AuthService {
   /**
    * Create session token for user
    */
-  static async createSession(
-    user: User,
-  ): Promise<{ token: string; user: User }> {
+  static createSession(user: User): { token: string; user: User } {
     try {
       const token = this.generateToken(user);
 

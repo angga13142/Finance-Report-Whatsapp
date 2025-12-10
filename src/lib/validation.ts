@@ -1,5 +1,5 @@
-import { PHONE_NUMBER_REGEX, AMOUNT_INPUT_PATTERNS } from '../config/constants';
-import { parseAmount } from './currency';
+import { PHONE_NUMBER_REGEX, AMOUNT_INPUT_PATTERNS } from "../config/constants";
+import { parseAmount } from "./currency";
 
 /**
  * Input validation helpers
@@ -12,12 +12,14 @@ import { parseAmount } from './currency';
  * @throws {Error} If invalid
  */
 export function validatePhoneNumber(phoneNumber: string): boolean {
-  if (!phoneNumber || typeof phoneNumber !== 'string') {
-    throw new Error('Phone number is required');
+  if (!phoneNumber || typeof phoneNumber !== "string") {
+    throw new Error("Phone number is required");
   }
 
   if (!PHONE_NUMBER_REGEX.test(phoneNumber)) {
-    throw new Error('Phone number must be in Indonesian format: +62XXXXXXXXXX or 0XXXXXXXXXX');
+    throw new Error(
+      "Phone number must be in Indonesian format: +62XXXXXXXXXX or 0XXXXXXXXXX",
+    );
   }
 
   return true;
@@ -30,20 +32,20 @@ export function validatePhoneNumber(phoneNumber: string): boolean {
  */
 export function normalizePhoneNumber(phoneNumber: string): string {
   validatePhoneNumber(phoneNumber);
-  
+
   // Remove spaces and special characters
-  const cleaned = phoneNumber.replace(/[\s\-()]/g, '');
-  
+  const cleaned = phoneNumber.replace(/[\s\-()]/g, "");
+
   // Convert 0 prefix to +62
-  if (cleaned.startsWith('0')) {
-    return '+62' + cleaned.substring(1);
+  if (cleaned.startsWith("0")) {
+    return "+62" + cleaned.substring(1);
   }
-  
+
   // Ensure +62 prefix
-  if (!cleaned.startsWith('+62')) {
-    throw new Error('Phone number must start with +62 or 0');
+  if (!cleaned.startsWith("+62")) {
+    throw new Error("Phone number must start with +62 or 0");
   }
-  
+
   return cleaned;
 }
 
@@ -54,22 +56,22 @@ export function normalizePhoneNumber(phoneNumber: string): string {
  * @throws {Error} If invalid
  */
 export function validateAmountFormat(input: string): boolean {
-  if (!input || typeof input !== 'string') {
-    throw new Error('Amount is required');
+  if (!input || typeof input !== "string") {
+    throw new Error("Amount is required");
   }
 
   // Check if input matches any valid pattern
   const isValid = AMOUNT_INPUT_PATTERNS.some((pattern) => pattern.test(input));
-  
+
   if (!isValid) {
-    throw new Error('Invalid amount format. Use: 500000, 500.000, or 500,000');
+    throw new Error("Invalid amount format. Use: 500000, 500.000, or 500,000");
   }
 
   // Try to parse to ensure it's a valid number
   try {
     parseAmount(input);
   } catch (error) {
-    throw new Error('Invalid amount value');
+    throw new Error("Invalid amount value");
   }
 
   return true;
@@ -88,9 +90,9 @@ export function validateStringLength(
   value: string,
   min: number,
   max: number,
-  fieldName: string = 'Field'
+  fieldName: string = "Field",
 ): boolean {
-  if (typeof value !== 'string') {
+  if (typeof value !== "string") {
     throw new Error(`${fieldName} must be a string`);
   }
 
@@ -116,14 +118,12 @@ export function validateStringLength(
 export function validateEnum<T extends Record<string, string>>(
   value: string,
   enumObject: T,
-  fieldName: string = 'Field'
+  fieldName: string = "Field",
 ): value is T[keyof T] {
   const validValues = Object.values(enumObject);
-  
+
   if (!validValues.includes(value as T[keyof T])) {
-    throw new Error(
-      `${fieldName} must be one of: ${validValues.join(', ')}`
-    );
+    throw new Error(`${fieldName} must be one of: ${validValues.join(", ")}`);
   }
 
   return true;
@@ -135,14 +135,15 @@ export function validateEnum<T extends Record<string, string>>(
  * @returns Sanitized string
  */
 export function sanitizeString(input: string): string {
-  if (typeof input !== 'string') {
-    return '';
+  if (typeof input !== "string") {
+    return "";
   }
 
   // Remove null bytes and control characters
+  // eslint-disable-next-line no-control-regex
   return input
-    .replace(/\0/g, '')
-    .replace(/[\x00-\x1F\x7F]/g, '')
+    .replace(/\0/g, "")
+    .replace(/[\x00-\x1F\x7F]/g, "")
     .trim();
 }
 
@@ -153,12 +154,12 @@ export function sanitizeString(input: string): string {
  * @throws {Error} If invalid
  */
 export function validateUUID(uuid: string): boolean {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
   if (!uuidRegex.test(uuid)) {
-    throw new Error('Invalid UUID format');
+    throw new Error("Invalid UUID format");
   }
 
   return true;
 }
-

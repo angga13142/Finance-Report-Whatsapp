@@ -47,7 +47,11 @@ export class TransactionModel {
     },
   ): Promise<Transaction[]> {
     try {
-      const where: any = { userId };
+      const where: {
+        userId: string;
+        type?: TransactionType;
+        timestamp?: { gte?: Date; lte?: Date };
+      } = { userId };
 
       if (options?.type) {
         where.type = options.type;
@@ -88,7 +92,10 @@ export class TransactionModel {
   static async findTodayTransactions(userId?: string): Promise<Transaction[]> {
     try {
       const { start, end } = getDayRangeWITA();
-      const where: any = {
+      const where: {
+        userId?: string;
+        timestamp: { gte: Date; lte: Date };
+      } = {
         timestamp: {
           gte: start,
           lte: end,
@@ -187,11 +194,24 @@ export class TransactionModel {
     }>,
   ): Promise<Transaction> {
     try {
-      const updateData: any = { ...data };
+      const updateData: {
+        category?: string;
+        amount?: Decimal;
+        description?: string;
+        approvalStatus?: ApprovalStatus;
+        approvalBy?: string;
+        version?: { increment: number };
+        approvedAt?: Date;
+      } = {
+        category: data.category,
+        description: data.description,
+        approvalStatus: data.approvalStatus,
+        approvalBy: data.approvalBy,
+      };
 
       // Handle amount update
       if (data.amount !== undefined) {
-        const amountDecimal =
+        const amountDecimal: Decimal =
           typeof data.amount === "string" || typeof data.amount === "number"
             ? parseAmount(String(data.amount))
             : data.amount;

@@ -1,4 +1,5 @@
 import { Message } from "whatsapp-web.js";
+import { User } from "@prisma/client";
 import { logger } from "../../lib/logger";
 import { SessionManager } from "../middleware/session";
 import { ButtonMenu } from "../ui/buttons";
@@ -17,7 +18,7 @@ export class TransactionHandler {
    * Handle transaction start (from button or command)
    */
   static async handleTransactionStart(
-    user: any,
+    user: User,
     message: Message,
   ): Promise<void> {
     const client = getWhatsAppClient();
@@ -45,7 +46,7 @@ export class TransactionHandler {
    * Handle amount input
    */
   static async handleAmountInput(
-    user: any,
+    user: User,
     input: string,
     message: Message,
   ): Promise<void> {
@@ -91,12 +92,15 @@ export class TransactionHandler {
     });
 
     // Show confirmation
+    if (!validation.parsed) {
+      throw new Error("Invalid amount");
+    }
     const confirmMsg = MessageFormatter.formatConfirmationMessage({
-      type: session.transactionType,
-      category: session.category,
+      type: session.transactionType ?? "expense",
+      category: session.category ?? "",
       amount: validation.parsed,
-      description: session.description,
-      userName: user.name,
+      description: session.description ?? undefined,
+      userName: user.name ?? undefined,
     });
 
     const confirmButtons = ButtonMenu.generateConfirmationButtons();
@@ -118,7 +122,7 @@ export class TransactionHandler {
    * Handle category input (text fallback)
    */
   static async handleCategoryInput(
-    user: any,
+    user: User,
     input: string,
     message: Message,
   ): Promise<void> {
@@ -213,8 +217,14 @@ export class TransactionHandler {
     const dailyTotal = await TransactionProcessor.getDailyTotalMessage(user.id);
 
     // Send success message
-    const successMsg =
-      TransactionProcessor.getSuccessMessage(result.transaction) + dailyTotal;
+    const successMsg = result.transaction
+      ? TransactionProcessor.getSuccessMessage({
+          amount: result.transaction.amount,
+          type: result.transaction.type,
+          category: result.transaction.category,
+          timestamp: result.transaction.timestamp,
+        }) + dailyTotal
+      : "Transaksi berhasil disimpan!" + dailyTotal;
     await client.sendMessage(message.from, successMsg);
 
     // Clear session

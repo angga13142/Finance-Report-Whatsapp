@@ -1,4 +1,4 @@
-import { TransactionType } from "@prisma/client";
+import { TransactionType, Transaction } from "@prisma/client";
 import { parseAmount, validateAmountRange } from "../../lib/currency";
 import { validateStringLength } from "../../lib/validation";
 import { CategoryModel } from "../../models/category";
@@ -19,7 +19,7 @@ export class TransactionValidator {
   static validateAmount(amount: string | number): {
     valid: boolean;
     error?: string;
-    parsed?: any;
+    parsed?: number;
   } {
     try {
       const parsed = parseAmount(String(amount));
@@ -28,7 +28,7 @@ export class TransactionValidator {
         MIN_TRANSACTION_AMOUNT,
         MAX_TRANSACTION_AMOUNT,
       );
-      return { valid: true, parsed };
+      return { valid: true, parsed: parsed.toNumber() };
     } catch (error) {
       return {
         valid: false,
@@ -90,7 +90,7 @@ export class TransactionValidator {
     category: string,
     amount: string | number,
     timeWindowMinutes: number = 1,
-  ): Promise<{ isDuplicate: boolean; existingTransaction?: any }> {
+  ): Promise<{ isDuplicate: boolean; existingTransaction?: Transaction }> {
     try {
       const parsedAmount = parseAmount(String(amount));
       const timeWindow = new Date(Date.now() - timeWindowMinutes * 60 * 1000);

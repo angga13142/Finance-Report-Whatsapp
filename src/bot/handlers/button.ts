@@ -1,4 +1,5 @@
 import { Message } from "whatsapp-web.js";
+import { User } from "@prisma/client";
 import { logger } from "../../lib/logger";
 import { AuthMiddleware } from "../middleware/auth";
 import { SessionManager } from "../middleware/session";
@@ -81,7 +82,7 @@ export class ButtonHandler {
    * Route button to appropriate handler
    */
   private static async routeButton(
-    user: any,
+    user: User,
     buttonId: string,
     message: Message,
   ): Promise<void> {
@@ -161,7 +162,7 @@ export class ButtonHandler {
    * Handle main menu
    */
   private static async handleMainMenu(
-    user: any,
+    user: User,
     message: Message,
   ): Promise<void> {
     const client = getWhatsAppClient();
@@ -175,7 +176,7 @@ export class ButtonHandler {
     const menu = ButtonMenu.generateMainMenu(user.role);
     const welcomeMsg = MessageFormatter.formatWelcomeMessage(
       user.role,
-      user.name,
+      user.name ?? undefined,
     );
 
     try {
@@ -198,7 +199,7 @@ export class ButtonHandler {
    * Handle transaction type selection
    */
   private static async handleTransactionType(
-    user: any,
+    user: User,
     type: "income" | "expense",
     message: Message,
   ): Promise<void> {
@@ -234,7 +235,7 @@ export class ButtonHandler {
    * Handle category selection
    */
   private static async handleCategorySelection(
-    user: any,
+    user: User,
     buttonId: string,
     message: Message,
   ): Promise<void> {
@@ -277,7 +278,7 @@ export class ButtonHandler {
    * Handle transaction confirmation
    */
   private static async handleTransactionConfirm(
-    user: any,
+    user: User,
     message: Message,
   ): Promise<void> {
     const client = getWhatsAppClient();
@@ -318,8 +319,14 @@ export class ButtonHandler {
     const dailyTotal = await TransactionProcessor.getDailyTotalMessage(user.id);
 
     // Send success message
-    const successMsg =
-      TransactionProcessor.getSuccessMessage(result.transaction) + dailyTotal;
+    const successMsg = result.transaction
+      ? TransactionProcessor.getSuccessMessage({
+          amount: result.transaction.amount,
+          type: result.transaction.type,
+          category: result.transaction.category,
+          timestamp: result.transaction.timestamp,
+        }) + dailyTotal
+      : "Transaksi berhasil disimpan!" + dailyTotal;
     await client.sendMessage(message.from, successMsg);
 
     // Clear session
@@ -330,7 +337,7 @@ export class ButtonHandler {
    * Handle edit amount
    */
   private static async handleEditAmount(
-    user: any,
+    user: User,
     message: Message,
   ): Promise<void> {
     const client = getWhatsAppClient();
@@ -360,7 +367,7 @@ export class ButtonHandler {
    * Handle edit category
    */
   private static async handleEditCategory(
-    user: any,
+    user: User,
     message: Message,
   ): Promise<void> {
     const client = getWhatsAppClient();
@@ -386,7 +393,7 @@ export class ButtonHandler {
    * Handle cancel
    */
   private static async handleCancel(
-    user: any,
+    user: User,
     message: Message,
   ): Promise<void> {
     const client = getWhatsAppClient();

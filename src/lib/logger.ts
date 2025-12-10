@@ -22,7 +22,10 @@ export const logger = winston.createLogger({
             const metaStr = Object.keys(meta).length
               ? JSON.stringify(meta, null, 2)
               : "";
-            return `${timestamp} [${level}]: ${message} ${metaStr}`;
+            const timestampStr = String(timestamp ?? "");
+            const levelStr = String(level ?? "");
+            const messageStr = String(message ?? "");
+            return `${timestampStr} [${levelStr}]: ${messageStr} ${metaStr}`;
           }),
         ),
   defaultMeta: {

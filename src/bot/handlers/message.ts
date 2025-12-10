@@ -1,4 +1,5 @@
 import { Message } from "whatsapp-web.js";
+import { User } from "@prisma/client";
 import { logger } from "../../lib/logger";
 import { AuthMiddleware } from "../middleware/auth";
 import { SessionManager } from "../middleware/session";
@@ -111,7 +112,7 @@ export class MessageHandler {
    * Handle text commands
    */
   private static async handleCommand(
-    user: any,
+    user: User,
     command: string,
     message: Message,
   ): Promise<void> {
@@ -195,7 +196,7 @@ export class MessageHandler {
    */
   private static async isButtonResponse(
     message: Message,
-    _user: any,
+    _user: User,
   ): Promise<boolean> {
     const body = message.body?.trim() || "";
 

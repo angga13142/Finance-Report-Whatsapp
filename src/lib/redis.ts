@@ -1,6 +1,6 @@
-import { createClient } from 'redis';
-import { env } from '../config/env';
-import { logger } from './logger';
+import { createClient } from "redis";
+import { env } from "../config/env";
+import { logger } from "./logger";
 
 let redisClient: ReturnType<typeof createClient> | null = null;
 
@@ -18,7 +18,9 @@ export function getRedisClient(): ReturnType<typeof createClient> {
       port: env.REDIS_PORT,
       reconnectStrategy: (times: number) => {
         const delay = Math.min(times * 50, 2000);
-        logger.warn(`Redis connection retry attempt ${times}, waiting ${delay}ms`);
+        logger.warn(
+          `Redis connection retry attempt ${times}, waiting ${delay}ms`,
+        );
         return delay;
       },
     },
@@ -26,20 +28,24 @@ export function getRedisClient(): ReturnType<typeof createClient> {
     database: env.REDIS_DB,
   });
 
-  client.on('error', (err) => {
-    logger.error('Redis client error', { error: err.message });
+  client.on("error", (err: unknown) => {
+    const errorObj = err instanceof Error ? err : new Error(String(err));
+    logger.error("Redis client error", { error: errorObj.message });
   });
 
-  client.on('connect', () => {
-    logger.info('Redis client connected', { host: env.REDIS_HOST, port: env.REDIS_PORT });
+  client.on("connect", () => {
+    logger.info("Redis client connected", {
+      host: env.REDIS_HOST,
+      port: env.REDIS_PORT,
+    });
   });
 
-  client.on('ready', () => {
-    logger.info('Redis client ready');
+  client.on("ready", () => {
+    logger.info("Redis client ready");
   });
 
-  client.on('reconnecting', () => {
-    logger.warn('Redis client reconnecting');
+  client.on("reconnecting", () => {
+    logger.warn("Redis client reconnecting");
   });
 
   redisClient = client;
@@ -53,7 +59,7 @@ export async function connectRedis(): Promise<void> {
   const client = getRedisClient();
   if (!client.isOpen) {
     await client.connect();
-    logger.info('Redis connection established');
+    logger.info("Redis connection established");
   }
 }
 
@@ -63,7 +69,7 @@ export async function connectRedis(): Promise<void> {
 export async function disconnectRedis(): Promise<void> {
   if (redisClient && redisClient.isOpen) {
     await redisClient.quit();
-    logger.info('Redis connection closed');
+    logger.info("Redis connection closed");
     redisClient = null;
   }
 }
@@ -156,4 +162,3 @@ export const redis = {
 };
 
 export default redis;
-

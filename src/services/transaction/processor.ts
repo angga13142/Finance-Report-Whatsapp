@@ -1,4 +1,5 @@
-import { TransactionType, ApprovalStatus } from "@prisma/client";
+import { TransactionType, ApprovalStatus, Transaction } from "@prisma/client";
+import { Decimal } from "@prisma/client/runtime/library";
 import { TransactionModel } from "../../models/transaction";
 import { TransactionValidator } from "./validator";
 import { logger } from "../../lib/logger";
@@ -19,7 +20,7 @@ export class TransactionProcessor {
     category: string;
     amount: string | number;
     description?: string;
-  }): Promise<{ success: boolean; transaction?: any; error?: string }> {
+  }): Promise<{ success: boolean; transaction?: Transaction; error?: string }> {
     try {
       // Validate transaction data
       const validation = await TransactionValidator.validateTransaction(data);
@@ -74,9 +75,18 @@ export class TransactionProcessor {
   /**
    * Get transaction success message
    */
-  static getSuccessMessage(transaction: any): string {
+  static getSuccessMessage(transaction: {
+    amount: string | number | Decimal;
+    type: string;
+    category: string;
+    timestamp: Date | string;
+  }): string {
     const amount = formatCurrency(transaction.amount);
-    const date = formatDateWITA(transaction.timestamp);
+    const timestamp =
+      transaction.timestamp instanceof Date
+        ? transaction.timestamp
+        : new Date(transaction.timestamp);
+    const date = formatDateWITA(timestamp);
     const typeLabel =
       transaction.type === "income" ? "Pemasukan" : "Pengeluaran";
 

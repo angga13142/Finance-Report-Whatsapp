@@ -41,12 +41,7 @@ export class ListMenu {
         },
       ];
 
-      return new List(
-        "Pilih kategori transaksi:",
-        "Pilih",
-        sections as any,
-        title,
-      );
+      return new List("Pilih kategori transaksi:", "Pilih", sections, title);
     } catch (error) {
       logger.error("Error generating category list", {
         error,

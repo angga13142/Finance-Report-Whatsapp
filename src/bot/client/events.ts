@@ -39,28 +39,33 @@ export function setupEventHandlers(client: Client): void {
   });
 
   // Message event - handle incoming messages
-  client.on("message", async (message: Message) => {
-    try {
-      logger.debug("Message received", {
-        from: message.from,
-        body: message.body?.substring(0, 100) || "", // Log first 100 chars
-        hasMedia: message.hasMedia,
-        type: message.type,
-      });
+  client.on("message", (message: Message) => {
+    void (async () => {
+      try {
+        logger.debug("Message received", {
+          from: message.from,
+          body: message.body?.substring(0, 100) || "", // Log first 100 chars
+          hasMedia: message.hasMedia,
+          type: message.type,
+        });
 
-      // Route message to appropriate handler
-      const { MessageHandler } = await import("../handlers/message");
-      await MessageHandler.routeMessage(message);
-    } catch (error) {
-      logger.error("Error handling message", {
-        error,
-        messageId: message.id._serialized,
-      });
-    }
+        // Route message to appropriate handler
+        const { MessageHandler } = await import("../handlers/message");
+        await MessageHandler.routeMessage(message);
+      } catch (error) {
+        const errorObj =
+          error instanceof Error ? error : new Error(String(error));
+        logger.error("Error handling message", {
+          error: errorObj.message,
+          stack: errorObj.stack,
+          messageId: message.id._serialized,
+        });
+      }
+    })();
   });
 
   // Message create event - handle sent messages
-  client.on("message_create", async (message: Message) => {
+  client.on("message_create", (message: Message) => {
     // Only log if message is from us
     if (message.fromMe) {
       logger.debug("Message sent", {
@@ -71,10 +76,11 @@ export function setupEventHandlers(client: Client): void {
   });
 
   // Error event
-  client.on("error", (error) => {
+  client.on("error", (error: unknown) => {
+    const errorObj = error instanceof Error ? error : new Error(String(error));
     logger.error("WhatsApp client error", {
-      error: error.message,
-      stack: error.stack,
+      error: errorObj.message,
+      stack: errorObj.stack,
     });
   });
 
@@ -102,7 +108,7 @@ export function initializeEventHandlers(): void {
 /**
  * Message routing function (to be implemented in Phase 3)
  */
-export async function routeMessage(message: Message): Promise<void> {
+export function routeMessage(message: Message): void {
   // This will be implemented in Phase 3 with proper message routing
   logger.debug("Message routing not yet implemented", {
     from: message.from,
