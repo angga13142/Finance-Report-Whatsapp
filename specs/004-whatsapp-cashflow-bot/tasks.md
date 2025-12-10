@@ -271,16 +271,16 @@ This document contains actionable, dependency-ordered implementation tasks organ
 
 ### User Story 5 Tasks
 
-- [ ] T089 [US5] Create AuditLog model operations in src/models/audit.ts
-- [ ] T090 [US5] Implement audit logging service in src/services/audit/logger.ts
-- [ ] T091 [US5] Implement user management service in src/services/user/service.ts
-- [ ] T092 [US5] Implement system health monitoring service in src/services/system/health.ts
-- [ ] T093 [US5] Implement Dev role menu handler in src/bot/handlers/admin.ts
-- [ ] T094 [US5] Implement health dashboard handler in src/bot/handlers/admin.ts
-- [ ] T095 [US5] Implement user management handlers (list, add, edit, deactivate) in src/bot/handlers/admin.ts
-- [ ] T096 [US5] Implement audit log query handler in src/bot/handlers/admin.ts
-- [ ] T097 [US5] Implement system configuration handler in src/bot/handlers/admin.ts
-- [ ] T098 [US5] Integrate audit logging into all sensitive operations (create/edit/delete transactions, role changes)
+- [x] T089 [US5] Create AuditLog model operations in src/models/audit.ts
+- [x] T090 [US5] Implement audit logging service in src/services/audit/logger.ts
+- [x] T091 [US5] Implement user management service in src/services/user/service.ts
+- [x] T092 [US5] Implement system health monitoring service in src/services/system/health.ts
+- [x] T093 [US5] Implement Dev role menu handler in src/bot/handlers/admin.ts
+- [x] T094 [US5] Implement health dashboard handler in src/bot/handlers/admin.ts
+- [x] T095 [US5] Implement user management handlers (list, add, edit, deactivate) in src/bot/handlers/admin.ts
+- [x] T096 [US5] Implement audit log query handler in src/bot/handlers/admin.ts
+- [x] T097 [US5] Implement system configuration handler in src/bot/handlers/admin.ts
+- [x] T098 [US5] Integrate audit logging into all sensitive operations (create/edit/delete transactions, role changes)
 
 ---
 

@@ -5,6 +5,7 @@ import { logger } from "../../lib/logger";
 import { UserModel } from "../../models/user";
 import { normalizePhoneNumber } from "../../lib/validation";
 import { User, UserRole } from "@prisma/client";
+import { AuditLogger } from "../audit/logger";
 
 export interface JWTPayload {
   userId: string;
@@ -57,16 +58,23 @@ export class AuthService {
 
       if (!user) {
         logger.warn("User not found", { phoneNumber: normalized });
+        // Log failed auth attempt
+        await AuditLogger.logAuthFailed(normalized, "User not found");
         return null;
       }
 
       if (!user.isActive) {
         logger.warn("User account is deactivated", { userId: user.id });
+        // Log failed auth attempt
+        await AuditLogger.logAuthFailed(normalized, "Account deactivated");
         return null;
       }
 
       // Update last active timestamp
       await UserModel.updateLastActive(user.id);
+
+      // Log successful authentication
+      await AuditLogger.logAuthSuccess(user.id, normalized);
 
       return user;
     } catch (error) {

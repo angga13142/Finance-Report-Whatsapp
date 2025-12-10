@@ -6,6 +6,7 @@ import { logger } from "../../lib/logger";
 import { parseAmount } from "../../lib/currency";
 import { formatCurrency } from "../../lib/currency";
 import { formatDateWITA } from "../../lib/date";
+import { AuditLogger } from "../audit/logger";
 
 /**
  * Transaction processing service
@@ -47,6 +48,14 @@ export class TransactionProcessor {
         amount,
         description: data.description,
         approvalStatus,
+      });
+
+      // Log audit
+      await AuditLogger.logTransactionCreated(data.userId, transaction.id, {
+        type: data.type,
+        category: data.category,
+        amount: transaction.amount.toNumber(),
+        description: data.description,
       });
 
       logger.info("Transaction created successfully", {
