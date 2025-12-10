@@ -52,8 +52,30 @@ export class MessageHandler {
         return;
       }
 
+      // Check for recovery context first (before anything else)
+      const hasRecoverable = await SessionManager.hasRecoverableContext(
+        user.id,
+      );
+      if (hasRecoverable) {
+        const handled = await TransactionHandler.handleRecoveryDecision(
+          user,
+          body,
+          message,
+        );
+        if (handled) {
+          return;
+        }
+      }
+
       // Handle transaction input workflow
       const session = await SessionManager.getSession(user.id);
+
+      // Check if user is in editing mode
+      if (session?.isEditing) {
+        await TransactionHandler.handleEditInput(user, body, message);
+        return;
+      }
+
       if (session?.menu === MENU_STATES.AMOUNT) {
         await TransactionHandler.handleAmountInput(user, body, message);
         return;
@@ -64,8 +86,20 @@ export class MessageHandler {
         return;
       }
 
-      // Default: show main menu
-      await this.handleWelcome(user, message);
+      // Check for retry command
+      if (body === "coba lagi" || body === "retry") {
+        await TransactionHandler.handleRetry(user, message);
+        return;
+      }
+
+      // Default: check for recovery offer, then show main menu
+      const offered = await TransactionHandler.checkAndOfferRecovery(
+        user,
+        message,
+      );
+      if (!offered) {
+        await this.handleWelcome(user, message);
+      }
     } catch (error) {
       logger.error("Error routing message", {
         error,

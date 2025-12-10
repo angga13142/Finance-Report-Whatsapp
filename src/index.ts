@@ -6,6 +6,7 @@ import {
   destroyWhatsAppClient,
 } from "./bot/client/client";
 import { initializeEventHandlers } from "./bot/client/events";
+import { SessionManager } from "./bot/middleware/session";
 import { PrismaClient } from "@prisma/client";
 
 // Initialize Prisma Client
@@ -30,6 +31,10 @@ async function main(): Promise<void> {
     initializeEventHandlers();
     logger.info("WhatsApp client initialized");
 
+    // Start session cleanup interval (Phase 5)
+    SessionManager.startCleanupInterval();
+    logger.info("Session cleanup interval started");
+
     // TODO: Start cron jobs (Phase 4)
     // TODO: Start HTTP server for health checks (Phase 11)
 
@@ -44,6 +49,7 @@ async function main(): Promise<void> {
 process.on("SIGTERM", () => {
   logger.info("SIGTERM received, shutting down gracefully");
   void (async () => {
+    SessionManager.stopCleanupInterval();
     await destroyWhatsAppClient();
     await disconnectRedis();
     await prisma.$disconnect();
@@ -54,6 +60,7 @@ process.on("SIGTERM", () => {
 process.on("SIGINT", () => {
   logger.info("SIGINT received, shutting down gracefully");
   void (async () => {
+    SessionManager.stopCleanupInterval();
     await destroyWhatsAppClient();
     await disconnectRedis();
     await prisma.$disconnect();

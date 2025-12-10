@@ -194,13 +194,13 @@ This document contains actionable, dependency-ordered implementation tasks organ
 
 ### User Story 3 Tasks
 
-- [ ] T069 [US3] Enhance session state management for multi-step workflows in src/bot/middleware/session.ts
-- [ ] T070 [US3] Implement edit field handlers (amount, category, notes) in src/bot/handlers/transaction.ts
-- [ ] T071 [US3] Implement session timeout cleanup (10 minutes) in src/bot/middleware/session.ts
-- [ ] T072 [US3] Implement cancellation workflow handler in src/bot/handlers/transaction.ts
-- [ ] T073 [US3] Implement network interruption recovery with Redis queuing in src/bot/middleware/session.ts
-- [ ] T074 [US3] Implement context preservation across edits in src/bot/handlers/transaction.ts
-- [ ] T075 [US3] Implement pre-filled data retry mechanism in src/bot/handlers/transaction.ts
+- [x] T069 [US3] Enhance session state management for multi-step workflows in src/bot/middleware/session.ts
+- [x] T070 [US3] Implement edit field handlers (amount, category, notes) in src/bot/handlers/transaction.ts
+- [x] T071 [US3] Implement session timeout cleanup (10 minutes) in src/bot/middleware/session.ts
+- [x] T072 [US3] Implement cancellation workflow handler in src/bot/handlers/transaction.ts
+- [x] T073 [US3] Implement network interruption recovery with Redis queuing in src/bot/middleware/session.ts
+- [x] T074 [US3] Implement context preservation across edits in src/bot/handlers/transaction.ts
+- [x] T075 [US3] Implement pre-filled data retry mechanism in src/bot/handlers/transaction.ts
 
 ---
 

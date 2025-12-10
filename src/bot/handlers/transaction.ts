@@ -194,41 +194,467 @@ export class TransactionHandler {
       return;
     }
 
-    // Process transaction
-    const result = await TransactionProcessor.processTransaction({
-      userId: user.id,
-      type: session.transactionType,
-      category: session.category,
-      amount: session.amount,
-      description: session.description,
-    });
+    try {
+      // Save partial data before processing (for network recovery)
+      await SessionManager.savePartialData(user.id, {
+        transactionType: session.transactionType,
+        category: session.category,
+        amount: session.amount,
+        description: session.description,
+      });
 
-    if (!result.success) {
+      // Process transaction
+      const result = await TransactionProcessor.processTransaction({
+        userId: user.id,
+        type: session.transactionType,
+        category: session.category,
+        amount: session.amount,
+        description: session.description,
+      });
+
+      if (!result.success) {
+        await client.sendMessage(
+          message.from,
+          MessageFormatter.formatErrorMessage(
+            result.error || "Gagal menyimpan transaksi",
+          ),
+        );
+        return;
+      }
+
+      // Get daily totals
+      const dailyTotal = await TransactionProcessor.getDailyTotalMessage(
+        user.id,
+      );
+
+      // Send success message
+      const successMsg = result.transaction
+        ? TransactionProcessor.getSuccessMessage({
+            amount: result.transaction.amount,
+            type: result.transaction.type,
+            category: result.transaction.category,
+            timestamp: result.transaction.timestamp,
+          }) + dailyTotal
+        : "Transaksi berhasil disimpan!" + dailyTotal;
+      await client.sendMessage(message.from, successMsg);
+
+      // Clear session and partial data after success
+      await SessionManager.clearSession(user.id);
+      await SessionManager.clearPartialData(user.id);
+    } catch (error) {
+      logger.error("Error confirming transaction", { error, userId: user.id });
       await client.sendMessage(
         message.from,
-        MessageFormatter.formatErrorMessage(
-          result.error || "Gagal menyimpan transaksi",
-        ),
+        "❌ Terjadi kesalahan jaringan. Data Anda telah disimpan dan akan dicoba lagi.\n\nKetik 'coba lagi' untuk melanjutkan.",
+      );
+    }
+  }
+
+  /**
+   * Handle edit amount button click
+   */
+  static async handleEditAmount(user: User, message: Message): Promise<void> {
+    const client = getWhatsAppClient();
+    if (!client) {
+      return;
+    }
+
+    const session = await SessionManager.getSession(user.id);
+    if (!session) {
+      await client.sendMessage(
+        message.from,
+        "❌ Sesi tidak ditemukan. Silakan mulai lagi.",
       );
       return;
     }
 
-    // Get daily totals
-    const dailyTotal = await TransactionProcessor.getDailyTotalMessage(user.id);
+    // Start editing mode
+    await SessionManager.startEditing(user.id, "amount");
 
-    // Send success message
-    const successMsg = result.transaction
-      ? TransactionProcessor.getSuccessMessage({
-          amount: result.transaction.amount,
-          type: result.transaction.type,
-          category: result.transaction.category,
-          timestamp: result.transaction.timestamp,
-        }) + dailyTotal
-      : "Transaksi berhasil disimpan!" + dailyTotal;
-    await client.sendMessage(message.from, successMsg);
+    const currentAmount = session.amount || "tidak ada";
+    await client.sendMessage(
+      message.from,
+      `✏️ *Edit Jumlah*\n\nJumlah saat ini: Rp ${currentAmount}\n\nMasukkan jumlah baru atau ketik 'batal' untuk kembali:`,
+    );
+  }
 
-    // Clear session
-    await SessionManager.clearSession(user.id);
+  /**
+   * Handle edit category button click
+   */
+  static async handleEditCategory(user: User, message: Message): Promise<void> {
+    const client = getWhatsAppClient();
+    if (!client) {
+      return;
+    }
+
+    const session = await SessionManager.getSession(user.id);
+    if (!session) {
+      await client.sendMessage(
+        message.from,
+        "❌ Sesi tidak ditemukan. Silakan mulai lagi.",
+      );
+      return;
+    }
+
+    // Start editing mode
+    await SessionManager.startEditing(user.id, "category");
+
+    const currentCategory = session.category || "tidak ada";
+    const transactionType = session.transactionType || "expense";
+
+    await client.sendMessage(
+      message.from,
+      `✏️ *Edit Kategori*\n\nKategori saat ini: ${currentCategory}`,
+    );
+
+    // Show category list
+    const categoryList =
+      await ListMenu.generateCategoryTextList(transactionType);
+    await client.sendMessage(message.from, categoryList);
+  }
+
+  /**
+   * Handle edit description button click
+   */
+  static async handleEditDescription(
+    user: User,
+    message: Message,
+  ): Promise<void> {
+    const client = getWhatsAppClient();
+    if (!client) {
+      return;
+    }
+
+    const session = await SessionManager.getSession(user.id);
+    if (!session) {
+      await client.sendMessage(
+        message.from,
+        "❌ Sesi tidak ditemukan. Silakan mulai lagi.",
+      );
+      return;
+    }
+
+    // Start editing mode
+    await SessionManager.startEditing(user.id, "description");
+
+    const currentDesc = session.description || "tidak ada";
+    await client.sendMessage(
+      message.from,
+      `✏️ *Edit Catatan*\n\nCatatan saat ini: ${currentDesc}\n\nMasukkan catatan baru, ketik 'hapus' untuk menghapus, atau 'batal' untuk kembali:`,
+    );
+  }
+
+  /**
+   * Handle input during editing mode
+   */
+  static async handleEditInput(
+    user: User,
+    input: string,
+    message: Message,
+  ): Promise<void> {
+    const client = getWhatsAppClient();
+    if (!client) {
+      return;
+    }
+
+    const session = await SessionManager.getSession(user.id);
+    if (!session?.isEditing || !session.editingField) {
+      return;
+    }
+
+    // Check for cancel
+    if (input.toLowerCase() === "batal" || input.toLowerCase() === "cancel") {
+      await SessionManager.cancelEditing(user.id);
+      await this.showConfirmation(user, message);
+      return;
+    }
+
+    const field = session.editingField;
+
+    // Handle different field types
+    switch (field) {
+      case "amount": {
+        const validation = TransactionValidator.validateAmount(input);
+        if (!validation.valid) {
+          await client.sendMessage(
+            message.from,
+            MessageFormatter.formatInvalidInputMessage("Jumlah", [
+              "500000",
+              "500.000",
+              "500,000",
+            ]),
+          );
+          return;
+        }
+
+        await SessionManager.updateSession(user.id, { amount: input });
+        await SessionManager.finishEditing(user.id);
+        await client.sendMessage(message.from, "✅ Jumlah berhasil diubah!");
+        break;
+      }
+
+      case "category": {
+        const category = await ListMenu.findCategoryBySelection(
+          input,
+          session.transactionType || "expense",
+        );
+
+        if (!category) {
+          await client.sendMessage(
+            message.from,
+            "❌ Kategori tidak ditemukan. Silakan pilih lagi.",
+          );
+          return;
+        }
+
+        await SessionManager.updateSession(user.id, {
+          category: category.name,
+        });
+        await SessionManager.finishEditing(user.id);
+        await client.sendMessage(message.from, "✅ Kategori berhasil diubah!");
+        break;
+      }
+
+      case "description": {
+        if (input.toLowerCase() === "hapus") {
+          await SessionManager.updateSession(user.id, {
+            description: undefined,
+          });
+          await SessionManager.finishEditing(user.id);
+          await client.sendMessage(
+            message.from,
+            "✅ Catatan berhasil dihapus!",
+          );
+        } else {
+          await SessionManager.updateSession(user.id, { description: input });
+          await SessionManager.finishEditing(user.id);
+          await client.sendMessage(message.from, "✅ Catatan berhasil diubah!");
+        }
+        break;
+      }
+
+      default:
+        await client.sendMessage(
+          message.from,
+          "❌ Field tidak dikenali. Silakan coba lagi.",
+        );
+        return;
+    }
+
+    // Show updated confirmation
+    await this.showConfirmation(user, message);
+  }
+
+  /**
+   * Show confirmation screen with current data
+   */
+  static async showConfirmation(user: User, message: Message): Promise<void> {
+    const client = getWhatsAppClient();
+    if (!client) {
+      return;
+    }
+
+    const session = await SessionManager.getSession(user.id);
+    if (!session?.transactionType || !session?.category || !session?.amount) {
+      await client.sendMessage(
+        message.from,
+        "❌ Data transaksi tidak lengkap.",
+      );
+      return;
+    }
+
+    const validation = TransactionValidator.validateAmount(session.amount);
+    if (!validation.valid || !validation.parsed) {
+      await client.sendMessage(message.from, "❌ Jumlah tidak valid.");
+      return;
+    }
+
+    const confirmMsg = MessageFormatter.formatConfirmationMessage({
+      type: session.transactionType,
+      category: session.category,
+      amount: validation.parsed,
+      description: session.description ?? undefined,
+      userName: user.name ?? undefined,
+    });
+
+    const confirmButtons = ButtonMenu.generateConfirmationButtons();
+
+    try {
+      await client.sendMessage(message.from, confirmMsg);
+      await client.sendMessage(message.from, confirmButtons);
+    } catch (error) {
+      logger.error("Error sending confirmation", { error });
+      await client.sendMessage(
+        message.from,
+        confirmMsg +
+          '\n\nKetik "ya" untuk simpan atau "batal" untuk membatalkan.',
+      );
+    }
+  }
+
+  /**
+   * Handle workflow cancellation
+   */
+  static async handleCancel(user: User, message: Message): Promise<void> {
+    const client = getWhatsAppClient();
+    if (!client) {
+      return;
+    }
+
+    const session = await SessionManager.getSession(user.id);
+    if (session?.isEditing) {
+      // Cancel editing - restore snapshot
+      await SessionManager.cancelEditing(user.id);
+      await client.sendMessage(
+        message.from,
+        "❌ Edit dibatalkan. Kembali ke data sebelumnya.",
+      );
+      await this.showConfirmation(user, message);
+    } else {
+      // Cancel entire workflow
+      await SessionManager.clearSession(user.id);
+      await SessionManager.clearPartialData(user.id);
+      await client.sendMessage(
+        message.from,
+        "❌ Transaksi dibatalkan. Semua data dihapus.",
+      );
+    }
+  }
+
+  /**
+   * Handle retry from partial data (network recovery)
+   */
+  static async handleRetry(user: User, message: Message): Promise<void> {
+    const client = getWhatsAppClient();
+    if (!client) {
+      return;
+    }
+
+    try {
+      // Check if there's recoverable data
+      const hasRecoverable = await SessionManager.hasRecoverableContext(
+        user.id,
+      );
+      if (!hasRecoverable) {
+        await client.sendMessage(
+          message.from,
+          "❌ Tidak ada data untuk dicoba lagi. Silakan mulai transaksi baru.",
+        );
+        return;
+      }
+
+      // Restore session from partial data
+      const session = await SessionManager.restoreFromPartialData(user.id);
+
+      // Increment retry count
+      const retryCount = await SessionManager.incrementRetryCount(user.id);
+
+      if (retryCount > 3) {
+        await client.sendMessage(
+          message.from,
+          "❌ Terlalu banyak percobaan. Silakan mulai transaksi baru.\n\nData yang tersimpan:\n" +
+            `• Jenis: ${session.transactionType === "income" ? "Penjualan" : "Pengeluaran"}\n` +
+            `• Kategori: ${session.category || "-"}\n` +
+            `• Jumlah: ${session.amount || "-"}\n` +
+            `• Catatan: ${session.description || "-"}`,
+        );
+        await SessionManager.clearPartialData(user.id);
+        return;
+      }
+
+      // Show recovered data with pre-filled information
+      await client.sendMessage(
+        message.from,
+        `🔄 *Data Dipulihkan* (Percobaan ${retryCount}/3)\n\n` +
+          `Jenis: ${session.transactionType === "income" ? "Penjualan" : "Pengeluaran"}\n` +
+          `Kategori: ${session.category || "-"}\n` +
+          `Jumlah: ${session.amount || "-"}\n` +
+          `Catatan: ${session.description || "-"}\n\n` +
+          "Melanjutkan ke konfirmasi...",
+      );
+
+      // Show confirmation with recovered data
+      await SessionManager.updateSession(user.id, {
+        menu: MENU_STATES.CONFIRM,
+      });
+      await this.showConfirmation(user, message);
+    } catch (error) {
+      logger.error("Error handling retry", { error, userId: user.id });
+      await client.sendMessage(
+        message.from,
+        "❌ Gagal memulihkan data. Silakan mulai transaksi baru.",
+      );
+    }
+  }
+
+  /**
+   * Check and offer recovery on user reconnection
+   */
+  static async checkAndOfferRecovery(
+    user: User,
+    message: Message,
+  ): Promise<boolean> {
+    const client = getWhatsAppClient();
+    if (!client) {
+      return false;
+    }
+
+    const hasRecoverable = await SessionManager.hasRecoverableContext(user.id);
+    if (!hasRecoverable) {
+      return false;
+    }
+
+    const partialData = await SessionManager.getPartialData(user.id);
+    if (!partialData) {
+      return false;
+    }
+
+    // Show recovery prompt
+    await client.sendMessage(
+      message.from,
+      `🔄 *Data Transaksi Ditemukan*\n\n` +
+        `Anda memiliki transaksi yang belum selesai:\n` +
+        `• Jenis: ${partialData.transactionType === "income" ? "Penjualan" : "Pengeluaran"}\n` +
+        `• Kategori: ${partialData.category || "-"}\n` +
+        `• Jumlah: ${partialData.amount || "-"}\n\n` +
+        `Ketik 'lanjut' untuk melanjutkan atau 'hapus' untuk menghapus data.`,
+    );
+
+    return true;
+  }
+
+  /**
+   * Handle recovery decision
+   */
+  static async handleRecoveryDecision(
+    user: User,
+    input: string,
+    message: Message,
+  ): Promise<boolean> {
+    const client = getWhatsAppClient();
+    if (!client) {
+      return false;
+    }
+
+    if (
+      input.toLowerCase() === "lanjut" ||
+      input.toLowerCase() === "continue"
+    ) {
+      await this.handleRetry(user, message);
+      return true;
+    } else if (
+      input.toLowerCase() === "hapus" ||
+      input.toLowerCase() === "delete"
+    ) {
+      await SessionManager.clearPartialData(user.id);
+      await client.sendMessage(
+        message.from,
+        "✅ Data dihapus. Anda dapat memulai transaksi baru.",
+      );
+      return true;
+    }
+
+    return false;
   }
 }
 

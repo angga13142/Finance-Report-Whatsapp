@@ -159,6 +159,41 @@ export const redis = {
     }
     await client.publish(channel, message);
   },
+
+  /**
+   * Get keys matching pattern
+   */
+  async keys(pattern: string): Promise<string[]> {
+    const client = getRedisClient();
+    if (!client.isOpen) {
+      await connectRedis();
+    }
+    return await client.keys(pattern);
+  },
+
+  /**
+   * Set if not exists (NX option)
+   */
+  async setNX(
+    key: string,
+    value: string,
+    ttlSeconds?: number,
+  ): Promise<boolean> {
+    const client = getRedisClient();
+    if (!client.isOpen) {
+      await connectRedis();
+    }
+    if (ttlSeconds) {
+      const result = await client.set(key, value, {
+        EX: ttlSeconds,
+        NX: true,
+      });
+      return result === "OK";
+    } else {
+      const result = await client.set(key, value, { NX: true });
+      return result === "OK";
+    }
+  },
 };
 
 export default redis;

@@ -6,7 +6,7 @@ import { SessionManager } from "../middleware/session";
 import { ButtonMenu } from "../ui/buttons";
 import { ListMenu } from "../ui/lists";
 import { MessageFormatter } from "../ui/messages";
-import { TransactionProcessor } from "../../services/transaction/processor";
+import { TransactionHandler } from "./transaction";
 import { getWhatsAppClient } from "../client/client";
 import { MENU_STATES } from "../../config/constants";
 
@@ -128,6 +128,14 @@ export class ButtonHandler {
 
     if (buttonId === "txn_edit_category") {
       await this.handleEditCategory(user, message);
+      return;
+    }
+
+    if (
+      buttonId === "txn_edit_description" ||
+      buttonId === "txn_add_description"
+    ) {
+      await this.handleEditDescription(user, message);
       return;
     }
 
@@ -281,56 +289,8 @@ export class ButtonHandler {
     user: User,
     message: Message,
   ): Promise<void> {
-    const client = getWhatsAppClient();
-    if (!client) {
-      return;
-    }
-
-    const session = await SessionManager.getSession(user.id);
-    if (!session?.transactionType || !session?.category || !session?.amount) {
-      await client.sendMessage(
-        message.from,
-        "❌ Data transaksi tidak lengkap. Silakan mulai lagi.",
-      );
-      await this.handleMainMenu(user, message);
-      return;
-    }
-
-    // Process transaction
-    const result = await TransactionProcessor.processTransaction({
-      userId: user.id,
-      type: session.transactionType,
-      category: session.category,
-      amount: session.amount,
-      description: session.description,
-    });
-
-    if (!result.success) {
-      await client.sendMessage(
-        message.from,
-        MessageFormatter.formatErrorMessage(
-          result.error || "Gagal menyimpan transaksi",
-        ),
-      );
-      return;
-    }
-
-    // Get daily totals
-    const dailyTotal = await TransactionProcessor.getDailyTotalMessage(user.id);
-
-    // Send success message
-    const successMsg = result.transaction
-      ? TransactionProcessor.getSuccessMessage({
-          amount: result.transaction.amount,
-          type: result.transaction.type,
-          category: result.transaction.category,
-          timestamp: result.transaction.timestamp,
-        }) + dailyTotal
-      : "Transaksi berhasil disimpan!" + dailyTotal;
-    await client.sendMessage(message.from, successMsg);
-
-    // Clear session
-    await SessionManager.clearSession(user.id);
+    // Delegate to TransactionHandler for proper confirmation with partial data saving
+    await TransactionHandler.handleConfirm(user, message);
   }
 
   /**
@@ -340,27 +300,8 @@ export class ButtonHandler {
     user: User,
     message: Message,
   ): Promise<void> {
-    const client = getWhatsAppClient();
-    if (!client) {
-      return;
-    }
-
-    const session = await SessionManager.getSession(user.id);
-    if (!session?.category) {
-      await this.handleMainMenu(user, message);
-      return;
-    }
-
-    await SessionManager.updateSession(user.id, {
-      menu: MENU_STATES.AMOUNT,
-      amount: undefined, // Clear amount
-    });
-
-    const prompt = MessageFormatter.formatAmountInputPrompt(
-      session.category,
-      session.amount,
-    );
-    await client.sendMessage(message.from, prompt);
+    // Delegate to TransactionHandler for proper editing workflow
+    await TransactionHandler.handleEditAmount(user, message);
   }
 
   /**
@@ -370,23 +311,19 @@ export class ButtonHandler {
     user: User,
     message: Message,
   ): Promise<void> {
-    const client = getWhatsAppClient();
-    if (!client) {
-      return;
-    }
+    // Delegate to TransactionHandler for proper editing workflow
+    await TransactionHandler.handleEditCategory(user, message);
+  }
 
-    const session = await SessionManager.getSession(user.id);
-    if (!session?.transactionType) {
-      await this.handleMainMenu(user, message);
-      return;
-    }
-
-    await SessionManager.updateSession(user.id, {
-      menu: MENU_STATES.CATEGORY,
-      category: undefined, // Clear category
-    });
-
-    await this.handleTransactionType(user, session.transactionType, message);
+  /**
+   * Handle edit description
+   */
+  private static async handleEditDescription(
+    user: User,
+    message: Message,
+  ): Promise<void> {
+    // Delegate to TransactionHandler for proper editing workflow
+    await TransactionHandler.handleEditDescription(user, message);
   }
 
   /**
@@ -396,13 +333,8 @@ export class ButtonHandler {
     user: User,
     message: Message,
   ): Promise<void> {
-    const client = getWhatsAppClient();
-    if (!client) {
-      return;
-    }
-
-    await SessionManager.clearSession(user.id);
-    await client.sendMessage(message.from, "❌ Transaksi dibatalkan.");
+    // Delegate to TransactionHandler for proper cancellation workflow
+    await TransactionHandler.handleCancel(user, message);
     await this.handleMainMenu(user, message);
   }
 

@@ -70,17 +70,27 @@ export class ButtonMenu {
   }
 
   /**
-   * Generate confirmation buttons
+   * Generate confirmation buttons with edit options
    */
-  static generateConfirmationButtons(): Buttons {
+  static generateConfirmationButtons(hasDescription = false): Buttons {
+    const buttons = [
+      { body: "✅ Ya, Simpan", id: "txn_confirm_yes" },
+      { body: "✏️ Edit Jumlah", id: "txn_edit_amount" },
+      { body: "✏️ Edit Kategori", id: "txn_edit_category" },
+    ];
+
+    // Add edit description button if there's a description
+    if (hasDescription) {
+      buttons.push({ body: "✏️ Edit Catatan", id: "txn_edit_description" });
+    } else {
+      buttons.push({ body: "➕ Tambah Catatan", id: "txn_add_description" });
+    }
+
+    buttons.push({ body: "❌ Batal", id: "txn_cancel" });
+
     return new Buttons(
       "Apakah data sudah benar?",
-      [
-        { body: "✅ Ya, Simpan", id: "txn_confirm_yes" },
-        { body: "✏️ Edit Jumlah", id: "txn_edit_amount" },
-        { body: "✏️ Edit Kategori", id: "txn_edit_category" },
-        { body: "❌ Batal", id: "txn_cancel" },
-      ],
+      buttons,
       "Konfirmasi transaksi:",
     );
   }
