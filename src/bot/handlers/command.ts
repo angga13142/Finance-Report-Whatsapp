@@ -69,6 +69,9 @@ export class CommandHandler {
     this.aliasMap.set("bulk", "bulk");
     this.aliasMap.set("bulk-help", "bulk-help");
     this.aliasMap.set("batch", "bulk");
+    this.aliasMap.set("receipt", "receipt");
+    this.aliasMap.set("receipt-on", "receipt-on");
+    this.aliasMap.set("receipt-off", "receipt-off");
 
     logger.info("Command handler initialized", {
       aliases: Array.from(this.aliasMap.keys()),
@@ -377,6 +380,28 @@ export class CommandHandler {
 
         case "bulk-help":
           await this.handleBulkHelpCommand(message, user.id, user.role);
+          break;
+
+        case "receipt":
+          await this.handleReceiptCommand(message, user.id, user.role);
+          break;
+
+        case "receipt-on":
+          await this.handleReceiptToggleCommand(
+            message,
+            user.id,
+            user.role,
+            true,
+          );
+          break;
+
+        case "receipt-off":
+          await this.handleReceiptToggleCommand(
+            message,
+            user.id,
+            user.role,
+            false,
+          );
           break;
 
         default:
@@ -1114,6 +1139,77 @@ export class CommandHandler {
 
     const { TransactionHandler } = await import("./transaction");
     await TransactionHandler.showBulkEntryHelp(user, message);
+  }
+
+  /**
+   * Handle /receipt command - Show receipt status (Dev only)
+   */
+  private static async handleReceiptCommand(
+    message: Message,
+    _userId: string,
+    userRole: UserRole,
+  ): Promise<void> {
+    if (userRole !== "dev") {
+      await message.reply(
+        "⛔ Akses ditolak. Hanya Dev yang dapat mengakses pengaturan receipt.",
+      );
+      return;
+    }
+
+    const { receiptService } =
+      await import("../../services/notification/receipt");
+    const config = await receiptService.getConfig();
+
+    let statusMsg = "🧾 *RECEIPT NOTIFICATION STATUS*\n\n";
+    statusMsg += `Status: ${config.enabled ? "✅ Enabled" : "❌ Disabled"}\n`;
+    statusMsg += `Send Immediately: ${config.sendImmediately ? "Yes" : "No"}\n`;
+    statusMsg += `Include Details: ${config.includeDetails ? "Yes" : "No"}\n`;
+    statusMsg += `Include Reference: ${config.includeReference ? "Yes" : "No"}\n\n`;
+
+    statusMsg += "*Commands:*\n";
+    statusMsg += "/receipt-on - Enable receipt notifications\n";
+    statusMsg += "/receipt-off - Disable receipt notifications";
+
+    await message.reply(statusMsg);
+  }
+
+  /**
+   * Handle /receipt-on and /receipt-off commands (Dev only)
+   */
+  private static async handleReceiptToggleCommand(
+    message: Message,
+    _userId: string,
+    userRole: UserRole,
+    enable: boolean,
+  ): Promise<void> {
+    if (userRole !== "dev") {
+      await message.reply(
+        "⛔ Akses ditolak. Hanya Dev yang dapat mengubah pengaturan receipt.",
+      );
+      return;
+    }
+
+    const { receiptService } =
+      await import("../../services/notification/receipt");
+
+    if (enable) {
+      await receiptService.updateConfig({ enabled: true }, "dev");
+      await message.reply(
+        "✅ Receipt notifications telah diaktifkan.\n\n" +
+          "User akan menerima konfirmasi otomatis setelah setiap transaksi.",
+      );
+    } else {
+      await receiptService.updateConfig({ enabled: false }, "dev");
+      await message.reply(
+        "❌ Receipt notifications telah dinonaktifkan.\n\n" +
+          "User tidak akan menerima konfirmasi transaksi.",
+      );
+    }
+
+    logger.info("Receipt notifications toggled", {
+      enabled: enable,
+      by: userRole,
+    });
   }
 
   /**
