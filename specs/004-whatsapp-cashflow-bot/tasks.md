@@ -170,10 +170,10 @@ This document contains actionable, dependency-ordered implementation tasks organ
 - [x] T061 [US2] Implement PDF generation with charts in src/services/report/pdf.ts
 - [x] T062 [US2] Implement daily report cron job (23:55 WITA) in src/services/scheduler/daily-report.ts
 - [x] T063 [US2] Implement report delivery service (24:00 WITA) in src/services/scheduler/delivery.ts
-- [ ] T064 [US2] Implement role-based report content filtering in src/services/report/generator.ts
+- [x] T064 [US2] Implement role-based report content filtering in src/services/report/generator.ts
 - [x] T065 [US2] Implement report delivery rate limiting (15-20 msg/min) in src/services/scheduler/delivery.ts
 - [x] T066 [US2] Implement retry logic for failed deliveries (3 retries, 5-min intervals) in src/services/scheduler/delivery.ts
-- [ ] T067 [US2] Implement report drill-down handler in src/bot/handlers/report.ts
+- [x] T067 [US2] Implement report drill-down handler in src/bot/handlers/report.ts
 - [x] T068 [US2] Implement report delivery status tracking in src/models/report.ts
 
 ---
