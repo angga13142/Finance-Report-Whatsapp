@@ -371,17 +371,17 @@ This document contains actionable, dependency-ordered implementation tasks organ
 
 ### Low-Priority Features (Phase 2+)
 
-- [ ] T177 [FR-022] Implement user profile viewing (phone, name, role, registration date) in src/bot/handlers/profile.ts
-- [ ] T178 [FR-024] Implement account deletion request workflow in src/bot/handlers/profile.ts
+- [x] T177 [FR-022] Implement user profile viewing (phone, name, role, registration date) in src/bot/handlers/profile.ts
+- [x] T178 [FR-024] Implement account deletion request workflow in src/bot/handlers/profile.ts
 - [ ] T179 [FR-025] Implement user activity summary display for Boss/Dev in src/bot/handlers/admin.ts
-- [ ] T180 [FR-034] Implement keyboard shortcuts for power users (number shortcuts: 1, 2, 3) in src/bot/handlers/command.ts
+- [x] T180 [FR-034] Implement keyboard shortcuts for power users (number shortcuts: 1, 2, 3) in src/bot/handlers/command.ts
 - [ ] T181 [FR-038] Implement button label customization by Dev role in src/services/system/config.ts
 - [ ] T182 [FR-040] Implement full localization support (Indonesian with English fallback) in src/lib/i18n.ts
 - [ ] T183 [FR-064] Implement saved report templates for Boss in src/services/report/templates.ts
 - [ ] T184 [FR-065] Implement custom report scheduling (beyond 24:00) in src/services/scheduler/custom.ts
 - [ ] T185 [FR-074] Implement bulk transaction entry for Power Users (Dev/Boss) in src/bot/handlers/transaction.ts
-- [ ] T186 [FR-078] Implement transaction editing after submission (same-day edits, previous day by Boss/Dev) in src/bot/handlers/transaction.ts
-- [ ] T187 [FR-079] Implement transaction deletion (soft delete) with Boss/Dev permission in src/services/transaction/processor.ts
+- [x] T186 [FR-078] Implement transaction editing after submission (same-day edits, previous day by Boss/Dev) in src/bot/handlers/transaction.ts
+- [x] T187 [FR-079] Implement transaction deletion (soft delete) with Boss/Dev permission in src/services/transaction/processor.ts
 - [ ] T188 [FR-080] Implement receipt SMS/WhatsApp confirmation (optional, Dev-enabled) in src/services/notification/receipt.ts
 - [ ] T189 [FR-085] Implement recommendation dismissal tracking in src/models/recommendation.ts
 - [ ] T190 [FR-087] Implement recommendation learning from user acknowledgment patterns in src/services/recommendation/learning.ts

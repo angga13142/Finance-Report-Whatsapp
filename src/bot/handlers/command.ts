@@ -51,6 +51,15 @@ export class CommandHandler {
     this.aliasMap.set("reject", "reject");
     this.aliasMap.set("setujui", "approve");
     this.aliasMap.set("tolak", "reject");
+    this.aliasMap.set("profile", "profile");
+    this.aliasMap.set("profil", "profile");
+    this.aliasMap.set("akun", "profile");
+    this.aliasMap.set("delete-account", "delete-account");
+    this.aliasMap.set("hapus-akun", "delete-account");
+    this.aliasMap.set("edit", "edit");
+    this.aliasMap.set("ubah", "edit");
+    this.aliasMap.set("delete", "delete");
+    this.aliasMap.set("hapus", "delete");
 
     logger.info("Command handler initialized", {
       aliases: Array.from(this.aliasMap.keys()),
@@ -62,6 +71,12 @@ export class CommandHandler {
    */
   static parseCommand(text: string): ParsedCommand | null {
     const trimmed = text.trim();
+
+    // Check for number shortcuts (1-9)
+    const numberShortcut = this.parseNumberShortcut(trimmed);
+    if (numberShortcut) {
+      return numberShortcut;
+    }
 
     // Check if it starts with / or is a known command
     if (!trimmed.startsWith("/") && !this.isKnownCommand(trimmed)) {
@@ -87,6 +102,44 @@ export class CommandHandler {
     return {
       command: resolvedCommand,
       args,
+      rawText: text,
+    };
+  }
+
+  /**
+   * Parse number shortcuts (1-9)
+   * Maps to menu selections based on context
+   */
+  private static parseNumberShortcut(text: string): ParsedCommand | null {
+    const match = text.match(/^([1-9])$/);
+    if (!match) {
+      return null;
+    }
+
+    const number = parseInt(match[1], 10);
+
+    // Map numbers to common menu items
+    // This provides quick access shortcuts
+    const shortcutMap: Record<number, string> = {
+      1: "record", // Catat Transaksi
+      2: "report", // Lihat Laporan
+      3: "menu", // Menu Utama
+      4: "help", // Bantuan
+      5: "profile", // Profil
+      6: "pending", // Pending Approvals (Boss)
+      7: "recommendations", // Rekomendasi
+      8: "admin", // Admin Menu (Dev)
+      9: "start", // Start Over
+    };
+
+    const command = shortcutMap[number];
+    if (!command) {
+      return null;
+    }
+
+    return {
+      command,
+      args: [],
       rawText: text,
     };
   }
@@ -234,6 +287,42 @@ export class CommandHandler {
 
         case "reject":
           await this.handleRejectCommand(
+            message,
+            user.id,
+            user.role,
+            parsed.args,
+          );
+          break;
+
+        case "profile":
+          await this.handleProfileCommand(
+            message,
+            user.id,
+            user.role,
+            parsed.args,
+          );
+          break;
+
+        case "delete-account":
+          await this.handleDeleteAccountCommand(
+            message,
+            user.id,
+            user.role,
+            parsed.args,
+          );
+          break;
+
+        case "edit":
+          await this.handleEditCommand(
+            message,
+            user.id,
+            user.role,
+            parsed.args,
+          );
+          break;
+
+        case "delete":
+          await this.handleDeleteCommand(
             message,
             user.id,
             user.role,
@@ -698,6 +787,192 @@ export class CommandHandler {
   ): Promise<void> {
     const { RecommendationHandler } = await import("./recommendation");
     await RecommendationHandler.handleListActive(message, userId, userRole);
+  }
+
+  /**
+   * Handle /edit command - Edit transaction
+   */
+  private static async handleEditCommand(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    args: string[],
+  ): Promise<void> {
+    if (args.length < 3) {
+      await message.reply(
+        "❌ Format: `/edit <transaction-id> <field> <new-value>`\n\n" +
+          "Field yang bisa diedit:\n" +
+          "• `amount` - Jumlah (contoh: 50000)\n" +
+          "• `category` - Kategori (contoh: Transport)\n" +
+          "• `description` - Catatan\n\n" +
+          "Contoh:\n" +
+          "`/edit abc123 amount 75000`\n" +
+          "`/edit abc123 category Makan`\n" +
+          "`/edit abc123 description Makan siang`\n\n" +
+          "Note: Same-day edits untuk owner, previous day untuk Boss/Dev",
+      );
+      return;
+    }
+
+    const transactionId = args[0];
+    const field = args[1].toLowerCase();
+    const newValue = args.slice(2).join(" ");
+
+    const { TransactionEditor } =
+      await import("../../services/transaction/editor");
+
+    let result;
+    switch (field) {
+      case "amount":
+      case "jumlah":
+        result = await TransactionEditor.editAmount(
+          transactionId,
+          newValue,
+          userId,
+          userRole,
+        );
+        break;
+
+      case "category":
+      case "kategori":
+        result = await TransactionEditor.editCategory(
+          transactionId,
+          newValue,
+          userId,
+          userRole,
+        );
+        break;
+
+      case "description":
+      case "catatan":
+      case "keterangan":
+        result = await TransactionEditor.editDescription(
+          transactionId,
+          newValue,
+          userId,
+          userRole,
+        );
+        break;
+
+      default:
+        await message.reply(
+          `❌ Field tidak valid: \`${field}\`\n\n` +
+            "Field yang bisa diedit: amount, category, description",
+        );
+        return;
+    }
+
+    if (result.success && result.transaction) {
+      const { formatCurrency } = await import("../../lib/currency");
+      await message.reply(
+        `✅ Transaksi berhasil diupdate!\n\n` +
+          `ID: ${transactionId}\n` +
+          `Jumlah: ${formatCurrency(result.transaction.amount)}\n` +
+          `Kategori: ${result.transaction.category}\n` +
+          `Catatan: ${result.transaction.description || "-"}`,
+      );
+    } else {
+      await message.reply(`❌ Gagal mengedit transaksi: ${result.error}`);
+    }
+  }
+
+  /**
+   * Handle /delete command - Delete transaction (Boss/Dev only)
+   */
+  private static async handleDeleteCommand(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    args: string[],
+  ): Promise<void> {
+    // Check role
+    if (userRole !== "boss" && userRole !== "dev") {
+      await message.reply(
+        "❌ Command ini hanya untuk Boss dan Dev.\n\n" +
+          "Anda tidak memiliki akses untuk menghapus transaksi.",
+      );
+      return;
+    }
+
+    if (args.length === 0) {
+      await message.reply(
+        "❌ Format: `/delete <transaction-id> [reason]`\n\n" +
+          "Contoh:\n" +
+          "`/delete abc123`\n" +
+          "`/delete abc123 Data duplikat`\n\n" +
+          "Note: Penghapusan bersifat soft delete (tidak permanen)",
+      );
+      return;
+    }
+
+    const transactionId = args[0];
+    const reason = args.slice(1).join(" ") || undefined;
+
+    const { TransactionProcessor } =
+      await import("../../services/transaction/processor");
+
+    const result = await TransactionProcessor.deleteTransaction(
+      transactionId,
+      userId,
+      userRole,
+      reason,
+    );
+
+    if (result.success) {
+      await message.reply(
+        `✅ Transaksi berhasil dihapus!\n\n` +
+          `ID: ${transactionId}\n` +
+          `${reason ? `Alasan: ${reason}\n` : ""}` +
+          `\nTransaksi telah di-soft delete dan tercatat di audit log.`,
+      );
+    } else {
+      await message.reply(`❌ Gagal menghapus transaksi: ${result.error}`);
+    }
+  }
+
+  /**
+   * Handle /profile command
+   */
+  private static async handleProfileCommand(
+    message: Message,
+    userId: string,
+    _userRole: UserRole,
+    _args: string[],
+  ): Promise<void> {
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      await message.reply("❌ User tidak ditemukan");
+      return;
+    }
+
+    const { ProfileHandler } = await import("./profile");
+    await ProfileHandler.handleProfileView(user, message);
+  }
+
+  /**
+   * Handle /delete-account command
+   */
+  private static async handleDeleteAccountCommand(
+    message: Message,
+    userId: string,
+    _userRole: UserRole,
+    args: string[],
+  ): Promise<void> {
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      await message.reply("❌ User tidak ditemukan");
+      return;
+    }
+
+    const { ProfileHandler } = await import("./profile");
+
+    // If no args, show confirmation request
+    if (args.length === 0) {
+      await ProfileHandler.handleAccountDeletionRequest(user, message);
+    } else {
+      // Handle confirmation
+      await ProfileHandler.handleAccountDeletionConfirm(user, args[0], message);
+    }
   }
 
   /**

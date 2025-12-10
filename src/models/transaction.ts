@@ -486,6 +486,41 @@ export class TransactionModel {
       `Failed to update transaction: ${lastError?.message || "Unknown error"}`,
     );
   }
+
+  /**
+   * Soft delete transaction by marking description with [DELETED] prefix
+   * We don't actually delete to maintain audit trail
+   */
+  static async softDelete(
+    id: string,
+    deletedBy: string,
+    reason?: string,
+  ): Promise<Transaction> {
+    try {
+      const transaction = await this.findById(id);
+      if (!transaction) {
+        throw new Error("Transaction not found");
+      }
+
+      const deletedDescription = `[DELETED by ${deletedBy}${reason ? `: ${reason}` : ""}] ${transaction.description || ""}`;
+
+      return await prisma.transaction.update({
+        where: { id },
+        data: {
+          description: deletedDescription,
+          amount: new Decimal(0), // Zero out amount
+          version: { increment: 1 },
+        },
+        include: {
+          user: true,
+          approver: true,
+        },
+      });
+    } catch (error) {
+      logger.error("Error soft deleting transaction", { error, id });
+      throw error;
+    }
+  }
 }
 
 export default TransactionModel;

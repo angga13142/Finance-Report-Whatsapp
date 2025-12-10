@@ -1,4 +1,4 @@
-import { TransactionType, Transaction } from "@prisma/client";
+import { TransactionType, Transaction, UserRole } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { TransactionModel } from "../../models/transaction";
 import { TransactionValidator } from "./validator";
@@ -141,6 +141,71 @@ export class TransactionProcessor {
     } catch (error) {
       logger.error("Error getting daily totals", { error, userId });
       return "";
+    }
+  }
+
+  /**
+   * Delete transaction (soft delete with Boss/Dev permission)
+   */
+  static async deleteTransaction(
+    transactionId: string,
+    userId: string,
+    userRole: UserRole,
+    reason?: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Only Boss and Dev can delete transactions
+      if (userRole !== "boss" && userRole !== "dev") {
+        return {
+          success: false,
+          error: "Hanya Boss dan Dev yang dapat menghapus transaksi",
+        };
+      }
+
+      // Get transaction
+      const transaction = await TransactionModel.findById(transactionId);
+      if (!transaction) {
+        return { success: false, error: "Transaksi tidak ditemukan" };
+      }
+
+      // Check if already deleted
+      if (transaction.description?.startsWith("[DELETED")) {
+        return { success: false, error: "Transaksi sudah dihapus" };
+      }
+
+      // Soft delete
+      await TransactionModel.softDelete(transactionId, userId, reason);
+
+      // Log audit trail
+      await AuditLogger.log(
+        "transaction_deleted",
+        {
+          transactionId,
+          originalAmount: transaction.amount.toString(),
+          category: transaction.category,
+          type: transaction.type,
+          deletedBy: userId,
+          reason: reason || "No reason provided",
+        },
+        userId,
+        transactionId,
+        "Transaction",
+      );
+
+      logger.info("Transaction deleted", {
+        transactionId,
+        userId,
+        userRole,
+      });
+
+      return { success: true };
+    } catch (error) {
+      logger.error("Error deleting transaction", { error, transactionId });
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Gagal menghapus transaksi",
+      };
     }
   }
 }
