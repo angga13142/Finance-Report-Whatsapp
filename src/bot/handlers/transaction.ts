@@ -179,7 +179,7 @@ export class TransactionHandler {
   /**
    * Handle transaction confirmation (from text input "ya" or button)
    */
-  static async handleConfirm(user: any, message: Message): Promise<void> {
+  static async handleConfirm(user: User, message: Message): Promise<void> {
     const client = getWhatsAppClient();
     if (!client) {
       return;

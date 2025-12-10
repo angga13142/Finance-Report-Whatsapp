@@ -409,7 +409,7 @@ export class ButtonHandler {
   /**
    * Handle back navigation
    */
-  private static async handleBack(user: any, message: Message): Promise<void> {
+  private static async handleBack(user: User, message: Message): Promise<void> {
     const client = getWhatsAppClient();
     if (!client) {
       return;
@@ -434,7 +434,7 @@ export class ButtonHandler {
   /**
    * Handle help
    */
-  private static async handleHelp(user: any, message: Message): Promise<void> {
+  private static async handleHelp(user: User, message: Message): Promise<void> {
     const client = getWhatsAppClient();
     if (!client) {
       return;

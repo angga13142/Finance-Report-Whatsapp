@@ -41,7 +41,7 @@ export class MessageHandler {
       const body = message.body?.trim().toLowerCase() || "";
 
       // Check if it's a button callback (button responses come as text)
-      if (await this.isButtonResponse(message, user)) {
+      if (this.isButtonResponse(message, user)) {
         await ButtonHandler.handleButton(message);
         return;
       }
@@ -77,7 +77,7 @@ export class MessageHandler {
   /**
    * Handle welcome message (first interaction)
    */
-  static async handleWelcome(user: any, message: Message): Promise<void> {
+  static async handleWelcome(user: User, message: Message): Promise<void> {
     const client = getWhatsAppClient();
     if (!client) {
       return;
@@ -151,7 +151,7 @@ export class MessageHandler {
   /**
    * Handle help command
    */
-  private static async handleHelp(user: any, message: Message): Promise<void> {
+  private static async handleHelp(user: User, message: Message): Promise<void> {
     const client = getWhatsAppClient();
     if (!client) {
       return;
@@ -194,10 +194,7 @@ export class MessageHandler {
   /**
    * Check if message is a button response
    */
-  private static async isButtonResponse(
-    message: Message,
-    _user: User,
-  ): Promise<boolean> {
+  private static isButtonResponse(message: Message, _user: User): boolean {
     const body = message.body?.trim() || "";
 
     // Button responses typically come as text with button ID

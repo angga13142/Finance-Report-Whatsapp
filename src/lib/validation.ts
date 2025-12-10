@@ -141,10 +141,13 @@ export function sanitizeString(input: string): string {
 
   // Remove null bytes and control characters
   // eslint-disable-next-line no-control-regex
-  return input
-    .replace(/\0/g, "")
-    .replace(/[\x00-\x1F\x7F]/g, "")
-    .trim();
+  return (
+    input
+      .replace(/\0/g, "")
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\x00-\x1F\x7F]/g, "")
+      .trim()
+  );
 }
 
 /**
