@@ -3,14 +3,11 @@
  * Tests recommendation learning and performance tracking
  */
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let mockPrismaInstance: any;
+
 import { RecommendationLearningService } from "../../../../src/services/recommendation/learning";
 import type { LearningData } from "../../../../src/services/recommendation/learning";
-
-// Mock Prisma
-let mockPrismaInstance: {
-  $executeRaw: jest.Mock;
-  $queryRaw: jest.Mock;
-};
 
 jest.mock("@prisma/client", () => {
   const mockInstance = {

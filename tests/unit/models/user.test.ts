@@ -3,18 +3,11 @@
  * Tests user CRUD operations, phone number normalization, role management, etc.
  */
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let mockPrismaInstance: any;
+
 import { UserModel } from "../../../src/models/user";
 import type { UserRole } from "@prisma/client";
-
-// Mock Prisma - use var to avoid TDZ issues with jest.mock hoisting
-let mockPrismaInstance: {
-  user: {
-    findUnique: jest.Mock;
-    findMany: jest.Mock;
-    create: jest.Mock;
-    update: jest.Mock;
-  };
-};
 
 jest.mock("@prisma/client", () => {
   // Create mock instance inside factory

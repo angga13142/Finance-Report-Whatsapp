@@ -3,12 +3,10 @@
  * Tests trend detection and monthly insights generation
  */
 
-import { TrendingInsightsService } from "../../../../src/services/recommendation/trending";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let mockPrismaInstance: any;
 
-// Mock Prisma
-let mockPrismaInstance: {
-  $queryRaw: jest.Mock;
-};
+import { TrendingInsightsService } from "../../../../src/services/recommendation/trending";
 
 jest.mock("@prisma/client", () => {
   const mockInstance = {

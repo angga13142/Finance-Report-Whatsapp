@@ -5,16 +5,11 @@
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let mockPrismaInstance: any;
+
 import FinancialAnomalyAnalyzer from "../../../../src/services/recommendation/analyzer";
 import { Decimal } from "@prisma/client/runtime/library";
-
-// Mock Prisma
-let mockPrismaInstance: {
-  transaction: {
-    aggregate: jest.Mock;
-    findMany: jest.Mock;
-  };
-};
 
 jest.mock("@prisma/client", () => {
   const mockInstance = {

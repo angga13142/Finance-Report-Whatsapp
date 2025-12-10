@@ -3,14 +3,11 @@
  * Tests custom recommendation rules CRUD operations and rule evaluation
  */
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let mockPrismaInstance: any;
+
 import { CustomRulesService } from "../../../../src/services/recommendation/rules";
 import type { RecommendationRule } from "../../../../src/services/recommendation/rules";
-
-// Mock Prisma
-let mockPrismaInstance: {
-  $queryRaw: jest.Mock;
-  $executeRaw: jest.Mock;
-};
 
 jest.mock("@prisma/client", () => {
   const mockInstance = {
