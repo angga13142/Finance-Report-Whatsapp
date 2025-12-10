@@ -145,6 +145,179 @@ export class ButtonMenu {
   }
 
   /**
+   * Generate numbered text menu with title and footer
+   */
+  static generateNumberedTextMenu(
+    title: string,
+    items: Array<{ label: string; id: string }>,
+    footer?: string,
+  ): string {
+    let menu = `📋 *${title}*\n\n`;
+
+    items.forEach((item, index) => {
+      menu += `${index + 1}. ${item.label}\n`;
+    });
+
+    if (footer) {
+      menu += `\n${footer}`;
+    } else {
+      menu += `\n_Ketik nomor (1-${items.length}) untuk memilih_`;
+    }
+
+    return menu;
+  }
+
+  /**
+   * Generate role-specific text menu as fallback
+   */
+  static generateRoleTextMenu(role: UserRole): string {
+    const items: Array<{ label: string; id: string }> = [];
+
+    // Transaction options
+    if (RBACService.canCreateTransaction(role)) {
+      items.push({
+        label: "💰 Catat Penjualan",
+        id: this.getButtonId("💰 Catat Penjualan"),
+      });
+      items.push({
+        label: "💸 Catat Pengeluaran",
+        id: this.getButtonId("💸 Catat Pengeluaran"),
+      });
+    }
+
+    // Report options
+    if (RBACService.canViewReports(role)) {
+      items.push({
+        label: "📊 Lihat Laporan",
+        id: this.getButtonId("📊 Lihat Laporan"),
+      });
+    }
+
+    // Help
+    items.push({
+      label: "❓ Bantuan",
+      id: this.getButtonId("❓ Bantuan"),
+    });
+
+    // Admin options
+    if (role === USER_ROLES.DEV || role === USER_ROLES.BOSS) {
+      items.push({
+        label: "⚙️ Pengaturan",
+        id: this.getButtonId("⚙️ Pengaturan"),
+      });
+    }
+
+    return this.generateNumberedTextMenu(
+      "Menu Utama",
+      items,
+      "_Anda juga bisa gunakan command: /menu, /help, /catat, /laporan_",
+    );
+  }
+
+  /**
+   * Generate transaction type text menu
+   */
+  static generateTransactionTypeTextMenu(): string {
+    const items = [
+      { label: "💰 Penjualan (Income)", id: "txn_type_income" },
+      { label: "💸 Pengeluaran (Expense)", id: "txn_type_expense" },
+      { label: "🔙 Kembali ke Menu", id: "menu_main" },
+    ];
+
+    return this.generateNumberedTextMenu(
+      "Jenis Transaksi",
+      items,
+      "_Pilih jenis transaksi yang ingin dicatat_",
+    );
+  }
+
+  /**
+   * Generate confirmation text menu
+   */
+  static generateConfirmationTextMenu(hasDescription = false): string {
+    const items = [
+      { label: "✅ Ya, Simpan Transaksi", id: "txn_confirm_yes" },
+      { label: "✏️ Edit Jumlah", id: "txn_edit_amount" },
+      { label: "✏️ Edit Kategori", id: "txn_edit_category" },
+    ];
+
+    if (hasDescription) {
+      items.push({ label: "✏️ Edit Catatan", id: "txn_edit_description" });
+    } else {
+      items.push({ label: "➕ Tambah Catatan", id: "txn_add_description" });
+    }
+
+    items.push({ label: "❌ Batal Transaksi", id: "txn_cancel" });
+
+    return this.generateNumberedTextMenu(
+      "Konfirmasi Transaksi",
+      items,
+      "_Pastikan data sudah benar sebelum menyimpan_",
+    );
+  }
+
+  /**
+   * Generate report type text menu
+   */
+  static generateReportTypeTextMenu(): string {
+    const items = [
+      { label: "📅 Laporan Harian", id: "report_daily" },
+      { label: "📆 Laporan Mingguan", id: "report_weekly" },
+      { label: "📊 Laporan Bulanan", id: "report_monthly" },
+      { label: "📈 Laporan Custom", id: "report_custom" },
+      { label: "🔙 Kembali ke Menu", id: "menu_main" },
+    ];
+
+    return this.generateNumberedTextMenu(
+      "Pilih Jenis Laporan",
+      items,
+      "_Command: /laporan [daily/weekly/monthly]_",
+    );
+  }
+
+  /**
+   * Parse numbered selection from text
+   */
+  static parseNumberedSelection(
+    text: string,
+    items: Array<{ label: string; id: string }>,
+  ): string | null {
+    const trimmed = text.trim();
+
+    // Check if it's a number
+    const num = parseInt(trimmed, 10);
+
+    if (isNaN(num) || num < 1 || num > items.length) {
+      return null;
+    }
+
+    // Return the ID of the selected item
+    return items[num - 1].id;
+  }
+
+  /**
+   * Send menu with button fallback
+   * Tries to send buttons first, falls back to numbered text menu
+   */
+  static async sendMenuWithFallback(
+    message: { reply: (content: string | Buttons) => Promise<void> },
+    buttons: Buttons,
+    textMenuItems: Array<{ label: string; id: string }>,
+    title: string,
+  ): Promise<boolean> {
+    try {
+      // Try to send buttons
+      await message.reply(buttons);
+      return true;
+    } catch {
+      // Fallback to numbered text menu
+      const textMenu = this.generateNumberedTextMenu(title, textMenuItems);
+      await message.reply(textMenu);
+      return false;
+    }
+  }
+
+  /**
    * Validate button label length
    */
   static validateButtonLabel(label: string): boolean {

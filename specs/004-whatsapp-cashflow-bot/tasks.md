@@ -349,9 +349,9 @@ This document contains actionable, dependency-ordered implementation tasks organ
 
 ### Text Command Fallbacks
 
-- [ ] T118 Implement text command parser (/start, /help, /menu, /laporan, /catat) in src/bot/handlers/command.ts
-- [ ] T119 Implement command routing to appropriate handlers in src/bot/handlers/command.ts
-- [ ] T120 Implement numbered text menu fallback for button rendering failures in src/bot/ui/buttons.ts
+- [x] T118 Implement text command parser (/start, /help, /menu, /laporan, /catat) in src/bot/handlers/command.ts
+- [x] T119 Implement command routing to appropriate handlers in src/bot/handlers/command.ts
+- [x] T120 Implement numbered text menu fallback for button rendering failures in src/bot/ui/buttons.ts
 
 ### Error Handling & Recovery
 

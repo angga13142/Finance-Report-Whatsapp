@@ -187,6 +187,41 @@ export class MessageFormatter {
       `⏰ Sesi Anda telah berakhir.\n\n` + `Silakan mulai lagi dari menu utama.`
     );
   }
+
+  /**
+   * Format numbered menu selection help
+   */
+  static formatNumberedMenuHelp(): string {
+    return (
+      `💡 *Cara Menggunakan Menu:*\n\n` +
+      `1️⃣ Ketik nomor menu yang ingin dipilih (1, 2, 3, dst)\n` +
+      `2️⃣ Atau gunakan command dengan / (contoh: /menu, /help)\n` +
+      `3️⃣ Atau klik button jika tersedia\n\n` +
+      `_Ketik /help untuk panduan lengkap_`
+    );
+  }
+
+  /**
+   * Format button fallback notice
+   */
+  static formatButtonFallbackNotice(): string {
+    return (
+      `ℹ️ Button tidak tersedia di device Anda.\n` +
+      `Gunakan nomor (1, 2, 3, dst) atau command (/) untuk navigasi.\n\n` +
+      `Ketik /help untuk panduan.`
+    );
+  }
+
+  /**
+   * Format invalid selection message
+   */
+  static formatInvalidSelectionMessage(maxOptions: number): string {
+    return (
+      `❌ Pilihan tidak valid.\n\n` +
+      `Silakan ketik nomor 1-${maxOptions} atau gunakan command.\n` +
+      `Ketik /menu untuk kembali ke menu utama.`
+    );
+  }
 }
 
 export default MessageFormatter;
