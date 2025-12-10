@@ -60,7 +60,7 @@ function maskSensitiveData(data: unknown): unknown {
     // Mask API keys
     masked = masked.replace(
       /(["\s:=]+)([a-zA-Z0-9_-]{16,})/g,
-      (match: string, prefix: string, key: string) => {
+      (_match: string, prefix: string, key: string) => {
         const lastFour = key.slice(-4);
         return `${prefix}****${lastFour}`;
       },
