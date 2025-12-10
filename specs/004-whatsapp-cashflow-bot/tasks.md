@@ -300,14 +300,14 @@ This document contains actionable, dependency-ordered implementation tasks organ
 
 ### User Story 4 Tasks
 
-- [ ] T099 [US4] Implement investor-specific report aggregation (no individual transactions) in src/services/report/generator.ts
-- [ ] T100 [US4] Implement monthly report generation trigger in src/services/scheduler/daily-report.ts
-- [ ] T101 [US4] Implement 7-day moving average calculation in src/services/report/generator.ts
-- [ ] T102 [US4] Implement 90-day trend analysis service in src/services/report/trend.ts
-- [ ] T103 [US4] Implement investment insights generation in src/services/report/insights.ts
-- [ ] T104 [US4] Implement period comparison service (vs last month, vs targets) in src/services/report/comparison.ts
-- [ ] T105 [US4] Implement variance analysis (>15% threshold) in src/services/report/comparison.ts
-- [ ] T106 [US4] Implement investor menu handler with [📈 Analisis Trend] and [💡 Insight Investasi] in src/bot/handlers/investor.ts
+- [x] T099 [US4] Implement investor-specific report aggregation (no individual transactions) in src/services/report/generator.ts
+- [x] T100 [US4] Implement monthly report generation trigger in src/services/scheduler/daily-report.ts
+- [x] T101 [US4] Implement 7-day moving average calculation in src/services/report/generator.ts
+- [x] T102 [US4] Implement 90-day trend analysis service in src/services/report/trend.ts
+- [x] T103 [US4] Implement investment insights generation in src/services/report/insights.ts
+- [x] T104 [US4] Implement period comparison service (vs last month, vs targets) in src/services/report/comparison.ts
+- [x] T105 [US4] Implement variance analysis (>15% threshold) in src/services/report/comparison.ts
+- [x] T106 [US4] Implement investor menu handler with [📈 Analisis Trend] and [💡 Insight Investasi] in src/bot/handlers/investor.ts
 
 ---
 

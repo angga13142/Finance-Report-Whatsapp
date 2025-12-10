@@ -507,6 +507,148 @@ export class ReportGenerator {
 
     return reportData;
   }
+
+  /**
+   * Calculate 7-day moving average for investor reports
+   * @param endDate - End date for the period
+   * @returns Moving average for income, expense, and net cashflow
+   */
+  static async calculate7DayMovingAverage(endDate: Date): Promise<{
+    avgIncome: Decimal;
+    avgExpense: Decimal;
+    avgNetCashflow: Decimal;
+    periodStart: Date;
+    periodEnd: Date;
+  }> {
+    const periodEnd = new Date(endDate);
+    periodEnd.setHours(23, 59, 59, 999);
+
+    const periodStart = new Date(endDate);
+    periodStart.setDate(periodStart.getDate() - 6); // 7 days including today
+    periodStart.setHours(0, 0, 0, 0);
+
+    logger.debug("Calculating 7-day moving average", {
+      periodStart,
+      periodEnd,
+    });
+
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        timestamp: {
+          gte: periodStart,
+          lte: periodEnd,
+        },
+        approvalStatus: "approved",
+      },
+      select: {
+        amount: true,
+        type: true,
+        timestamp: true,
+      },
+    });
+
+    // Group by day and calculate daily totals
+    const dailyTotals = new Map<
+      string,
+      { income: Decimal; expense: Decimal }
+    >();
+
+    for (const tx of transactions) {
+      const dateKey = tx.timestamp.toISOString().split("T")[0];
+      if (!dailyTotals.has(dateKey)) {
+        dailyTotals.set(dateKey, {
+          income: new Decimal(0),
+          expense: new Decimal(0),
+        });
+      }
+
+      const day = dailyTotals.get(dateKey)!;
+      if (tx.type === "income") {
+        day.income = day.income.plus(tx.amount);
+      } else {
+        day.expense = day.expense.plus(tx.amount);
+      }
+    }
+
+    // Calculate averages across 7 days
+    let totalIncome = new Decimal(0);
+    let totalExpense = new Decimal(0);
+    const days = 7;
+
+    for (const daily of Array.from(dailyTotals.values())) {
+      totalIncome = totalIncome.plus(daily.income);
+      totalExpense = totalExpense.plus(daily.expense);
+    }
+
+    const avgIncome = totalIncome.dividedBy(days);
+    const avgExpense = totalExpense.dividedBy(days);
+    const avgNetCashflow = avgIncome.minus(avgExpense);
+
+    return {
+      avgIncome,
+      avgExpense,
+      avgNetCashflow,
+      periodStart,
+      periodEnd,
+    };
+  }
+
+  /**
+   * Generate investor-specific daily aggregated summary
+   * No individual transactions visible, only aggregated metrics
+   */
+  static async generateInvestorDailySummary(date: Date): Promise<{
+    date: Date;
+    totalRevenue: Decimal;
+    totalExpense: Decimal;
+    netProfit: Decimal;
+    profitMargin: number;
+    transactionCount: number;
+    movingAverage: {
+      avgIncome: Decimal;
+      avgExpense: Decimal;
+      avgNetCashflow: Decimal;
+    };
+  }> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Get daily summary
+    const whereClause = {
+      timestamp: {
+        gte: startOfDay,
+        lte: endOfDay,
+      },
+      approvalStatus: "approved",
+    };
+
+    const summary = await this.calculateSummary(whereClause);
+
+    // Calculate 7-day moving average
+    const movingAvg = await this.calculate7DayMovingAverage(date);
+
+    // Calculate profit margin
+    const profitMargin = summary.totalIncome.greaterThan(0)
+      ? summary.netCashflow.dividedBy(summary.totalIncome).times(100).toNumber()
+      : 0;
+
+    return {
+      date,
+      totalRevenue: summary.totalIncome,
+      totalExpense: summary.totalExpense,
+      netProfit: summary.netCashflow,
+      profitMargin,
+      transactionCount: summary.transactionCount,
+      movingAverage: {
+        avgIncome: movingAvg.avgIncome,
+        avgExpense: movingAvg.avgExpense,
+        avgNetCashflow: movingAvg.avgNetCashflow,
+      },
+    };
+  }
 }
 
 export default ReportGenerator;

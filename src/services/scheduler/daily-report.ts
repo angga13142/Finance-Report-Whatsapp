@@ -132,6 +132,9 @@ export class DailyReportJob {
       // Check for negative cashflow alerts
       await this.checkNegativeCashflowAlert(reportDate);
 
+      // Check if it's the last day of the month - trigger monthly analysis
+      await this.checkMonthlyReportTrigger(reportDate);
+
       const duration = Date.now() - startTime;
       logger.info("Daily report generation job completed", {
         duration: `${duration}ms`,
@@ -261,6 +264,91 @@ export class DailyReportJob {
       }
     } catch (error) {
       logger.error("Failed to check negative cashflow alert", { error });
+      // Don't throw - this is a non-critical feature
+    }
+  }
+
+  /**
+   * Check if it's month boundary and trigger detailed monthly analysis
+   */
+  private static async checkMonthlyReportTrigger(
+    reportDate: Date,
+  ): Promise<void> {
+    try {
+      // Check if this is the last day of the month
+      const tomorrow = new Date(reportDate);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      // If tomorrow is the 1st of next month, generate monthly report
+      if (tomorrow.getDate() === 1) {
+        logger.info("Month boundary detected - generating monthly analysis", {
+          reportDate,
+          month: reportDate.getMonth() + 1,
+          year: reportDate.getFullYear(),
+        });
+
+        // Generate monthly reports for all roles
+        const monthlyReportData =
+          await ReportGenerator.generateMonthlyReport(reportDate);
+
+        // Create monthly report records
+        for (const [role, data] of Array.from(monthlyReportData.entries())) {
+          const report = await prisma.report.create({
+            data: {
+              reportDate,
+              reportType: "monthly",
+              totalIncome: data.summary.totalIncome,
+              totalExpense: data.summary.totalExpense,
+              netCashflow: data.summary.netCashflow,
+              jsonSummary: {
+                role,
+                reportPeriod: "monthly",
+                month: reportDate.getMonth() + 1,
+                year: reportDate.getFullYear(),
+                transactionCount: data.summary.transactionCount,
+                incomeCount: data.summary.incomeCount,
+                expenseCount: data.summary.expenseCount,
+                avgTransaction: data.summary.avgTransaction.toString(),
+                categoryBreakdown: data.categoryBreakdown.map((cat) => ({
+                  category: cat.category,
+                  amount: cat.amount.toString(),
+                  count: cat.count,
+                  percentage: cat.percentage,
+                })),
+                topTransactions: data.topTransactions
+                  .slice(0, 10)
+                  .map((txn) => ({
+                    id: txn.id,
+                    type: txn.type,
+                    category: txn.category,
+                    amount: txn.amount.toString(),
+                    description: txn.description,
+                    timestamp: txn.timestamp.toISOString(),
+                    userName: txn.userName,
+                  })),
+                trends: data.trends,
+              },
+              deliveryStatus: {
+                status: "pending",
+                attempts: 0,
+                lastAttempt: null,
+                error: null,
+              },
+            },
+          });
+
+          logger.info("Monthly report record created", {
+            reportId: report.id,
+            role,
+            month: reportDate.getMonth() + 1,
+            year: reportDate.getFullYear(),
+          });
+        }
+
+        logger.info("Monthly analysis generation completed");
+      }
+    } catch (error) {
+      logger.error("Failed to check/generate monthly report", { error });
       // Don't throw - this is a non-critical feature
     }
   }
