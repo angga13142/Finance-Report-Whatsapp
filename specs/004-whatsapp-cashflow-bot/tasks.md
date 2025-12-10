@@ -327,17 +327,17 @@ This document contains actionable, dependency-ordered implementation tasks organ
 
 ### User Story 7 Tasks
 
-- [ ] T107 [US7] Create Recommendation model operations in src/models/recommendation.ts
-- [ ] T108 [US7] Implement recommendation engine core in src/services/recommendation/engine.ts
-- [ ] T109 [US7] Implement financial anomaly analyzer in src/services/recommendation/analyzer.ts
-- [ ] T110 [US7] Implement confidence score calculator (0-100%) in src/services/recommendation/confidence.ts
-- [ ] T111 [US7] Implement expense spike detection (>30% threshold) in src/services/recommendation/analyzer.ts
-- [ ] T112 [US7] Implement revenue decline detection (>15% threshold) in src/services/recommendation/analyzer.ts
-- [ ] T113 [US7] Implement negative cashflow detection (3+ days) in src/services/recommendation/analyzer.ts
-- [ ] T114 [US7] Implement alert delivery gating (Critical + ≥80% confidence) in src/services/recommendation/engine.ts
-- [ ] T115 [US7] Implement recommendation delivery service in src/services/recommendation/delivery.ts
-- [ ] T116 [US7] Implement recommendation dismissal tracking in src/models/recommendation.ts
-- [ ] T117 [US7] Implement recommendation action buttons ([📊 Lihat Detail], [💬 Diskusi dengan Tim]) in src/bot/handlers/recommendation.ts
+- [x] T107 [US7] Create Recommendation model operations in src/models/recommendation.ts
+- [x] T108 [US7] Implement recommendation engine core in src/services/recommendation/engine.ts
+- [x] T109 [US7] Implement financial anomaly analyzer in src/services/recommendation/analyzer.ts
+- [x] T110 [US7] Implement confidence score calculator (0-100%) in src/services/recommendation/confidence.ts
+- [x] T111 [US7] Implement expense spike detection (>30% threshold) in src/services/recommendation/analyzer.ts
+- [x] T112 [US7] Implement revenue decline detection (>15% threshold) in src/services/recommendation/analyzer.ts
+- [x] T113 [US7] Implement negative cashflow detection (3+ days) in src/services/recommendation/analyzer.ts
+- [x] T114 [US7] Implement alert delivery gating (Critical + ≥80% confidence) in src/services/recommendation/engine.ts
+- [x] T115 [US7] Implement recommendation delivery service in src/services/recommendation/delivery.ts
+- [x] T116 [US7] Implement recommendation dismissal tracking in src/models/recommendation.ts
+- [x] T117 [US7] Implement recommendation action buttons ([📊 Lihat Detail], [💬 Diskusi dengan Tim]) in src/bot/handlers/recommendation.ts
 
 ---
 
