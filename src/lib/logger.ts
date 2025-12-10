@@ -42,12 +42,16 @@ function maskSensitiveData(data: unknown): unknown {
     masked = masked.replace(/Rp\s*[\d.,]+/g, "Rp ******.***");
 
     // Mask KTP numbers (Indonesian ID)
-    masked = masked.replace(SENSITIVE_PATTERNS.ktpNumber, "****-****-****-****");
+    masked = masked.replace(
+      SENSITIVE_PATTERNS.ktpNumber,
+      "****-****-****-****",
+    );
 
     // Mask email addresses
     masked = masked.replace(SENSITIVE_PATTERNS.email, (match) => {
       const [local, domain] = match.split("@");
-      const maskedLocal = local.charAt(0) + "***" + local.charAt(local.length - 1);
+      const maskedLocal =
+        local.charAt(0) + "***" + local.charAt(local.length - 1);
       return `${maskedLocal}@${domain}`;
     });
 
@@ -55,7 +59,10 @@ function maskSensitiveData(data: unknown): unknown {
     masked = masked.replace(SENSITIVE_PATTERNS.jwtToken, "eyJ***[REDACTED]***");
 
     // Mask database URLs
-    masked = masked.replace(SENSITIVE_PATTERNS.databaseUrl, "postgres://***[REDACTED]***");
+    masked = masked.replace(
+      SENSITIVE_PATTERNS.databaseUrl,
+      "postgres://***[REDACTED]***",
+    );
 
     // Mask API keys
     masked = masked.replace(
@@ -77,7 +84,9 @@ function maskSensitiveData(data: unknown): unknown {
 
   if (typeof data === "object" && data !== null && !Array.isArray(data)) {
     const masked: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
+    for (const [key, value] of Object.entries(
+      data as Record<string, unknown>,
+    )) {
       // Check if key indicates sensitive data
       const keyLower = key.toLowerCase();
       if (
@@ -98,7 +107,10 @@ function maskSensitiveData(data: unknown): unknown {
             masked[key] = `+62 ****${lastFour}`;
           } else if (keyLower.includes("amount")) {
             masked[key] = "Rp ******.***";
-          } else if (keyLower.includes("password") || keyLower.includes("secret")) {
+          } else if (
+            keyLower.includes("password") ||
+            keyLower.includes("secret")
+          ) {
             masked[key] = "***[REDACTED]***";
           } else {
             const lastFour = String(value).slice(-4);
@@ -144,7 +156,10 @@ export const logger = winston.createLogger({
           winston.format.colorize(),
           winston.format.printf((info) => {
             const masked = maskSensitiveData(info);
-            const { timestamp, level, message, ...meta } = masked as Record<string, unknown>;
+            const { timestamp, level, message, ...meta } = masked as Record<
+              string,
+              unknown
+            >;
             const metaStr = Object.keys(meta).length
               ? JSON.stringify(meta, null, 2)
               : "";

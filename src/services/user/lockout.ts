@@ -77,9 +77,7 @@ export class AccountLockoutService {
    * @param phoneNumber - User's phone number
    * @returns Lockout status with details
    */
-  static getAccountLockoutStatus(
-    phoneNumber: string,
-  ): {
+  static getAccountLockoutStatus(phoneNumber: string): {
     isLocked: boolean;
     remainingMinutes?: number;
     failedAttempts?: number;
@@ -114,7 +112,10 @@ export class AccountLockoutService {
       });
 
       // Log admin action
-      await AuditLogger.logAuthFailed(phoneNumber, "Manual unlock requested by admin");
+      await AuditLogger.logAuthFailed(
+        phoneNumber,
+        "Manual unlock requested by admin",
+      );
 
       // TODO: Implement actual unlock once Prisma is regenerated
     } catch (error) {
@@ -137,7 +138,9 @@ export class AccountLockoutService {
     lockedUntil: Date;
   }> {
     try {
-      logger.info("Fetching locked accounts list (pending Prisma regeneration)");
+      logger.info(
+        "Fetching locked accounts list (pending Prisma regeneration)",
+      );
       return [];
       // TODO: Implement after Prisma regeneration
     } catch (error) {

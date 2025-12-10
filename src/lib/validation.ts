@@ -42,9 +42,14 @@ export function normalizePhoneNumber(phoneNumber: string): string {
     return "+62" + cleaned.substring(1);
   }
 
+  // Add + if starts with 62 but no +
+  if (cleaned.startsWith("62") && !cleaned.startsWith("+62")) {
+    return "+" + cleaned;
+  }
+
   // Ensure +62 prefix
   if (!cleaned.startsWith("+62")) {
-    throw new Error("Phone number must start with +62 or 0");
+    throw new Error("Phone number must start with +62, 62, or 0");
   }
 
   return cleaned;
@@ -241,7 +246,9 @@ export function validateCategory(
   const categoryRegex = /^[a-zA-Z0-9\s\-]+$/;
 
   if (!categoryRegex.test(category)) {
-    throw new Error(`${fieldName} can only contain letters, numbers, spaces, and hyphens`);
+    throw new Error(
+      `${fieldName} can only contain letters, numbers, spaces, and hyphens`,
+    );
   }
 
   return true;
@@ -402,7 +409,9 @@ export function validateItemList(
   }
 
   if (items.length > maxItems) {
-    throw new Error(`${fieldName} must not contain more than ${maxItems} items`);
+    throw new Error(
+      `${fieldName} must not contain more than ${maxItems} items`,
+    );
   }
 
   // Validate all items are strings

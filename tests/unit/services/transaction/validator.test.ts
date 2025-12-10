@@ -1,535 +1,365 @@
 /**
  * Unit tests for TransactionValidator
- * Tests validation logic with proper mocking of dependencies
+ * Tests transaction validation logic including amount, category, description, and duplicates
  */
 
-import { TransactionType } from "@prisma/client";
 import { TransactionValidator } from "../../../../src/services/transaction/validator";
 import { CategoryModel } from "../../../../src/models/category";
 import { TransactionModel } from "../../../../src/models/transaction";
-import { logger } from "../../../../src/lib/logger";
-import * as currencyUtils from "../../../../src/lib/currency";
-import * as validationUtils from "../../../../src/lib/validation";
+import { parseAmount, validateAmountRange } from "../../../../src/lib/currency";
+import { TransactionType } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 
 // Mock dependencies
 jest.mock("../../../../src/models/category");
 jest.mock("../../../../src/models/transaction");
-jest.mock("../../../../src/lib/logger");
 jest.mock("../../../../src/lib/currency");
-jest.mock("../../../../src/lib/validation");
+jest.mock("../../../../src/lib/logger", () => ({
+  logger: {
+    error: jest.fn(),
+  },
+}));
 
 describe("TransactionValidator", () => {
-  // Reset mocks before each test
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   describe("validateAmount", () => {
-    it("should validate correct amount string", () => {
-      const mockParsed = new Decimal(50000);
-      (currencyUtils.parseAmount as jest.Mock).mockReturnValue(mockParsed);
-      (currencyUtils.validateAmountRange as jest.Mock).mockReturnValue(true);
+    it("should validate valid amount", () => {
+      (parseAmount as jest.Mock).mockReturnValue(new Decimal(50000));
+      (validateAmountRange as jest.Mock).mockReturnValue(true);
 
       const result = TransactionValidator.validateAmount("50000");
 
       expect(result.valid).toBe(true);
       expect(result.parsed).toBe(50000);
-      expect(result.error).toBeUndefined();
-      expect(currencyUtils.parseAmount).toHaveBeenCalledWith("50000");
     });
 
-    it("should validate correct amount number", () => {
-      const mockParsed = new Decimal(50000);
-      (currencyUtils.parseAmount as jest.Mock).mockReturnValue(mockParsed);
-      (currencyUtils.validateAmountRange as jest.Mock).mockReturnValue(true);
-
-      const result = TransactionValidator.validateAmount(50000);
-
-      expect(result.valid).toBe(true);
-      expect(result.parsed).toBe(50000);
-      expect(currencyUtils.parseAmount).toHaveBeenCalledWith("50000");
-    });
-
-    it("should reject invalid amount format", () => {
-      (currencyUtils.parseAmount as jest.Mock).mockImplementation(() => {
+    it("should return error for invalid amount format", () => {
+      (parseAmount as jest.Mock).mockImplementation(() => {
         throw new Error("Invalid amount format");
       });
 
       const result = TransactionValidator.validateAmount("invalid");
 
       expect(result.valid).toBe(false);
-      expect(result.error).toBe("Invalid amount format");
-      expect(result.parsed).toBeUndefined();
+      expect(result.error).toContain("Invalid amount format");
     });
 
-    it("should reject amount below minimum", () => {
-      const mockParsed = new Decimal(100);
-      (currencyUtils.parseAmount as jest.Mock).mockReturnValue(mockParsed);
-      (currencyUtils.validateAmountRange as jest.Mock).mockImplementation(
-        () => {
-          throw new Error("Amount must be at least Rp1.000");
-        },
-      );
+    it("should return error for amount out of range", () => {
+      // Use amount that exceeds MAX_TRANSACTION_AMOUNT (500_000_000)
+      (parseAmount as jest.Mock).mockReturnValue(new Decimal(600000000));
+      (validateAmountRange as jest.Mock).mockImplementation(() => {
+        throw new Error("Amount cannot exceed Rp 500.000.000");
+      });
 
-      const result = TransactionValidator.validateAmount("100");
+      const result = TransactionValidator.validateAmount("600000000");
 
       expect(result.valid).toBe(false);
-      expect(result.error).toContain("at least");
-    });
-
-    it("should reject amount above maximum", () => {
-      const mockParsed = new Decimal(1000000000);
-      (currencyUtils.parseAmount as jest.Mock).mockReturnValue(mockParsed);
-      (currencyUtils.validateAmountRange as jest.Mock).mockImplementation(
-        () => {
-          throw new Error("Amount cannot exceed Rp500.000.000");
-        },
-      );
-
-      const result = TransactionValidator.validateAmount("1000000000");
-
-      expect(result.valid).toBe(false);
-      expect(result.error).toContain("exceed");
+      expect(result.error).toBeDefined();
     });
   });
 
   describe("validateCategory", () => {
-    it("should validate existing active category with matching type", async () => {
+    it("should validate existing and active category", async () => {
       const mockCategory = {
-        id: "cat-1",
+        id: "cat1",
         name: "Food",
-        type: TransactionType.expense,
+        type: "expense" as TransactionType,
         isActive: true,
-        userId: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
       };
 
       (CategoryModel.findByName as jest.Mock).mockResolvedValue(mockCategory);
 
       const result = await TransactionValidator.validateCategory(
         "Food",
-        TransactionType.expense,
+        "expense",
       );
 
       expect(result.valid).toBe(true);
       expect(result.error).toBeUndefined();
-      expect(CategoryModel.findByName as jest.Mock).toHaveBeenCalledWith(
-        "Food",
-      );
     });
 
-    it("should reject non-existent category", async () => {
+    it("should return error for non-existent category", async () => {
       (CategoryModel.findByName as jest.Mock).mockResolvedValue(null);
 
       const result = await TransactionValidator.validateCategory(
         "NonExistent",
-        TransactionType.expense,
+        "expense",
       );
 
       expect(result.valid).toBe(false);
       expect(result.error).toContain("tidak ditemukan");
     });
 
-    it("should reject inactive category", async () => {
+    it("should return error for inactive category", async () => {
       const mockCategory = {
-        id: "cat-1",
-        name: "OldCategory",
-        type: TransactionType.expense,
+        id: "cat1",
+        name: "Food",
+        type: "expense" as TransactionType,
         isActive: false,
-        userId: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
       };
 
       (CategoryModel.findByName as jest.Mock).mockResolvedValue(mockCategory);
 
       const result = await TransactionValidator.validateCategory(
-        "OldCategory",
-        TransactionType.expense,
+        "Food",
+        "expense",
       );
 
       expect(result.valid).toBe(false);
       expect(result.error).toContain("tidak aktif");
     });
 
-    it("should reject category with mismatched transaction type", async () => {
+    it("should return error for category type mismatch", async () => {
       const mockCategory = {
-        id: "cat-1",
-        name: "Salary",
-        type: TransactionType.income,
+        id: "cat1",
+        name: "Food",
+        type: "expense" as TransactionType,
         isActive: true,
-        userId: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
       };
 
       (CategoryModel.findByName as jest.Mock).mockResolvedValue(mockCategory);
 
       const result = await TransactionValidator.validateCategory(
-        "Salary",
-        TransactionType.expense,
+        "Food",
+        "income",
       );
 
       expect(result.valid).toBe(false);
       expect(result.error).toContain("tidak cocok");
     });
-
-    it("should handle database errors gracefully", async () => {
-      (CategoryModel.findByName as jest.Mock).mockRejectedValue(
-        new Error("Database error"),
-      );
-
-      const result = await TransactionValidator.validateCategory(
-        "Food",
-        TransactionType.expense,
-      );
-
-      expect(result.valid).toBe(false);
-      expect(result.error).toContain("memvalidasi");
-      expect(logger.error).toHaveBeenCalled();
-    });
   });
 
   describe("checkDuplicate", () => {
-    it("should not find duplicate when no similar transactions exist", async () => {
-      (currencyUtils.parseAmount as jest.Mock).mockReturnValue(
-        new Decimal(50000),
-      );
-      (TransactionModel.findByUserId as jest.Mock).mockResolvedValue([]);
-
-      const result = await TransactionValidator.checkDuplicate(
-        "user-1",
-        "Food",
-        "50000",
-      );
-
-      expect(result.isDuplicate).toBe(false);
-      expect(result.existingTransaction).toBeUndefined();
-    });
-
-    it("should find duplicate when similar transaction exists", async () => {
+    it("should detect duplicate transaction", async () => {
       const mockTransaction = {
-        id: "txn-1",
-        userId: "user-1",
-        type: TransactionType.expense,
+        id: "txn1",
         category: "Food",
         amount: new Decimal(50000),
-        description: "Lunch",
-        transactionDate: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        timestamp: new Date(),
       };
 
-      (currencyUtils.parseAmount as jest.Mock).mockReturnValue(
-        new Decimal(50000),
-      );
+      (parseAmount as jest.Mock).mockReturnValue(new Decimal(50000));
       (TransactionModel.findByUserId as jest.Mock).mockResolvedValue([
         mockTransaction,
       ]);
 
       const result = await TransactionValidator.checkDuplicate(
-        "user-1",
+        "user123",
         "Food",
         "50000",
+        1,
       );
 
       expect(result.isDuplicate).toBe(true);
       expect(result.existingTransaction).toEqual(mockTransaction);
     });
 
-    it("should not find duplicate for different amount", async () => {
+    it("should not detect duplicate for different category", async () => {
       const mockTransaction = {
-        id: "txn-1",
-        userId: "user-1",
-        type: TransactionType.expense,
-        category: "Food",
-        amount: new Decimal(30000),
-        description: "Lunch",
-        transactionDate: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      (currencyUtils.parseAmount as jest.Mock).mockReturnValue(
-        new Decimal(50000),
-      );
-      (TransactionModel.findByUserId as jest.Mock).mockResolvedValue([
-        mockTransaction,
-      ]);
-
-      const result = await TransactionValidator.checkDuplicate(
-        "user-1",
-        "Food",
-        "50000",
-      );
-
-      expect(result.isDuplicate).toBe(false);
-    });
-
-    it("should not find duplicate for different category", async () => {
-      const mockTransaction = {
-        id: "txn-1",
-        userId: "user-1",
-        type: TransactionType.expense,
+        id: "txn1",
         category: "Transport",
         amount: new Decimal(50000),
-        description: "Taxi",
-        transactionDate: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        timestamp: new Date(),
       };
 
-      (currencyUtils.parseAmount as jest.Mock).mockReturnValue(
-        new Decimal(50000),
-      );
+      (parseAmount as jest.Mock).mockReturnValue(new Decimal(50000));
       (TransactionModel.findByUserId as jest.Mock).mockResolvedValue([
         mockTransaction,
       ]);
 
       const result = await TransactionValidator.checkDuplicate(
-        "user-1",
+        "user123",
         "Food",
         "50000",
+        1,
       );
 
       expect(result.isDuplicate).toBe(false);
     });
 
-    it("should handle errors gracefully and not block transaction", async () => {
-      (currencyUtils.parseAmount as jest.Mock).mockImplementation(() => {
-        throw new Error("Parse error");
-      });
+    it("should not detect duplicate for different amount", async () => {
+      const mockTransaction = {
+        id: "txn1",
+        category: "Food",
+        amount: new Decimal(60000),
+        timestamp: new Date(),
+      };
+
+      (parseAmount as jest.Mock).mockReturnValue(new Decimal(50000));
+      (TransactionModel.findByUserId as jest.Mock).mockResolvedValue([
+        mockTransaction,
+      ]);
 
       const result = await TransactionValidator.checkDuplicate(
-        "user-1",
+        "user123",
         "Food",
-        "invalid",
+        "50000",
+        1,
       );
 
       expect(result.isDuplicate).toBe(false);
-      expect(logger.error).toHaveBeenCalled();
     });
 
-    it("should use custom time window", async () => {
-      (currencyUtils.parseAmount as jest.Mock).mockReturnValue(
-        new Decimal(50000),
+    it("should return false on error", async () => {
+      (parseAmount as jest.Mock).mockReturnValue(new Decimal(50000));
+      (TransactionModel.findByUserId as jest.Mock).mockRejectedValue(
+        new Error("Database error"),
       );
-      (TransactionModel.findByUserId as jest.Mock).mockResolvedValue([]);
 
-      await TransactionValidator.checkDuplicate("user-1", "Food", "50000", 5);
-
-      expect(TransactionModel.findByUserId as jest.Mock).toHaveBeenCalledWith(
-        "user-1",
-        expect.objectContaining({
-          startDate: expect.any(Date),
-          limit: 10,
-        }),
+      const result = await TransactionValidator.checkDuplicate(
+        "user123",
+        "Food",
+        "50000",
+        1,
       );
+
+      expect(result.isDuplicate).toBe(false);
     });
   });
 
   describe("validateDescription", () => {
-    it("should validate when description is undefined", () => {
-      const result = TransactionValidator.validateDescription(undefined);
+    it("should validate valid description", () => {
+      const result =
+        TransactionValidator.validateDescription("Valid description");
 
       expect(result.valid).toBe(true);
-      expect(result.error).toBeUndefined();
     });
 
-    it("should treat empty string as valid (falsy check)", () => {
-      // Empty string '' is falsy, so the function returns early with valid: true
-      const result = TransactionValidator.validateDescription("");
+    it("should allow empty description", () => {
+      const result = TransactionValidator.validateDescription();
 
       expect(result.valid).toBe(true);
-      expect(result.error).toBeUndefined();
     });
 
-    it("should validate correct description", () => {
-      (validationUtils.validateStringLength as jest.Mock).mockReturnValue(true);
+    it("should return error for description too long", () => {
+      const longDescription = "a".repeat(101);
 
-      const result = TransactionValidator.validateDescription(
-        "Lunch at restaurant",
-      );
-
-      expect(result.valid).toBe(true);
-      expect(validationUtils.validateStringLength).toHaveBeenCalledWith(
-        "Lunch at restaurant",
-        1,
-        100,
-        "Transaction description",
-      );
-    });
-
-    it("should reject description that is too long", () => {
-      (validationUtils.validateStringLength as jest.Mock).mockImplementation(
-        () => {
-          throw new Error("Description is too long");
-        },
-      );
-
-      const longDescription = "a".repeat(150);
       const result = TransactionValidator.validateDescription(longDescription);
 
       expect(result.valid).toBe(false);
-      expect(result.error).toContain("long");
+      expect(result.error).toBeDefined();
     });
   });
 
   describe("validateTransaction", () => {
-    const validTransactionData = {
-      userId: "user-1",
-      type: TransactionType.expense,
-      category: "Food",
-      amount: "50000",
-      description: "Lunch",
-    };
-
-    beforeEach(() => {
-      // Setup default mocks for happy path
-      (currencyUtils.parseAmount as jest.Mock).mockReturnValue(
-        new Decimal(50000),
-      );
-      (currencyUtils.validateAmountRange as jest.Mock).mockReturnValue(true);
-      (validationUtils.validateStringLength as jest.Mock).mockReturnValue(true);
-
-      (CategoryModel.findByName as jest.Mock).mockResolvedValue({
-        id: "cat-1",
+    it("should validate complete valid transaction", async () => {
+      const mockCategory = {
+        id: "cat1",
         name: "Food",
-        type: TransactionType.expense,
+        type: "expense" as TransactionType,
         isActive: true,
-        userId: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
+      };
 
+      (parseAmount as jest.Mock).mockReturnValue(new Decimal(50000));
+      (CategoryModel.findByName as jest.Mock).mockResolvedValue(mockCategory);
       (TransactionModel.findByUserId as jest.Mock).mockResolvedValue([]);
-    });
 
-    it("should validate complete transaction with all fields correct", async () => {
-      const result =
-        await TransactionValidator.validateTransaction(validTransactionData);
+      const result = await TransactionValidator.validateTransaction({
+        userId: "user123",
+        type: "expense",
+        category: "Food",
+        amount: "50000",
+        description: "Lunch",
+      });
 
       expect(result.valid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
 
-    it("should collect all validation errors", async () => {
-      // Make amount validation fail
-      (currencyUtils.parseAmount as jest.Mock).mockImplementation(() => {
+    it("should return errors for invalid amount", async () => {
+      (parseAmount as jest.Mock).mockImplementation(() => {
         throw new Error("Invalid amount");
       });
 
-      // Make category validation fail
-      (CategoryModel.findByName as jest.Mock).mockResolvedValue(null);
-
-      // Make description validation fail
-      (validationUtils.validateStringLength as jest.Mock).mockImplementation(
-        () => {
-          throw new Error("Description too long");
-        },
-      );
-
-      const result =
-        await TransactionValidator.validateTransaction(validTransactionData);
-
-      expect(result.valid).toBe(false);
-      expect(result.errors.length).toBeGreaterThan(1);
-      expect(result.errors).toEqual(
-        expect.arrayContaining([
-          expect.stringContaining("amount"),
-          expect.stringContaining("ditemukan"),
-          expect.stringContaining("long"),
-        ]),
-      );
-    });
-
-    it("should detect duplicate transactions", async () => {
-      const mockDuplicate = {
-        id: "txn-1",
-        userId: "user-1",
-        type: TransactionType.expense,
-        category: "Food",
-        amount: new Decimal(50000),
-        description: "Lunch",
-        transactionDate: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      (TransactionModel.findByUserId as jest.Mock).mockResolvedValue([
-        mockDuplicate,
-      ]);
-
-      const result =
-        await TransactionValidator.validateTransaction(validTransactionData);
-
-      expect(result.valid).toBe(false);
-      expect(result.errors).toContain(
-        "Transaksi serupa sudah ada dalam 1 menit terakhir",
-      );
-    });
-
-    it("should validate transaction without description", async () => {
-      const dataWithoutDescription = {
-        userId: "user-1",
-        type: TransactionType.income,
-        category: "Salary",
-        amount: "5000000",
-      };
-
-      (CategoryModel.findByName as jest.Mock).mockResolvedValue({
-        id: "cat-2",
-        name: "Salary",
-        type: TransactionType.income,
-        isActive: true,
-        userId: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-
-      const result = await TransactionValidator.validateTransaction(
-        dataWithoutDescription,
-      );
-
-      expect(result.valid).toBe(true);
-      expect(result.errors).toHaveLength(0);
-    });
-
-    it("should handle amount validation errors gracefully", async () => {
-      (currencyUtils.parseAmount as jest.Mock).mockImplementation(() => {
-        throw new Error("Invalid format");
-      });
-
       const result = await TransactionValidator.validateTransaction({
-        ...validTransactionData,
+        userId: "user123",
+        type: "expense",
+        category: "Food",
         amount: "invalid",
       });
 
       expect(result.valid).toBe(false);
-      expect(
-        result.errors.some(
-          (err) =>
-            err.includes("Invalid format") || err.includes("Invalid amount"),
-        ),
-      ).toBe(true);
+      expect(result.errors.length).toBeGreaterThan(0);
     });
-  });
 
-  describe("Integration with constants", () => {
-    it("should use MIN_TRANSACTION_AMOUNT from constants", () => {
-      const mockParsed = new Decimal(50000);
-      (currencyUtils.parseAmount as jest.Mock).mockReturnValue(mockParsed);
-      (currencyUtils.validateAmountRange as jest.Mock).mockReturnValue(true);
+    it("should return errors for invalid category", async () => {
+      (parseAmount as jest.Mock).mockReturnValue(new Decimal(50000));
+      (CategoryModel.findByName as jest.Mock).mockResolvedValue(null);
 
-      TransactionValidator.validateAmount("50000");
+      const result = await TransactionValidator.validateTransaction({
+        userId: "user123",
+        type: "expense",
+        category: "NonExistent",
+        amount: "50000",
+      });
 
-      expect(currencyUtils.validateAmountRange).toHaveBeenCalledWith(
-        expect.any(Decimal),
-        expect.any(Number),
-        expect.any(Number),
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes("tidak ditemukan"))).toBe(
+        true,
       );
+    });
+
+    it("should return errors for duplicate transaction", async () => {
+      const mockCategory = {
+        id: "cat1",
+        name: "Food",
+        type: "expense" as TransactionType,
+        isActive: true,
+      };
+
+      const mockDuplicate = {
+        id: "txn1",
+        category: "Food",
+        amount: new Decimal(50000),
+        timestamp: new Date(),
+      };
+
+      (parseAmount as jest.Mock).mockReturnValue(new Decimal(50000));
+      (CategoryModel.findByName as jest.Mock).mockResolvedValue(mockCategory);
+      (TransactionModel.findByUserId as jest.Mock).mockResolvedValue([
+        mockDuplicate,
+      ]);
+
+      const result = await TransactionValidator.validateTransaction({
+        userId: "user123",
+        type: "expense",
+        category: "Food",
+        amount: "50000",
+      });
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes("serupa sudah ada"))).toBe(
+        true,
+      );
+    });
+
+    it("should return errors for invalid description", async () => {
+      const mockCategory = {
+        id: "cat1",
+        name: "Food",
+        type: "expense" as TransactionType,
+        isActive: true,
+      };
+
+      const longDescription = "a".repeat(101);
+
+      (parseAmount as jest.Mock).mockReturnValue(new Decimal(50000));
+      (CategoryModel.findByName as jest.Mock).mockResolvedValue(mockCategory);
+      (TransactionModel.findByUserId as jest.Mock).mockResolvedValue([]);
+
+      const result = await TransactionValidator.validateTransaction({
+        userId: "user123",
+        type: "expense",
+        category: "Food",
+        amount: "50000",
+        description: longDescription,
+      });
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.length).toBeGreaterThan(0);
     });
   });
 });

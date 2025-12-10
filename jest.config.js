@@ -2,8 +2,17 @@ module.exports = {
   // Use ts-jest for TypeScript support
   preset: "ts-jest",
 
-  // Node environment for backend testing
+  // Configure ts-jest
   testEnvironment: "node",
+  moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
+  transform: {
+    "^.+\\.tsx?$": [
+      "ts-jest",
+      {
+        tsconfig: "tsconfig.test.json",
+      },
+    ],
+  },
 
   // Look for tests in the tests directory
   roots: ["<rootDir>/tests"],

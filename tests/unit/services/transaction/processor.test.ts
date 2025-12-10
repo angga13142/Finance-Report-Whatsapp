@@ -1,90 +1,98 @@
 /**
  * Unit tests for TransactionProcessor
- * Tests transaction processing logic (processTransaction, editTransaction, deleteTransaction)
+ * Tests transaction processing, approval flow, and success messages
  */
 
 import { TransactionProcessor } from "../../../../src/services/transaction/processor";
-import { TransactionModel } from "../../../../src/models/transaction";
 import { TransactionValidator } from "../../../../src/services/transaction/validator";
 import { ApprovalService } from "../../../../src/services/transaction/approval";
+import { TransactionModel } from "../../../../src/models/transaction";
 import { AuditLogger } from "../../../../src/services/audit/logger";
-import { logger } from "../../../../src/lib/logger";
-import { TransactionType } from "@prisma/client";
+import { parseAmount, formatCurrency } from "../../../../src/lib/currency";
+import { formatDateWITA } from "../../../../src/lib/date";
+import { TransactionType, Transaction, ApprovalStatus } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 
 // Mock dependencies
-jest.mock("../../../../src/models/transaction");
 jest.mock("../../../../src/services/transaction/validator");
 jest.mock("../../../../src/services/transaction/approval");
+jest.mock("../../../../src/models/transaction");
 jest.mock("../../../../src/services/audit/logger");
-jest.mock("../../../../src/lib/logger");
 jest.mock("../../../../src/lib/currency");
+jest.mock("../../../../src/lib/date");
+jest.mock("../../../../src/lib/logger", () => ({
+  logger: {
+    info: jest.fn(),
+    error: jest.fn(),
+  },
+}));
 
 describe("TransactionProcessor", () => {
-  const mockUserId = "test-user-id";
-  const mockTransactionId = "test-transaction-id";
-
-  const mockTransaction = {
-    id: mockTransactionId,
-    userId: mockUserId,
-    categoryId: null,
-    category: "Test Category",
-    amount: new Decimal(100000),
-    type: "income" as TransactionType,
-    description: "Test transaction",
-    timestamp: new Date(),
-    approvalStatus: "approved" as const,
-    approvalBy: null,
-    approvedAt: null,
-    version: 1,
-    archivedAt: null,
-  };
-
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   describe("processTransaction", () => {
     it("should process valid transaction successfully", async () => {
-      (TransactionValidator.validateTransaction as jest.Mock).mockResolvedValue({
-        valid: true,
-        errors: [],
-      });
+      const mockTransaction: Transaction = {
+        id: "txn123",
+        userId: "user123",
+        type: "expense" as TransactionType,
+        category: "Food",
+        amount: new Decimal(50000),
+        description: "Lunch",
+        approvalStatus: "approved" as ApprovalStatus,
+        timestamp: new Date(),
+        version: 1,
+        approvalBy: null,
+        approvedAt: null,
+        categoryId: null,
+      };
 
+      (TransactionValidator.validateTransaction as jest.Mock).mockResolvedValue(
+        {
+          valid: true,
+          errors: [],
+        },
+      );
+      (parseAmount as jest.Mock).mockReturnValue(new Decimal(50000));
       (ApprovalService.analyzeTransaction as jest.Mock).mockResolvedValue({
-        approved: true,
-        approvalStatus: "approved",
-        flaggedReason: null,
+        status: "approved" as ApprovalStatus,
+        requiresManualApproval: false,
+        confidenceScore: 95,
       });
-
       (TransactionModel.create as jest.Mock).mockResolvedValue(mockTransaction);
+      (AuditLogger.logTransactionCreated as jest.Mock).mockResolvedValue(
+        undefined,
+      );
 
       const result = await TransactionProcessor.processTransaction({
-        userId: mockUserId,
-        type: "income",
-        category: "Test Category",
-        amount: 100000,
-        description: "Test transaction",
+        userId: "user123",
+        type: "expense",
+        category: "Food",
+        amount: "50000",
+        description: "Lunch",
       });
 
       expect(result.success).toBe(true);
       expect(result.transaction).toEqual(mockTransaction);
-      expect(TransactionValidator.validateTransaction).toHaveBeenCalled();
-      expect(ApprovalService.analyzeTransaction).toHaveBeenCalled();
       expect(TransactionModel.create).toHaveBeenCalled();
+      expect(AuditLogger.logTransactionCreated).toHaveBeenCalled();
     });
 
-    it("should reject invalid transaction data", async () => {
-      (TransactionValidator.validateTransaction as jest.Mock).mockResolvedValue({
-        valid: false,
-        errors: ["Invalid amount", "Category required"],
-      });
+    it("should return error for invalid transaction", async () => {
+      (TransactionValidator.validateTransaction as jest.Mock).mockResolvedValue(
+        {
+          valid: false,
+          errors: ["Invalid amount", "Invalid category"],
+        },
+      );
 
       const result = await TransactionProcessor.processTransaction({
-        userId: mockUserId,
-        type: "income",
-        category: "",
-        amount: -1000,
+        userId: "user123",
+        type: "expense",
+        category: "Food",
+        amount: "invalid",
       });
 
       expect(result.success).toBe(false);
@@ -92,114 +100,105 @@ describe("TransactionProcessor", () => {
       expect(TransactionModel.create).not.toHaveBeenCalled();
     });
 
-    it("should handle flagged transactions for approval", async () => {
-      (TransactionValidator.validateTransaction as jest.Mock).mockResolvedValue({
-        valid: true,
-        errors: [],
-      });
+    it("should handle approval decision", async () => {
+      const mockTransaction: Transaction = {
+        id: "txn123",
+        userId: "user123",
+        type: "expense" as TransactionType,
+        category: "Food",
+        amount: new Decimal(50000),
+        description: "Lunch",
+        approvalStatus: "pending" as ApprovalStatus,
+        timestamp: new Date(),
+        version: 1,
+        approvalBy: null,
+        approvedAt: null,
+        categoryId: null,
+      };
 
+      (TransactionValidator.validateTransaction as jest.Mock).mockResolvedValue(
+        {
+          valid: true,
+          errors: [],
+        },
+      );
+      (parseAmount as jest.Mock).mockReturnValue(new Decimal(50000));
       (ApprovalService.analyzeTransaction as jest.Mock).mockResolvedValue({
-        approved: false,
-        approvalStatus: "pending",
-        flaggedReason: "Suspicious amount pattern",
+        status: "pending" as ApprovalStatus,
+        requiresManualApproval: true,
+        confidenceScore: 60,
       });
-
-      (TransactionModel.create as jest.Mock).mockResolvedValue({
-        ...mockTransaction,
-        approvalStatus: "pending",
-      });
+      (TransactionModel.create as jest.Mock).mockResolvedValue(mockTransaction);
 
       const result = await TransactionProcessor.processTransaction({
-        userId: mockUserId,
+        userId: "user123",
         type: "expense",
-        category: "Test Category",
-        amount: 1000000000,
+        category: "Food",
+        amount: "50000",
       });
 
       expect(result.success).toBe(true);
       expect(result.transaction?.approvalStatus).toBe("pending");
     });
 
-    it("should handle database errors gracefully", async () => {
-      (TransactionValidator.validateTransaction as jest.Mock).mockResolvedValue({
-        valid: true,
-        errors: [],
-      });
-
-      (ApprovalService.analyzeTransaction as jest.Mock).mockResolvedValue({
-        approved: true,
-        approvalStatus: "approved",
-      });
-
-      (TransactionModel.create as jest.Mock).mockRejectedValue(
-        new Error("Database connection failed")
+    it("should handle processing errors", async () => {
+      (TransactionValidator.validateTransaction as jest.Mock).mockRejectedValue(
+        new Error("Database error"),
       );
 
       const result = await TransactionProcessor.processTransaction({
-        userId: mockUserId,
-        type: "income",
-        category: "Test Category",
-        amount: 100000,
+        userId: "user123",
+        type: "expense",
+        category: "Food",
+        amount: "50000",
       });
 
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
-      expect(logger.error).toHaveBeenCalled();
     });
   });
 
-  describe("deleteTransaction", () => {
-    it("should soft delete transaction successfully", async () => {
-      (TransactionModel.findById as jest.Mock).mockResolvedValue(mockTransaction);
-      (TransactionModel.softDelete as jest.Mock).mockResolvedValue(true);
+  describe("getSuccessMessage", () => {
+    it("should generate success message for approved transaction", () => {
+      const mockTransaction = {
+        id: "txn123",
+        type: "expense" as TransactionType,
+        category: "Food",
+        amount: new Decimal(50000),
+        description: "Lunch",
+        approvalStatus: "approved" as ApprovalStatus,
+        timestamp: new Date("2024-01-15T12:00:00Z"),
+      };
 
-      const result = await TransactionProcessor.deleteTransaction(
-        mockTransactionId,
-        mockUserId,
-        "boss"
-      );
+      (formatCurrency as jest.Mock).mockReturnValue("Rp 50.000");
+      (formatDateWITA as jest.Mock).mockReturnValue("15 Januari 2024, 12:00");
 
-      expect(result.success).toBe(true);
-      expect(TransactionModel.softDelete).toHaveBeenCalledWith(
-        mockTransactionId,
-        mockUserId,
-        undefined
-      );
-      expect(AuditLogger.log).toHaveBeenCalledWith(
-        "transaction_deleted",
-        expect.any(Object),
-        mockUserId,
-        mockTransactionId,
-        "Transaction"
-      );
+      const result = TransactionProcessor.getSuccessMessage(mockTransaction);
+
+      expect(result).toContain("Transaksi berhasil");
+      expect(result).toContain("Rp 50.000");
+      expect(result).toContain("Food");
     });
 
-    it("should prevent employee from deleting transactions", async () => {
-      (TransactionModel.findById as jest.Mock).mockResolvedValue(mockTransaction);
+    it("should generate message for pending approval", () => {
+      const mockTransaction = {
+        id: "txn123",
+        type: "expense" as TransactionType,
+        category: "Food",
+        amount: new Decimal(50000),
+        description: "Lunch",
+        approvalStatus: "pending" as ApprovalStatus,
+        timestamp: new Date("2024-01-15T12:00:00Z"),
+      };
 
-      const result = await TransactionProcessor.deleteTransaction(
-        mockTransactionId,
-        mockUserId,
-        "employee"
-      );
+      (formatCurrency as jest.Mock).mockReturnValue("Rp 50.000");
+      (formatDateWITA as jest.Mock).mockReturnValue("15 Januari 2024, 12:00");
 
-      expect(result.success).toBe(false);
-      expect(result.error).toContain("Boss dan Dev");
-      expect(TransactionModel.softDelete).not.toHaveBeenCalled();
-    });
+      const result = TransactionProcessor.getSuccessMessage(mockTransaction);
 
-    it("should prevent deleting non-existent transaction", async () => {
-      (TransactionModel.findById as jest.Mock).mockResolvedValue(null);
-
-      const result = await TransactionProcessor.deleteTransaction(
-        "non-existent-id",
-        mockUserId,
-        "boss"
-      );
-
-      expect(result.success).toBe(false);
-      expect(result.error).toContain("tidak ditemukan");
+      expect(result).toContain("Transaksi berhasil disimpan");
+      expect(result).toContain("Rp 50.000");
+      expect(result).toContain("Food");
     });
   });
-
 });

@@ -1,7 +1,26 @@
 ---
-agent: "agent"
-model: "Claude Sonnet 4"
-tools: ["codebase"]
+agent: "debug"
+model: "Claude Sonnet 4.5"
+tools:
+  [
+    "edit",
+    "runNotebooks",
+    "search",
+    "new",
+    "runCommands",
+    "runTasks",
+    "usages",
+    "vscodeAPI",
+    "problems",
+    "changes",
+    "testFailure",
+    "openSimpleBrowser",
+    "fetch",
+    "githubRepo",
+    "extensions",
+    "todos",
+    "runSubagent",
+  ]
 description: "Generate comprehensive unit and integration tests for TypeScript/Jest"
 ---
 

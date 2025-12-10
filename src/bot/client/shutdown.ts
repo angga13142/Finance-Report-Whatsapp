@@ -17,13 +17,13 @@ export class GracefulShutdown {
     // Handle SIGTERM (Docker stop, Kubernetes termination)
     process.on("SIGTERM", () => {
       logger.info("SIGTERM received, initiating graceful shutdown");
-      this.shutdown("SIGTERM");
+      void this.shutdown("SIGTERM");
     });
 
     // Handle SIGINT (Ctrl+C)
     process.on("SIGINT", () => {
       logger.info("SIGINT received, initiating graceful shutdown");
-      this.shutdown("SIGINT");
+      void this.shutdown("SIGINT");
     });
 
     // Handle uncaught exceptions
@@ -31,7 +31,7 @@ export class GracefulShutdown {
       logger.error("Uncaught exception, initiating emergency shutdown", {
         error,
       });
-      this.shutdown("uncaughtException", 1);
+      void this.shutdown("uncaughtException", 1);
     });
 
     // Handle unhandled rejections
@@ -39,7 +39,7 @@ export class GracefulShutdown {
       logger.error("Unhandled rejection, initiating emergency shutdown", {
         reason,
       });
-      this.shutdown("unhandledRejection", 1);
+      void this.shutdown("unhandledRejection", 1);
     });
 
     logger.info("Graceful shutdown handlers initialized");

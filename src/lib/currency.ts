@@ -1,4 +1,4 @@
-import { Decimal } from '@prisma/client/runtime/library';
+import { Decimal } from "@prisma/client/runtime/library";
 
 /**
  * Currency formatting utilities for Indonesian Rupiah (Rp)
@@ -10,14 +10,15 @@ import { Decimal } from '@prisma/client/runtime/library';
  * @returns Formatted string like "Rp 500.000"
  */
 export function formatCurrency(amount: Decimal | number | string): string {
-  const decimal = typeof amount === 'string' || typeof amount === 'number' 
-    ? new Decimal(amount) 
-    : amount;
-  
+  const decimal =
+    typeof amount === "string" || typeof amount === "number"
+      ? new Decimal(amount)
+      : amount;
+
   const numValue = decimal.toNumber();
-  const formatted = new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
+  const formatted = new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(numValue);
@@ -33,31 +34,31 @@ export function formatCurrency(amount: Decimal | number | string): string {
  */
 export function parseAmount(input: string): Decimal {
   // Remove all non-digit characters except decimal point
-  const cleaned = input.replace(/[^\d,.]/g, '');
-  
+  const cleaned = input.replace(/[^\d,.]/g, "");
+
   // Replace comma with dot for decimal separator, or remove for thousand separator
   let normalized = cleaned;
-  
+
   // Check if comma is used as thousand separator (e.g., 500,000)
-  if (cleaned.includes(',') && !cleaned.includes('.')) {
-    normalized = cleaned.replace(/,/g, '');
-  } else if (cleaned.includes('.') && !cleaned.includes(',')) {
+  if (cleaned.includes(",") && !cleaned.includes(".")) {
+    normalized = cleaned.replace(/,/g, "");
+  } else if (cleaned.includes(".") && !cleaned.includes(",")) {
     // Check if dot is used as thousand separator (e.g., 500.000)
     // If there are multiple dots, it's likely thousand separator
     const dotCount = (cleaned.match(/\./g) || []).length;
-    if (dotCount > 1 || (dotCount === 1 && cleaned.split('.')[0].length > 3)) {
-      normalized = cleaned.replace(/\./g, '');
+    if (dotCount > 1 || (dotCount === 1 && cleaned.split(".")[0].length > 3)) {
+      normalized = cleaned.replace(/\./g, "");
     }
     // Otherwise, dot is decimal separator (keep as is)
   } else {
     // Mixed or unclear format, try to parse as-is
-    normalized = cleaned.replace(/,/g, '');
+    normalized = cleaned.replace(/,/g, "");
   }
 
   const numValue = parseFloat(normalized);
-  
+
   if (isNaN(numValue) || numValue <= 0) {
-    throw new Error('Invalid amount format. Please enter a positive number.');
+    throw new Error("Invalid amount format. Please enter a positive number.");
   }
 
   return new Decimal(numValue);
@@ -74,22 +75,23 @@ export function parseAmount(input: string): Decimal {
 export function validateAmountRange(
   amount: Decimal | number | string,
   min: number = 0.01,
-  max: number = 500_000_000
+  max: number = 500_000_000,
 ): boolean {
-  const decimal = typeof amount === 'string' || typeof amount === 'number'
-    ? new Decimal(amount)
-    : amount;
-  
+  const decimal =
+    typeof amount === "string" || typeof amount === "number"
+      ? new Decimal(amount)
+      : amount;
+
   const numValue = decimal.toNumber();
-  
+
   if (numValue < min) {
     throw new Error(`Amount must be at least ${formatCurrency(min)}`);
   }
-  
+
   if (numValue > max) {
     throw new Error(`Amount cannot exceed ${formatCurrency(max)}`);
   }
-  
+
   return true;
 }
 
@@ -110,4 +112,3 @@ export function toNumber(amount: Decimal): number {
 export function toDecimal(amount: number | string): Decimal {
   return new Decimal(amount);
 }
-

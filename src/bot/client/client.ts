@@ -2,6 +2,7 @@ import { Client } from "whatsapp-web.js";
 import { createLocalAuth } from "./auth";
 import { logger } from "../../lib/logger";
 import { RateLimitMiddleware } from "../middleware/rate-limit";
+import { setupPairingCodeHandler } from "./pairing";
 
 let whatsappClient: Client | null = null;
 
@@ -14,6 +15,9 @@ export function createWhatsAppClient(): Client {
   }
 
   const auth = createLocalAuth();
+
+  // Get pairing phone number from environment (optional)
+  const pairingPhoneNumber = process.env.WHATSAPP_PAIRING_PHONE_NUMBER;
 
   whatsappClient = new Client({
     authStrategy: auth,
@@ -35,9 +39,28 @@ export function createWhatsAppClient(): Client {
       remotePath:
         "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2413.51-beta.html",
     },
+    // Enable pairing code authentication if phone number is provided
+    ...(pairingPhoneNumber
+      ? {
+          pairWithPhoneNumber: {
+            phoneNumber: pairingPhoneNumber.replace(/\D/g, ""), // Remove non-digits
+            showNotification: true,
+            intervalMs: 180000, // 3 minutes
+          },
+        }
+      : {}),
   });
 
-  logger.info("WhatsApp client created");
+  // Setup pairing code handler if using pairing authentication
+  if (pairingPhoneNumber) {
+    setupPairingCodeHandler(whatsappClient);
+    logger.info("WhatsApp client created with pairing code authentication", {
+      phoneNumber:
+        pairingPhoneNumber.slice(0, 2) + " ****" + pairingPhoneNumber.slice(-4),
+    });
+  } else {
+    logger.info("WhatsApp client created with QR code authentication");
+  }
 
   return whatsappClient;
 }

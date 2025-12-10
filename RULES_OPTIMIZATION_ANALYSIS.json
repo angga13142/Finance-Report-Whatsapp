@@ -1,0 +1,156 @@
+{
+  "analysis": {
+    "project_type": "Node.js/TypeScript backend WhatsApp chatbot with Express.js, Prisma, PostgreSQL, Redis",
+    "technologies_detected": [
+      "Node.js 20+",
+      "TypeScript 5.x",
+      "Express.js 5.x",
+      "Prisma 5.x",
+      "PostgreSQL 15+",
+      "Redis 7.x",
+      "Jest",
+      "Playwright",
+      "Zod",
+      "Winston"
+    ],
+    "total_rule_files": 938,
+    "files_analyzed": "All .mdc files in .cursor/rules directory"
+  },
+  "decisions": [
+    {
+      "filename": "node-express.mdc",
+      "relevance_score": 5,
+      "reasoning": "Core framework - Express.js is the main web framework used in this project",
+      "duplicates_found": [],
+      "action": "keep",
+      "action_details": "Keep as-is, highly relevant"
+    },
+    {
+      "filename": "typescript.mdc",
+      "relevance_score": 5,
+      "reasoning": "Core language - Project is written in TypeScript 5.x",
+      "duplicates_found": [],
+      "action": "keep",
+      "action_details": "Keep as-is, essential"
+    },
+    {
+      "filename": "database.mdc",
+      "relevance_score": 4,
+      "reasoning": "Relevant for Prisma/PostgreSQL, but contains Supabase-specific content which is not used",
+      "duplicates_found": [],
+      "action": "update",
+      "action_details": "Remove Supabase sections, keep Prisma/PostgreSQL content"
+    },
+    {
+      "filename": "gitflow.mdc",
+      "relevance_score": 5,
+      "reasoning": "General git workflow rules applicable to all projects",
+      "duplicates_found": [],
+      "action": "keep",
+      "action_details": "Keep as-is"
+    },
+    {
+      "filename": "clean-code.mdc",
+      "relevance_score": 5,
+      "reasoning": "General coding principles applicable to all projects",
+      "duplicates_found": ["codequality.mdc"],
+      "action": "keep",
+      "action_details": "Keep, but review for overlap with codequality.mdc"
+    },
+    {
+      "filename": "codequality.mdc",
+      "relevance_score": 5,
+      "reasoning": "General code quality guidelines applicable to all projects",
+      "duplicates_found": ["clean-code.mdc"],
+      "action": "keep",
+      "action_details": "Keep, complementary to clean-code.mdc"
+    },
+    {
+      "filename": "es-module-nodejs-guidelines-cursorrules-prompt-fil/",
+      "relevance_score": 3,
+      "reasoning": "Partially relevant - project uses CommonJS (module: commonjs in tsconfig), but some general Node.js practices apply",
+      "duplicates_found": [],
+      "action": "keep",
+      "action_details": "Keep general Node.js practices, ignore ES module specific parts"
+    },
+    {
+      "filename": "javascript-typescript-code-quality-cursorrules-pro/",
+      "relevance_score": 4,
+      "reasoning": "Relevant for TypeScript code quality, but may overlap with typescript.mdc",
+      "duplicates_found": ["typescript.mdc"],
+      "action": "keep",
+      "action_details": "Keep, provides additional TypeScript-specific quality guidelines"
+    },
+    {
+      "filename": "jest-unit-testing-cursorrules-prompt-file/",
+      "relevance_score": 5,
+      "reasoning": "Core testing framework - Jest is used for unit/integration tests",
+      "duplicates_found": [],
+      "action": "keep",
+      "action_details": "Keep all Jest-related rules"
+    },
+    {
+      "filename": "playwright-*-cursorrules-prompt-file/",
+      "relevance_score": 5,
+      "reasoning": "E2E testing framework - Playwright is used for end-to-end tests",
+      "duplicates_found": [],
+      "action": "keep",
+      "action_details": "Keep all Playwright-related rules"
+    },
+    {
+      "filename": "All React/Next.js/Vue/Angular/Svelte rules",
+      "relevance_score": 1,
+      "reasoning": "Frontend frameworks not used - this is a backend-only project",
+      "duplicates_found": [],
+      "action": "remove",
+      "action_details": "Remove all frontend framework rules (React, Next.js, Vue, Angular, Svelte, etc.)"
+    },
+    {
+      "filename": "All Python/FastAPI/Django/Flask rules",
+      "relevance_score": 1,
+      "reasoning": "Python not used - project is TypeScript/Node.js only",
+      "duplicates_found": [],
+      "action": "remove",
+      "action_details": "Remove all Python framework rules"
+    },
+    {
+      "filename": "All mobile framework rules (Android, iOS, React Native, Flutter, NativeScript)",
+      "relevance_score": 1,
+      "reasoning": "No mobile development - backend API only",
+      "duplicates_found": [],
+      "action": "remove",
+      "action_details": "Remove all mobile framework rules"
+    },
+    {
+      "filename": "All other language rules (Go, Rust, Java, Kotlin, Scala, Elixir, etc.)",
+      "relevance_score": 1,
+      "reasoning": "Only TypeScript/Node.js used in this project",
+      "duplicates_found": [],
+      "action": "remove",
+      "action_details": "Remove all non-TypeScript/Node.js language rules"
+    },
+    {
+      "filename": "typescript-nestjs-best-practices-cursorrules-promp/",
+      "relevance_score": 1,
+      "reasoning": "NestJS not used - project uses Express.js, not NestJS",
+      "duplicates_found": [],
+      "action": "remove",
+      "action_details": "Remove NestJS rules, project uses Express"
+    },
+    {
+      "filename": "nodejs-mongodb-* rules",
+      "relevance_score": 1,
+      "reasoning": "MongoDB not used - project uses PostgreSQL with Prisma",
+      "duplicates_found": [],
+      "action": "remove",
+      "action_details": "Remove MongoDB-specific rules"
+    }
+  ],
+  "changes_made": {
+    "files_removed": [],
+    "files_merged": [],
+    "files_updated": [],
+    "files_kept": []
+  },
+  "summary": "Analysis complete - ready for execution"
+}

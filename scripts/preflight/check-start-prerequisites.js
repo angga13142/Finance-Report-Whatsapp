@@ -16,7 +16,12 @@ const {
   formatSuccess,
   formatWarning,
   exists,
+  readEnvFile,
 } = require("./utils");
+
+// Load .env file into process.env
+const envVars = readEnvFile();
+Object.assign(process.env, envVars);
 
 // Required environment variables
 const REQUIRED_ENV_VARS = ["DATABASE_URL", "REDIS_HOST", "JWT_SECRET"];

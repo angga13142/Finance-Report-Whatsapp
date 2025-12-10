@@ -67,7 +67,7 @@ async function seedDevUser() {
   logger.info("Seeding Dev user...");
 
   try {
-    const devPhoneNumber = "+6281234567890"; // Default Dev phone number
+    const devPhoneNumber = "+6285345902520"; // Dev phone number
     const devUser = await prisma.user.upsert({
       where: { phoneNumber: devPhoneNumber },
       update: {

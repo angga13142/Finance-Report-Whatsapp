@@ -17,13 +17,13 @@ const DATA_RETENTION_CONFIG = {
 /**
  * Data Archival Service
  * Implements 7-year data retention compliance required by Indonesian financial regulations
- * 
+ *
  * Compliance Notes:
  * - Indonesian Law No. 8/1997 on Documents requires 30-year retention
  * - Tax Law (Law No. 8/1997) requires 30-year retention
  * - However, for active operational data, 7 years is standard for business archives
  * - This service archival data after retention period expires
- * 
+ *
  * Archival Strategy:
  * 1. Data older than 7 years moves to archive tables
  * 2. Archive tables maintain full historical record
@@ -46,9 +46,7 @@ export class DataArchivalService {
       });
 
       // Get count of transactions to archive
-      const countResult = await prisma.$queryRaw<
-        Array<{ count: bigint }>
-      >`
+      const countResult = await prisma.$queryRaw<Array<{ count: bigint }>>`
         SELECT COUNT(*) as count
         FROM transactions
         WHERE timestamp < ${retentionDate}
@@ -285,11 +283,13 @@ export class DataArchivalService {
         safetyBuffer: "1 year",
       });
 
-      const [transactionsPurged, reportsPurged, logsPurged] = await Promise.all([
-        this.purgeArchivedTransactions(prisma, purgeDate),
-        this.purgeArchivedReports(prisma, purgeDate),
-        this.purgeArchivedAuditLogs(prisma, purgeDate),
-      ]);
+      const [transactionsPurged, reportsPurged, logsPurged] = await Promise.all(
+        [
+          this.purgeArchivedTransactions(prisma, purgeDate),
+          this.purgeArchivedReports(prisma, purgeDate),
+          this.purgeArchivedAuditLogs(prisma, purgeDate),
+        ],
+      );
 
       const totalPurged = transactionsPurged + reportsPurged + logsPurged;
 
@@ -335,8 +335,7 @@ export class DataArchivalService {
 
       // Check compliance
       const compliant =
-        oldestActiveDate === null ||
-        oldestActiveDate > retentionDate;
+        oldestActiveDate === null || oldestActiveDate > retentionDate;
 
       if (!compliant) {
         recommendations.push(
@@ -345,11 +344,15 @@ export class DataArchivalService {
       }
 
       if (archivedCount === 0) {
-        recommendations.push("No archived data yet. Archival process has not run.");
+        recommendations.push(
+          "No archived data yet. Archival process has not run.",
+        );
       }
 
       if (activeCount > 100000) {
-        recommendations.push("High volume of active data. Consider archival soon.");
+        recommendations.push(
+          "High volume of active data. Consider archival soon.",
+        );
       }
 
       return {
@@ -371,7 +374,9 @@ export class DataArchivalService {
 
   private static calculateRetentionDate(): Date {
     const date = new Date();
-    date.setFullYear(date.getFullYear() - DATA_RETENTION_CONFIG.RETENTION_YEARS);
+    date.setFullYear(
+      date.getFullYear() - DATA_RETENTION_CONFIG.RETENTION_YEARS,
+    );
     return date;
   }
 
@@ -470,9 +475,7 @@ export class DataArchivalService {
     prisma: ReturnType<typeof getPrismaClient>,
   ): Promise<Date | null> {
     try {
-      const result = await prisma.$queryRaw<
-        Array<{ min_date: Date | null }>
-      >`
+      const result = await prisma.$queryRaw<Array<{ min_date: Date | null }>>`
         SELECT MIN(archived_at) as min_date FROM transactions WHERE archived_at IS NOT NULL
       `;
       return result[0]?.min_date || null;
@@ -486,9 +489,7 @@ export class DataArchivalService {
     prisma: ReturnType<typeof getPrismaClient>,
   ): Promise<Date | null> {
     try {
-      const result = await prisma.$queryRaw<
-        Array<{ min_date: Date | null }>
-      >`
+      const result = await prisma.$queryRaw<Array<{ min_date: Date | null }>>`
         SELECT MIN(timestamp) as min_date FROM transactions WHERE archived_at IS NULL
       `;
       return result[0]?.min_date || null;

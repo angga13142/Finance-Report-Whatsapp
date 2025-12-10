@@ -11,6 +11,40 @@ Preflight checks ensure that:
 - Environment and services are ready before starting
 - Package is valid and safe before publishing
 
+## Available Commands
+
+### Comprehensive Preflight Check
+
+Run all preflight checks in sequence:
+
+```bash
+npm run preflight
+```
+
+This command runs:
+
+1. Node version check (`preflight:node`)
+2. Build prerequisites check (`preflight:build`)
+3. Start prerequisites check (`preflight:start`)
+
+### Individual Checks
+
+Run specific preflight checks:
+
+```bash
+# Check Node.js version
+npm run preflight:node
+
+# Check build prerequisites (TypeScript, Prisma, linting)
+npm run preflight:build
+
+# Check start prerequisites (environment variables, database)
+npm run preflight:start
+
+# Check publish prerequisites (version, tests, security)
+npm run preflight:publish
+```
+
 ## Lifecycle Hooks
 
 ### Pre-install Hook (`preinstall`)
@@ -179,11 +213,13 @@ Hooks are there for a reason. Only bypass in genuine emergencies:
 Run checks manually before committing:
 
 ```bash
-# Check Node version
-node scripts/preflight/check-node-version.js
+# Run all checks at once
+npm run preflight
 
-# Check build prerequisites
-node scripts/preflight/check-build-prerequisites.js
+# Or run individual checks
+npm run preflight:node
+npm run preflight:build
+npm run preflight:start
 
 # Check start prerequisites
 node scripts/preflight/check-start-prerequisites.js

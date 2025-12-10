@@ -38,18 +38,21 @@ An interactive WhatsApp chatbot for daily cashflow reporting with role-based acc
 ## Technology Stack
 
 ### Core Backend
+
 - **Runtime**: Node.js 20 LTS with ES2022 target
 - **Language**: TypeScript 5.x with strict mode enabled
 - **Web Framework**: Express.js 5.x for HTTP endpoints (health checks, metrics)
 - **WhatsApp Integration**: whatsapp-web.js v1.23.0+ with LocalAuth and Puppeteer
 
 ### Data & Storage
+
 - **Primary Database**: PostgreSQL 15+ with TimescaleDB extension for time-series optimization
 - **ORM**: Prisma 5.x with connection pooling and query optimization
 - **Session/Cache**: Redis 7.x (Alpine) for session management, rate limiting, and data caching
 - **Schema Validation**: Zod runtime validation for environment variables and inputs
 
 ### Development & Quality
+
 - **Testing Framework**: Jest 29.x (unit/integration) with ts-jest preset
 - **E2E Testing**: Playwright 1.40.0+ for end-to-end workflows
 - **Code Quality**: ESLint 8.x with TypeScript plugin, Prettier 3.x for formatting
@@ -57,12 +60,14 @@ An interactive WhatsApp chatbot for daily cashflow reporting with role-based acc
 - **Type Checking**: TypeScript strict mode with explicit return types
 
 ### Monitoring & Logging
+
 - **Logging**: Winston 3.11.0 with JSON structured logs and file rotation
 - **Metrics**: Prometheus client 15.1.3 for application observability
 - **Monitoring**: Prometheus + Grafana stack for visualization and alerting
 - **Container**: Docker with multi-stage builds, Alpine base images for efficiency
 
 ### Utilities & Libraries
+
 - **Report Generation**: ExcelJS 4.4.0 (Excel), PDFKit 0.13.0 (PDF)
 - **Date/Time**: Luxon 3.7.2 for WITA timezone handling
 - **Job Scheduling**: node-cron 3.0.0 for scheduled tasks
@@ -165,6 +170,7 @@ Before you begin, ensure you have the following installed:
 ### Installation
 
 1. **Clone the repository:**
+
    ```bash
    git clone https://github.com/angga13142/Finance-Report-Whatsapp.git
    cd Finance-Report-Whatsapp
@@ -172,15 +178,25 @@ Before you begin, ensure you have the following installed:
    ```
 
 2. **Install dependencies:**
+
    ```bash
    npm install
    ```
 
-3. **Set up environment variables:**
+3. **Verify installation (optional but recommended):**
+
+   ```bash
+   # Run preflight checks to validate environment
+   npm run preflight:node    # Verify Node.js version
+   npm run preflight:build   # Verify TypeScript and Prisma setup
+   ```
+
+4. **Set up environment variables:**
+
    ```bash
    # Copy the example environment file
    cp .env.example .env
-   
+
    # Edit .env with your configuration
    # Required variables:
    # - DATABASE_URL: PostgreSQL connection string
@@ -189,31 +205,41 @@ Before you begin, ensure you have the following installed:
    # - WHATSAPP_SESSION_PATH: Directory for WhatsApp sessions
    ```
 
-4. **Start infrastructure services:**
+5. **Start infrastructure services:**
+
    ```bash
    # Start PostgreSQL and Redis with Docker Compose
    docker-compose -f docker/docker-compose.dev.yml up -d
-   
+
    # Verify services are running
    docker-compose -f docker/docker-compose.dev.yml ps
    ```
 
-5. **Initialize the database:**
+6. **Initialize the database:**
+
    ```bash
    # Create database schema and run migrations
    npm run prisma:migrate
-   
+
    # Seed initial data (roles, categories, etc.)
    npm run prisma:seed
    ```
 
-6. **Start the application:**
+7. **Verify readiness (optional but recommended):**
+
+   ```bash
+   # Check if all prerequisites are met before starting
+   npm run preflight:start
+   ```
+
+8. **Start the application:**
+
    ```bash
    # Development mode with hot reload
    npm run dev
    ```
 
-7. **Authenticate WhatsApp:**
+9. **Authenticate WhatsApp:**
    - On first run, you'll see a QR code in the terminal
    - Open WhatsApp on your phone and scan the QR code
    - The bot is now authenticated and will remain so for future runs
@@ -233,6 +259,12 @@ curl http://localhost:3000/metrics
 ### Development Commands
 
 ```bash
+# Preflight checks (run all validations)
+npm run preflight         # Comprehensive check (node, build, start prerequisites)
+npm run preflight:node    # Check Node.js version only
+npm run preflight:build   # Check build prerequisites
+npm run preflight:start   # Check environment and database connections
+
 # Start development server with hot reload
 npm run dev
 
@@ -437,30 +469,35 @@ For detailed folder structure explanation, see [PROJECT_FOLDER_STRUCTURE_BLUEPRI
 ## Key Features Explained
 
 ### 1. Transaction Management
+
 - **Quick Input**: Button-based interface for fast transaction recording
 - **Validation**: Multi-level validation (format, business logic, database constraints)
 - **Categories**: Smart category selection with type matching
 - **Approval**: Auto-approval for normal transactions, manual approval for suspicious ones
 
 ### 2. Role-Based Access Control
+
 - **Developer (Dev)**: Full system access, configuration, user management
 - **Boss**: View all reports, approve high-value transactions, send analytics
 - **Employee**: Record transactions, view personal reports
 - **Investor**: View summary reports, portfolio analytics
 
 ### 3. Automated Reporting
+
 - **Daily Reports**: Automatically generated at 24:00 WITA every day
 - **Multiple Formats**: WhatsApp message, PDF download, Excel export
 - **Role-Specific Views**: Each role sees relevant data
 - **Scheduled Delivery**: Cron-based scheduling with retry logic
 
 ### 4. Smart Analytics
+
 - **Anomaly Detection**: Flags unusual spending patterns
 - **Trend Analysis**: 7-day moving averages and period comparisons
 - **Recommendations**: Actionable insights based on data patterns
 - **Real-time Alerts**: Immediate notification of unusual activity
 
 ### 5. Security & Audit
+
 - **JWT Authentication**: Session-based authentication with token expiration
 - **RBAC Enforcement**: Permission checks on every operation
 - **Audit Trails**: Complete logging of all transactions and approvals
@@ -469,12 +506,14 @@ For detailed folder structure explanation, see [PROJECT_FOLDER_STRUCTURE_BLUEPRI
 ## Development Workflow
 
 ### Branching Strategy
+
 - **main**: Production-ready code
 - **develop**: Development branch for feature integration
 - **feature/\***: Feature branches from develop
 - **hotfix/\***: Critical fixes from main
 
 ### Commit Standards
+
 Use [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```bash
@@ -488,12 +527,14 @@ docs(scope): description        # Documentation
 ```
 
 Examples:
+
 - `feat(transaction): add transaction editing functionality`
 - `fix(approval): correct threshold validation logic`
 - `security(auth): implement JWT token refresh`
 - `test(validator): add currency validation tests`
 
 ### Pull Request Process
+
 1. Create feature branch from develop
 2. Implement feature with tests
 3. Ensure all tests pass: `npm test`
@@ -505,6 +546,7 @@ Examples:
 ## Coding Standards
 
 ### TypeScript
+
 - **Strict Mode**: All files must compile with `strict: true`
 - **Explicit Types**: No implicit `any` types
 - **Return Types**: All functions must have explicit return types
@@ -527,6 +569,7 @@ async function processTransaction(userId, amount, category) {
 ```
 
 ### NestJS Patterns (where applicable)
+
 - Use dependency injection for services
 - Implement guards for authorization
 - Use interceptors for cross-cutting concerns
@@ -534,12 +577,14 @@ async function processTransaction(userId, amount, category) {
 - Use exception filters for error handling
 
 ### Code Organization
+
 - **Single Responsibility**: Each function/class has one purpose
 - **DRY (Don't Repeat Yourself)**: Extract common logic to utilities
 - **SOLID Principles**: Follow SOLID design principles
 - **Clear Naming**: Names reflect purpose and intent
 
 ### Async/Await
+
 ```typescript
 // ✅ GOOD: Async/await pattern
 async function getUserTransactions(userId: string): Promise<Transaction[]> {
@@ -555,12 +600,15 @@ async function getUserTransactions(userId: string): Promise<Transaction[]> {
 // ❌ BAD: Promise chains
 function getUserTransactions(userId) {
   return TransactionModel.findByUserId(userId)
-    .then(transactions => transactions)
-    .catch(error => { throw error; });
+    .then((transactions) => transactions)
+    .catch((error) => {
+      throw error;
+    });
 }
 ```
 
 ### Error Handling
+
 - Validate inputs early (fail fast)
 - Use typed errors with context
 - Log errors with structured data
@@ -573,12 +621,15 @@ try {
   if (!validation.valid) {
     return { success: false, error: validation.errors.join(", ") };
   }
-  
+
   // Business logic
   const result = await TransactionProcessor.process(data);
-  
+
   // Logging
-  logger.info("Transaction processed", { userId: data.userId, transactionId: result.id });
+  logger.info("Transaction processed", {
+    userId: data.userId,
+    transactionId: result.id,
+  });
   return result;
 } catch (error) {
   // Error handling with context
@@ -591,6 +642,7 @@ try {
 ```
 
 ### Performance Guidelines
+
 - **Query Optimization**: Use `select()` and `where()` to limit data transfer
 - **Connection Pooling**: Database uses connection pooling (min: 5, max: 50)
 - **Caching**: Cache frequently accessed data in Redis with TTL
@@ -619,6 +671,7 @@ The project uses a **Test Pyramid** approach:
 ```
 
 ### Unit Tests
+
 - Fast, isolated tests of individual functions
 - Mock external dependencies
 - Test success and failure cases
@@ -629,6 +682,7 @@ npm run test:unit
 ```
 
 ### Integration Tests
+
 - Test service interactions with real database
 - Verify API contracts
 - Test database migrations
@@ -639,6 +693,7 @@ npm run test:integration
 ```
 
 ### E2E Tests (Playwright)
+
 - Test complete user workflows
 - Verify UI interactions
 - Test role-based access control
@@ -649,6 +704,7 @@ npm run test:e2e
 ```
 
 ### Coverage Requirements
+
 - **Minimum**: 70% line coverage
 - **Target**: 80% statement coverage
 - **Critical paths**: 90% coverage
@@ -660,12 +716,14 @@ See [TESTING_GUIDE.md](docs/TESTING_GUIDE.md) for comprehensive testing document
 We welcome contributions from team members! Please follow these guidelines:
 
 ### Before You Start
+
 1. Check existing [issues](https://github.com/angga13142/Finance-Report-Whatsapp/issues)
 2. Review [TECHNOLOGY_STACK_BLUEPRINT.md](docs/TECHNOLOGY_STACK_BLUEPRINT.md) for architecture
 3. Read [CODE_EXEMPLARS](docs/) for coding patterns
 4. Understand [WORKFLOW_DOCUMENTATION.md](docs/WORKFLOW_DOCUMENTATION.md)
 
 ### Development Process
+
 1. Create a feature branch: `git checkout -b feature/your-feature-name`
 2. Make your changes following coding standards
 3. Write tests for new functionality
@@ -676,6 +734,7 @@ We welcome contributions from team members! Please follow these guidelines:
 8. Create a pull request with description
 
 ### Pre-commit Checklist
+
 - [ ] Code follows TypeScript strict mode
 - [ ] All tests pass (`npm test`)
 - [ ] Code is formatted (`npm run format`)
@@ -685,6 +744,7 @@ We welcome contributions from team members! Please follow these guidelines:
 - [ ] Documentation is updated if needed
 
 ### Security Considerations
+
 - Never commit secrets or credentials
 - Use environment variables for sensitive data
 - Validate all user inputs
@@ -695,22 +755,24 @@ We welcome contributions from team members! Please follow these guidelines:
 
 ### Key Documentation Files
 
-| Document | Purpose |
-|----------|---------|
-| [TECHNOLOGY_STACK_BLUEPRINT.md](docs/TECHNOLOGY_STACK_BLUEPRINT.md) | Complete technology stack reference with usage patterns |
-| [PROJECT_FOLDER_STRUCTURE_BLUEPRINT.md](docs/PROJECT_FOLDER_STRUCTURE_BLUEPRINT.md) | Folder organization and navigation guide |
-| [WORKFLOW_DOCUMENTATION.md](docs/WORKFLOW_DOCUMENTATION.md) | Feature workflows and implementation examples |
-| [TESTING_GUIDE.md](docs/TESTING_GUIDE.md) | Testing strategies and best practices |
-| [HUSKY_SETUP.md](docs/HUSKY_SETUP.md) | Git hooks and pre-commit automation |
+| Document                                                                            | Purpose                                                 |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| [TECHNOLOGY_STACK_BLUEPRINT.md](docs/TECHNOLOGY_STACK_BLUEPRINT.md)                 | Complete technology stack reference with usage patterns |
+| [PROJECT_FOLDER_STRUCTURE_BLUEPRINT.md](docs/PROJECT_FOLDER_STRUCTURE_BLUEPRINT.md) | Folder organization and navigation guide                |
+| [WORKFLOW_DOCUMENTATION.md](docs/WORKFLOW_DOCUMENTATION.md)                         | Feature workflows and implementation examples           |
+| [TESTING_GUIDE.md](docs/TESTING_GUIDE.md)                                           | Testing strategies and best practices                   |
+| [HUSKY_SETUP.md](docs/HUSKY_SETUP.md)                                               | Git hooks and pre-commit automation                     |
 
 ### Additional Resources
 
 - **Specifications**: See [specs/004-whatsapp-cashflow-bot/](specs/004-whatsapp-cashflow-bot/) for detailed feature specifications
-- **API Contracts**: See [specs/*/contracts/](specs/004-whatsapp-cashflow-bot/contracts/) for API contract definitions
+- **API Contracts**: See [specs/\*/contracts/](specs/004-whatsapp-cashflow-bot/contracts/) for API contract definitions
 - **Copilot Instructions**: See [.github/copilot-instructions.md](.github/copilot-instructions.md) for AI assistant guidelines
 
 ### Code Exemplars
+
 The project includes code exemplars demonstrating best practices:
+
 - Service layer patterns
 - Model layer data access
 - Handler message routing
@@ -722,6 +784,7 @@ The project includes code exemplars demonstrating best practices:
 ### Common Issues
 
 **Issue: WhatsApp QR Code Not Appearing**
+
 ```bash
 # Clear existing session
 rm -rf .wwebjs_auth
@@ -731,6 +794,7 @@ npm run dev
 ```
 
 **Issue: Database Connection Failed**
+
 ```bash
 # Verify PostgreSQL is running
 docker-compose -f docker/docker-compose.dev.yml ps
@@ -743,6 +807,7 @@ docker-compose -f docker/docker-compose.dev.yml restart postgres
 ```
 
 **Issue: Tests Failing**
+
 ```bash
 # Clear Jest cache
 npm test -- --clearCache
@@ -755,6 +820,7 @@ npm test validator.test.ts
 ```
 
 **Issue: Port Already in Use**
+
 ```bash
 # Check which process is using port 3000
 lsof -i :3000
@@ -790,6 +856,7 @@ This project is licensed under the ISC License - see the LICENSE file for detail
 ## Acknowledgments
 
 Built with best practices from:
+
 - [Clean Code Principles](https://en.wikipedia.org/wiki/Robert_C._Martin)
 - [SOLID Design Principles](https://en.wikipedia.org/wiki/SOLID)
 - [OWASP Security Guidelines](https://owasp.org/)
@@ -800,14 +867,15 @@ Built with best practices from:
 **Last Updated**: December 10, 2025  
 **Project Status**: Active Development  
 **Repository**: [Finance-Report-Whatsapp](https://github.com/angga13142/Finance-Report-Whatsapp)
-├── models/           # Prisma models and database access
-├── lib/              # Shared utilities
-└── config/           # Configuration management
+├── models/ # Prisma models and database access
+├── lib/ # Shared utilities
+└── config/ # Configuration management
 
 tests/
-├── unit/             # Unit tests (70% of suite)
-├── integration/      # Integration tests (20%)
-└── e2e/              # End-to-end tests (10%)
+├── unit/ # Unit tests (70% of suite)
+├── integration/ # Integration tests (20%)
+└── e2e/ # End-to-end tests (10%)
+
 ```
 
 ## Documentation
@@ -851,3 +919,4 @@ ISC
 - **Documentation**: See `docs/` directory
 - **Issues**: Create GitHub issue
 - **Team**: Contact Finance Engineering Team
+```

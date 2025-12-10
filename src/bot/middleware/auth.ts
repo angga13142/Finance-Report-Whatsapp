@@ -20,21 +20,43 @@ export class AuthMiddleware {
   static async authenticate(message: Message): Promise<User | null> {
     try {
       const phoneNumber = message.from.replace("@c.us", "");
+      logger.info("Auth debug: raw phone from WhatsApp", {
+        raw: message.from,
+        cleaned: phoneNumber,
+      });
+
       const normalized = normalizePhoneNumber(phoneNumber);
+      logger.info("Auth debug: normalized phone", {
+        normalized,
+        original: phoneNumber,
+      });
 
       const user = await AuthService.authenticateByPhoneNumber(normalized);
 
       if (!user) {
-        logger.warn("User not found or inactive", { phoneNumber: normalized });
+        logger.warn("User not found or inactive", {
+          phoneNumber: normalized,
+          searched: normalized,
+        });
         return null;
       }
+
+      logger.info("User authenticated successfully", {
+        userId: user.id,
+        role: user.role,
+        phone: normalized,
+      });
 
       // Update last active
       await UserModel.updateLastActive(user.id);
 
       return user;
     } catch (error) {
-      logger.error("Authentication error", { error, from: message.from });
+      logger.error("Authentication error", {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        from: message.from,
+      });
       return null;
     }
   }

@@ -1,6 +1,6 @@
-import { LocalAuth } from 'whatsapp-web.js';
-import { env } from '../../config/env';
-import { logger } from '../../lib/logger';
+import { LocalAuth } from "whatsapp-web.js";
+import { env } from "../../config/env";
+import { logger } from "../../lib/logger";
 
 /**
  * LocalAuth session management for WhatsApp Web.js
@@ -9,10 +9,10 @@ import { logger } from '../../lib/logger';
 export function createLocalAuth(): LocalAuth {
   const auth = new LocalAuth({
     dataPath: env.WHATSAPP_SESSION_PATH,
-    clientId: 'cashflow-bot',
+    clientId: "cashflow-bot",
   });
 
-  logger.info('LocalAuth configured', {
+  logger.info("LocalAuth configured", {
     dataPath: env.WHATSAPP_SESSION_PATH,
   });
 
@@ -20,4 +20,3 @@ export function createLocalAuth(): LocalAuth {
 }
 
 export default createLocalAuth;
-
