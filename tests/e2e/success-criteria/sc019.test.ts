@@ -43,11 +43,11 @@ describe("SC-019: New User Registration Performance", () => {
       const startTime = Date.now();
 
       // Step 1: User sends initial message (simulated)
-      const mockMessage = {
-        from: testPhoneNumber,
-        body: "/start",
-        timestamp: Date.now(),
-      } as unknown as Message;
+      // const mockMessage = {
+      //   from: testPhoneNumber,
+      //   body: "/start",
+      //   timestamp: Date.now(),
+      // } as unknown as Message;
 
       // Step 2: System detects new user
       const existingUser = await UserModel.findByPhoneNumber(testPhoneNumber);
@@ -147,7 +147,7 @@ describe("SC-019: New User Registration Performance", () => {
 
           // Should not reach here
           fail(`Expected validation error for phone: ${phone}`);
-        } catch (error) {
+        } catch (error: unknown) {
           // Expected validation error
           expect(error).toBeDefined();
         }

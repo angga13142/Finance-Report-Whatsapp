@@ -160,7 +160,11 @@ describe("TransactionProcessor", () => {
       );
 
       expect(result.success).toBe(true);
-      expect(TransactionModel.softDelete).toHaveBeenCalledWith(mockTransactionId);
+      expect(TransactionModel.softDelete).toHaveBeenCalledWith(
+        mockTransactionId,
+        mockUserId,
+        undefined
+      );
       expect(AuditLogger.log).toHaveBeenCalledWith(
         expect.objectContaining({
           action: "transaction_deleted",
@@ -178,7 +182,7 @@ describe("TransactionProcessor", () => {
       );
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain("Insufficient permissions");
+      expect(result.error).toContain("Boss dan Dev");
       expect(TransactionModel.softDelete).not.toHaveBeenCalled();
     });
 
@@ -192,7 +196,7 @@ describe("TransactionProcessor", () => {
       );
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain("Transaction not found");
+      expect(result.error).toContain("tidak ditemukan");
     });
   });
 

@@ -105,7 +105,7 @@ describe("SC-020: Dynamic Category Management", () => {
       ];
 
       await Promise.all(
-        testCategories.map((cat) => CategoryModel.create(cat))
+        testCategories.map((cat) => CategoryModel.create(cat) as Promise<unknown>)
       );
 
       // Retrieve all active categories
@@ -115,7 +115,7 @@ describe("SC-020: Dynamic Category Management", () => {
 
       // Verify test categories are included
       const testCategoryNames = testCategories.map((c) => c.name);
-      const retrievedNames = activeCategories.map((c) => c.name);
+      const retrievedNames = activeCategories.map((c) => c.name) as string[];
 
       testCategoryNames.forEach((name) => {
         expect(retrievedNames).toContain(name);
@@ -176,7 +176,7 @@ describe("SC-020: Dynamic Category Management", () => {
 
       // Verify it's not in active list
       const activeCategories = await CategoryModel.findAllActive();
-      const activeCategoryIds = activeCategories.map((c) => c.id);
+      const activeCategoryIds = activeCategories.map((c) => c.id) as string[];
 
       expect(activeCategoryIds).not.toContain(category.id);
     });
@@ -197,7 +197,7 @@ describe("SC-020: Dynamic Category Management", () => {
 
       // Verify it's in active list
       const activeCategories = await CategoryModel.findAllActive();
-      const activeCategoryIds = activeCategories.map((c) => c.id);
+      const activeCategoryIds = activeCategories.map((c) => c.id) as string[];
 
       expect(activeCategoryIds).toContain(category.id);
     });
@@ -324,7 +324,7 @@ describe("SC-020: Dynamic Category Management", () => {
       const subcategories = await CategoryModel.findSubcategories(parent.id);
 
       expect(subcategories.length).toBeGreaterThanOrEqual(2);
-      const subcategoryIds = subcategories.map((c) => c.id);
+      const subcategoryIds = subcategories.map((c) => c.id) as string[];
       expect(subcategoryIds).toContain(child1.id);
       expect(subcategoryIds).toContain(child2.id);
     });
@@ -360,7 +360,7 @@ describe("SC-020: Dynamic Category Management", () => {
 
       // Verify category appears in active list
       const activeCategories = await CategoryModel.findAllActive();
-      const activeCategoryIds = activeCategories.map((c) => c.id);
+      const activeCategoryIds = activeCategories.map((c) => c.id) as string[];
       expect(activeCategoryIds).toContain(category.id);
 
       logger.info("✅ SC-020: Category immediately available after creation", {
