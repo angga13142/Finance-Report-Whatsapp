@@ -1,0 +1,179 @@
+{
+  "analysis": {
+    "project_type": "Node.js/TypeScript backend WhatsApp chatbot with Express.js, Prisma, PostgreSQL, Redis",
+    "technologies_detected": [
+      "Node.js 20+",
+      "TypeScript 5.x",
+      "Express.js 5.x",
+      "Prisma 5.x",
+      "PostgreSQL 15+",
+      "Redis 7.x",
+      "Jest",
+      "Playwright",
+      "Zod",
+      "Winston"
+    ],
+    "total_rule_files_before": 938,
+    "total_rule_files_after": 43,
+    "total_directories_before": 200,
+    "total_directories_after": 14,
+    "reduction_percentage": 95.4
+  },
+  "decisions": [
+    {
+      "filename": "node-express.mdc",
+      "relevance_score": 5,
+      "reasoning": "Core framework - Express.js is the main web framework used in this project",
+      "duplicates_found": [],
+      "action": "keep",
+      "action_details": "Kept as-is, highly relevant"
+    },
+    {
+      "filename": "typescript.mdc",
+      "relevance_score": 5,
+      "reasoning": "Core language - Project is written in TypeScript 5.x",
+      "duplicates_found": [],
+      "action": "keep",
+      "action_details": "Kept as-is, essential"
+    },
+    {
+      "filename": "database.mdc",
+      "relevance_score": 4,
+      "reasoning": "Relevant for Prisma/PostgreSQL, but contained Supabase-specific content which was removed",
+      "duplicates_found": [],
+      "action": "update",
+      "action_details": "Removed Supabase sections, kept Prisma/PostgreSQL content"
+    },
+    {
+      "filename": "gitflow.mdc",
+      "relevance_score": 5,
+      "reasoning": "General git workflow rules applicable to all projects",
+      "duplicates_found": [],
+      "action": "keep",
+      "action_details": "Kept as-is"
+    },
+    {
+      "filename": "clean-code.mdc",
+      "relevance_score": 5,
+      "reasoning": "General coding principles applicable to all projects",
+      "duplicates_found": ["codequality.mdc"],
+      "action": "keep",
+      "action_details": "Kept, complementary to codequality.mdc"
+    },
+    {
+      "filename": "codequality.mdc",
+      "relevance_score": 5,
+      "reasoning": "General code quality guidelines applicable to all projects",
+      "duplicates_found": ["clean-code.mdc"],
+      "action": "keep",
+      "action_details": "Kept, complementary to clean-code.mdc"
+    },
+    {
+      "filename": "jest-unit-testing-cursorrules-prompt-file/",
+      "relevance_score": 5,
+      "reasoning": "Core testing framework - Jest is used for unit/integration tests",
+      "duplicates_found": [],
+      "action": "keep",
+      "action_details": "Kept all Jest-related rules"
+    },
+    {
+      "filename": "playwright-*-cursorrules-prompt-file/",
+      "relevance_score": 5,
+      "reasoning": "E2E testing framework - Playwright is used for end-to-end tests",
+      "duplicates_found": [],
+      "action": "keep",
+      "action_details": "Kept all Playwright-related rules"
+    },
+    {
+      "filename": "es-module-nodejs-guidelines-cursorrules-prompt-fil/",
+      "relevance_score": 3,
+      "reasoning": "Partially relevant - project uses CommonJS, but general Node.js practices apply",
+      "duplicates_found": [],
+      "action": "keep",
+      "action_details": "Kept for general Node.js practices"
+    },
+    {
+      "filename": "javascript-typescript-code-quality-cursorrules-pro/",
+      "relevance_score": 4,
+      "reasoning": "Relevant for TypeScript code quality",
+      "duplicates_found": [],
+      "action": "keep",
+      "action_details": "Kept, provides TypeScript-specific quality guidelines"
+    },
+    {
+      "filename": "github-code-quality-cursorrules-prompt-file/",
+      "relevance_score": 4,
+      "reasoning": "General code quality and GitHub practices",
+      "duplicates_found": [],
+      "action": "keep",
+      "action_details": "Kept for general code quality"
+    },
+    {
+      "filename": "code-guidelines-cursorrules-prompt-file/",
+      "relevance_score": 4,
+      "reasoning": "General coding guidelines",
+      "duplicates_found": [],
+      "action": "keep",
+      "action_details": "Kept for general coding practices"
+    },
+    {
+      "filename": "code-style-consistency-cursorrules-prompt-file/",
+      "relevance_score": 4,
+      "reasoning": "Code style consistency guidelines",
+      "duplicates_found": [],
+      "action": "keep",
+      "action_details": "Kept for code style"
+    },
+    {
+      "filename": "git-conventional-commit-messages/",
+      "relevance_score": 4,
+      "reasoning": "Git commit message conventions",
+      "duplicates_found": [],
+      "action": "keep",
+      "action_details": "Kept for commit message standards"
+    },
+    {
+      "filename": "github-cursorrules-prompt-file-instructions/",
+      "relevance_score": 3,
+      "reasoning": "General GitHub/Cursor instructions",
+      "duplicates_found": [],
+      "action": "keep",
+      "action_details": "Kept for general instructions"
+    }
+  ],
+  "changes_made": {
+    "files_removed": [
+      "All React/Next.js/Vue/Angular/Svelte frontend framework rules",
+      "All Python/FastAPI/Django/Flask framework rules",
+      "All mobile framework rules (Android, iOS, React Native, Flutter, NativeScript)",
+      "All other language rules (Go, Rust, Java, Kotlin, Scala, Elixir, C++, etc.)",
+      "NestJS rules (project uses Express.js)",
+      "MongoDB rules (project uses PostgreSQL)",
+      "Cypress rules (project uses Jest/Playwright)",
+      "Supabase-specific content from database.mdc",
+      "Template/documentation/tool-specific rules"
+    ],
+    "files_merged": [],
+    "files_updated": [
+      "database.mdc - Removed Supabase sections, kept Prisma/PostgreSQL content"
+    ],
+    "files_kept": [
+      "node-express.mdc",
+      "typescript.mdc",
+      "database.mdc (updated)",
+      "gitflow.mdc",
+      "clean-code.mdc",
+      "codequality.mdc",
+      "jest-unit-testing-cursorrules-prompt-file/",
+      "playwright-*-cursorrules-prompt-file/",
+      "es-module-nodejs-guidelines-cursorrules-prompt-fil/",
+      "javascript-typescript-code-quality-cursorrules-pro/",
+      "github-code-quality-cursorrules-prompt-file/",
+      "code-guidelines-cursorrules-prompt-file/",
+      "code-style-consistency-cursorrules-prompt-file/",
+      "git-conventional-commit-messages/",
+      "github-cursorrules-prompt-file-instructions/"
+    ]
+  },
+  "summary": "Optimization complete: Reduced from 938 files in 200 directories to 43 files in 14 directories (95.4% reduction). Removed all frontend frameworks, Python frameworks, mobile frameworks, and other irrelevant technologies. Kept only Node.js/TypeScript/Express.js/Prisma/PostgreSQL/Jest/Playwright relevant rules. Updated database.mdc to remove Supabase content."
+}

@@ -1,0 +1,63 @@
+---
+description: Database best practices focusing on Prisma and PostgreSQL
+globs: prisma/**/*, src/db/**/*, **/*.prisma
+---
+
+# Database Best Practices
+
+## Prisma Setup
+- Use proper schema design
+- Implement proper migrations
+- Use proper relation definitions
+- Configure proper connection
+- Implement proper seeding
+- Use proper client setup
+
+## Prisma Models
+- Use proper model naming
+- Implement proper relations
+- Use proper field types
+- Define proper indexes
+- Implement proper constraints
+- Use proper enums
+
+## Prisma Queries
+- Use proper query optimization
+- Implement proper filtering
+- Use proper relations loading
+- Handle transactions properly
+- Implement proper pagination
+- Use proper aggregations
+
+## PostgreSQL Design
+- Use proper normalization
+- Implement proper indexing
+- Use proper constraints
+- Define proper relations
+- Implement proper cascades
+- Use proper data types
+- Leverage PostgreSQL-specific features (TimescaleDB for time-series)
+
+## Performance
+- Use proper connection pooling
+- Implement proper caching
+- Use proper query optimization
+- Handle N+1 queries properly
+- Implement proper batching
+- Monitor performance metrics
+
+## Security
+- Use proper authentication
+- Implement proper authorization
+- Handle sensitive data properly
+- Use proper encryption
+- Implement proper backups
+- Monitor security issues
+
+## Best Practices
+- Follow database conventions
+- Use proper migrations
+- Implement proper versioning
+- Handle errors properly
+- Document schema properly
+- Monitor database health 

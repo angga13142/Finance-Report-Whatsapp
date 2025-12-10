@@ -1,0 +1,567 @@
+openapi: 3.0.3
+info:
+  title: WhatsApp Cashflow Bot - Internal Service API Contracts
+  description: |
+    Internal service API contracts for business logic services. These APIs are 
+    used internally by the bot handlers and are not exposed directly to users.
+    Defines contracts for transaction processing, report generation, user management,
+    and recommendation engine.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000/api
+    description: Internal service API
+
+paths:
+  /transactions:
+    post:
+      summary: Create new transaction
+      description: |
+        Creates a new financial transaction (income or expense) with validation
+        and duplicate detection. Returns created transaction with approval status.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTransactionRequest'
+      responses:
+        '201':
+          description: Transaction created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+        '400':
+          description: Validation error (invalid amount, category, etc.)
+        '409':
+          description: Duplicate transaction detected
+        '403':
+          description: User role does not have permission
+
+  /transactions/{id}:
+    get:
+      summary: Get transaction by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Transaction found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+        '404':
+          description: Transaction not found
+        '403':
+          description: User does not have permission to view this transaction
+
+    patch:
+      summary: Update transaction
+      description: |
+        Updates transaction (amount, category, description). Only allowed for
+        same-day transactions by owner, or any transaction by Boss/Dev.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTransactionRequest'
+      responses:
+        '200':
+          description: Transaction updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+        '400':
+          description: Validation error
+        '403':
+          description: User does not have permission
+        '409':
+          description: Optimistic locking conflict
+
+  /reports/generate:
+    post:
+      summary: Generate report
+      description: |
+        Generates a role-specific financial report with aggregation and calculations.
+        Returns report data and file paths (PDF, Excel) if requested.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateReportRequest'
+      responses:
+        '200':
+          description: Report generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportData'
+        '400':
+          description: Invalid date range or parameters
+        '403':
+          description: User role does not have permission
+
+  /reports/daily:
+    get:
+      summary: Get daily report data
+      description: |
+        Retrieves daily report data for a specific date. Applies role-based
+        filtering automatically.
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          example: '2025-12-09'
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Report data retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailyReportData'
+        '403':
+          description: User does not have permission
+
+  /users/{id}:
+    get:
+      summary: Get user by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '404':
+          description: User not found
+        '403':
+          description: User does not have permission
+
+    patch:
+      summary: Update user (role, status)
+      description: |
+        Updates user role or activation status. Only Dev/Boss can change roles.
+        Role changes take effect immediately on next interaction.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '403':
+          description: User does not have permission
+
+  /recommendations:
+    get:
+      summary: Get recommendations for user
+      description: |
+        Retrieves financial recommendations (anomalies, alerts) for a user
+        based on their role. Filters by priority and confidence score.
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: ['critical', 'high', 'medium', 'low']
+        - name: min_confidence
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100
+            default: 0
+      responses:
+        '200':
+          description: Recommendations retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RecommendationResponse'
+
+  /sessions/{phone_number}:
+    get:
+      summary: Get user session state
+      description: |
+        Retrieves current conversation state and context data for a user.
+        Used for multi-step workflows (transaction input, etc.).
+      parameters:
+        - name: phone_number
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^(\+62|0)[0-9]{9,12}$'
+      responses:
+        '200':
+          description: Session found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '404':
+          description: No active session
+
+    put:
+      summary: Update session state
+      description: |
+        Updates user conversation state and context data. Used to track
+        multi-step workflows (category selection, amount input, etc.).
+      parameters:
+        - name: phone_number
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^(\+62|0)[0-9]{9,12}$'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSessionRequest'
+      responses:
+        '200':
+          description: Session updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+
+components:
+  schemas:
+    CreateTransactionRequest:
+      type: object
+      required:
+        - user_id
+        - type
+        - category
+        - amount
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: ['income', 'expense']
+        category:
+          type: string
+          maxLength: 100
+          example: 'Produk A'
+        amount:
+          type: number
+          minimum: 0.01
+          maximum: 500000000
+          example: 500000
+        description:
+          type: string
+          maxLength: 100
+          nullable: true
+          example: 'Sale to Customer XYZ'
+
+    UpdateTransactionRequest:
+      type: object
+      properties:
+        category:
+          type: string
+          maxLength: 100
+        amount:
+          type: number
+          minimum: 0.01
+          maximum: 500000000
+        description:
+          type: string
+          maxLength: 100
+          nullable: true
+        version:
+          type: integer
+          description: Optimistic locking version number
+
+    TransactionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: ['income', 'expense']
+        category:
+          type: string
+        amount:
+          type: number
+          format: decimal
+        description:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+        approval_status:
+          type: string
+          enum: ['approved', 'pending', 'rejected']
+        approval_by:
+          type: string
+          format: uuid
+          nullable: true
+        approved_at:
+          type: string
+          format: date-time
+          nullable: true
+        version:
+          type: integer
+
+    GenerateReportRequest:
+      type: object
+      required:
+        - user_id
+        - report_type
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        report_type:
+          type: string
+          enum: ['daily', 'weekly', 'monthly', 'custom']
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        include_pdf:
+          type: boolean
+          default: false
+        include_excel:
+          type: boolean
+          default: false
+
+    ReportData:
+      type: object
+      properties:
+        report_id:
+          type: string
+          format: uuid
+        report_date:
+          type: string
+          format: date
+        total_income:
+          type: number
+          format: decimal
+        total_expense:
+          type: number
+          format: decimal
+        net_cashflow:
+          type: number
+          format: decimal
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionResponse'
+        pdf_path:
+          type: string
+          nullable: true
+        excel_path:
+          type: string
+          nullable: true
+
+    DailyReportData:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        total_income:
+          type: number
+          format: decimal
+        total_expense:
+          type: number
+          format: decimal
+        net_cashflow:
+          type: number
+          format: decimal
+        transaction_count:
+          type: integer
+        top_transactions:
+          type: array
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/TransactionResponse'
+        category_breakdown:
+          type: object
+          additionalProperties:
+            type: number
+            format: decimal
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        phone_number:
+          type: string
+        name:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: ['dev', 'boss', 'employee', 'investor']
+        created_at:
+          type: string
+          format: date-time
+        last_active:
+          type: string
+          format: date-time
+          nullable: true
+        is_active:
+          type: boolean
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: ['dev', 'boss', 'employee', 'investor']
+        is_active:
+          type: boolean
+        name:
+          type: string
+          maxLength: 255
+
+    RecommendationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: ['expense_spike', 'revenue_decline', 'cashflow_warning', 'employee_inactivity', 'target_variance']
+        content:
+          type: object
+          properties:
+            title:
+              type: string
+            message:
+              type: string
+            data:
+              type: object
+        priority:
+          type: string
+          enum: ['critical', 'high', 'medium', 'low']
+        confidence_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        generated_at:
+          type: string
+          format: date-time
+
+    SessionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        phone_number:
+          type: string
+        state:
+          type: object
+          properties:
+            menu:
+              type: string
+              enum: ['main', 'transaction', 'category', 'amount', 'confirm']
+            step:
+              type: integer
+        context_data:
+          type: object
+          nullable: true
+          properties:
+            category:
+              type: string
+            amount:
+              type: number
+            description:
+              type: string
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+
+    UpdateSessionRequest:
+      type: object
+      properties:
+        state:
+          type: object
+          properties:
+            menu:
+              type: string
+              enum: ['main', 'transaction', 'category', 'amount', 'confirm']
+            step:
+              type: integer
+        context_data:
+          type: object
+          nullable: true
+

@@ -1,0 +1,87 @@
+================================================================================
+.cursorrules Configuration Summary
+================================================================================
+
+FILE: /home/senarokalie/Desktop/Finance/.cursorrules
+SIZE: 528 lines
+STATUS: ✅ ACTIVE
+
+================================================================================
+TECH STACK CONFIGURED
+================================================================================
+
+✅ Node.js 18+ with Express.js
+✅ PostgreSQL 15+ with TimescaleDB extension
+✅ Prisma 5.x ORM (type-safe database operations)
+✅ Redis 7.x (caching, sessions, rate limiting)
+✅ JWT Authentication
+✅ Jest Unit Testing
+✅ Cypress API Testing
+✅ Docker & Docker Compose
+
+================================================================================
+KEY SECTIONS INCLUDED
+================================================================================
+
+1. CODE STYLE & STRUCTURE
+   - TypeScript best practices
+   - Naming conventions
+   - File organization
+
+2. PRISMA 5.x DATABASE LAYER
+   - Schema standards with Decimal for financial amounts
+   - Query patterns and examples
+   - Migration management
+   - ACID transaction compliance
+
+3. POSTGRESQL + TIMESCALEDB
+   - Hypertable configuration
+   - Decimal arithmetic for precision
+   - ACID compliance patterns
+
+4. REDIS 7.x CACHING
+   - Session management (1-hour TTL)
+   - Balance caching (5-minute TTL)
+   - Token bucket rate limiting
+   - Pub/Sub for real-time updates
+   - Graceful error handling
+
+5. EXPRESS.js API DEVELOPMENT
+   - RESTful endpoint design
+   - Complete endpoint example with Prisma + Redis
+   - Input validation patterns
+   - Error handling strategies
+   - JWT authentication middleware
+
+6. TESTING STANDARDS
+   - Jest unit testing with Prisma mocking
+   - Cypress API testing patterns
+   - Edge case coverage examples
+
+7. SECURITY STANDARDS
+   - Authentication (JWT)
+   - Input validation & sanitization
+   - Error message safety
+   - Rate limiting implementation
+   - Audit logging for transactions
+   - Data protection measures
+
+8. PROJECT STRUCTURE & SETUP
+   - Recommended directory layout
+   - Environment variables list
+   - Development workflow commands
+
+================================================================================
+READY FOR USE
+================================================================================
+
+Cursor AI will now:
+✅ Apply these rules to all generated code
+✅ Enforce TypeScript type safety
+✅ Ensure Prisma best practices
+✅ Implement Redis caching patterns
+✅ Follow security standards
+✅ Generate properly structured endpoints
+
+START CURSOR AI WITH THIS PROJECT FOLDER
+================================================================================
