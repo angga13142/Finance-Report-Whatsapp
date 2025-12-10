@@ -3,7 +3,7 @@ module.exports = {
   parserOptions: {
     ecmaVersion: 2022,
     sourceType: "module",
-    project: "./tsconfig.json",
+    project: ["./tsconfig.json", "./tsconfig.test.json"],
   },
   extends: [
     "eslint:recommended",
@@ -27,6 +27,17 @@ module.exports = {
     ".lintstagedrc.js",
     "jest.config.js",
     "playwright.config.ts",
+  ],
+  overrides: [
+    {
+      files: ["**/*.test.ts", "**/*.spec.ts", "tests/**/*.ts"],
+      rules: {
+        "@typescript-eslint/unbound-method": "off",
+        "@typescript-eslint/no-unsafe-assignment": "off",
+        "@typescript-eslint/no-unsafe-member-access": "off",
+        "@typescript-eslint/no-unsafe-call": "off",
+      },
+    },
   ],
   rules: {
     "@typescript-eslint/no-explicit-any": "warn", // Changed to warn for Phase 3 code
