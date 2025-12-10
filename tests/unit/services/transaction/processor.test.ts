@@ -166,9 +166,11 @@ describe("TransactionProcessor", () => {
         undefined
       );
       expect(AuditLogger.log).toHaveBeenCalledWith(
-        expect.objectContaining({
-          action: "transaction_deleted",
-        })
+        "transaction_deleted",
+        expect.any(Object),
+        mockUserId,
+        mockTransactionId,
+        "Transaction"
       );
     });
 
