@@ -1,5 +1,5 @@
-import winston from 'winston';
-import { env } from '../config/env';
+import * as winston from "winston";
+import { env } from "../config/env";
 
 /**
  * Winston logger configuration
@@ -7,23 +7,26 @@ import { env } from '../config/env';
  */
 export const logger = winston.createLogger({
   level: env.LOG_LEVEL,
-  format: env.LOG_FORMAT === 'json' 
-    ? winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.errors({ stack: true }),
-        winston.format.json()
-      )
-    : winston.format.combine(
-        winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-        winston.format.errors({ stack: true }),
-        winston.format.colorize(),
-        winston.format.printf(({ timestamp, level, message, ...meta }) => {
-          const metaStr = Object.keys(meta).length ? JSON.stringify(meta, null, 2) : '';
-          return `${timestamp} [${level}]: ${message} ${metaStr}`;
-        })
-      ),
+  format:
+    env.LOG_FORMAT === "json"
+      ? winston.format.combine(
+          winston.format.timestamp(),
+          winston.format.errors({ stack: true }),
+          winston.format.json(),
+        )
+      : winston.format.combine(
+          winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
+          winston.format.errors({ stack: true }),
+          winston.format.colorize(),
+          winston.format.printf(({ timestamp, level, message, ...meta }) => {
+            const metaStr = Object.keys(meta).length
+              ? JSON.stringify(meta, null, 2)
+              : "";
+            return `${timestamp} [${level}]: ${message} ${metaStr}`;
+          }),
+        ),
   defaultMeta: {
-    service: 'whatsapp-cashflow-bot',
+    service: "whatsapp-cashflow-bot",
     environment: env.NODE_ENV,
   },
   transports: [
@@ -34,14 +37,14 @@ export const logger = winston.createLogger({
     }),
     // File transport for errors
     new winston.transports.File({
-      filename: 'logs/error.log',
-      level: 'error',
+      filename: "logs/error.log",
+      level: "error",
       maxsize: 5242880, // 5MB
       maxFiles: 5,
     }),
     // File transport for all logs
     new winston.transports.File({
-      filename: 'logs/combined.log',
+      filename: "logs/combined.log",
       maxsize: 5242880, // 5MB
       maxFiles: 5,
     }),
@@ -51,12 +54,11 @@ export const logger = winston.createLogger({
 });
 
 // Create logs directory if it doesn't exist
-import { mkdirSync } from 'fs';
+import { mkdirSync } from "fs";
 try {
-  mkdirSync('logs', { recursive: true });
+  mkdirSync("logs", { recursive: true });
 } catch (error) {
   // Directory might already exist, ignore
 }
 
 export default logger;
-

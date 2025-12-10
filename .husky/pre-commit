@@ -1,0 +1,24 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔍 Running pre-commit checks..."
+
+# Run lint-staged to format and lint staged files
+echo "📝 Formatting and linting staged files..."
+npx lint-staged || {
+  echo "❌ Lint-staged failed. Please fix the issues above."
+  exit 1
+}
+
+# Run type checking on staged TypeScript files
+# Only check files that are staged and are TypeScript files
+echo "🔧 Type checking staged TypeScript files..."
+staged_ts_files=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx)$' || true)
+if [ -n "$staged_ts_files" ]; then
+  echo "$staged_ts_files" | xargs npx tsc --noEmit --skipLibCheck || {
+    echo "❌ Type check failed. Please fix TypeScript errors before committing."
+    exit 1
+  }
+fi
+
+echo "✅ Pre-commit checks passed!"

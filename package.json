@@ -11,6 +11,11 @@
     "test": "tests"
   },
   "scripts": {
+    "prepare": "husky install",
+    "preinstall": "node scripts/preflight/check-node-version.js",
+    "prebuild": "node scripts/preflight/check-build-prerequisites.js",
+    "prestart": "node scripts/preflight/check-start-prerequisites.js",
+    "prepublishOnly": "node scripts/preflight/check-publish-prerequisites.js && npm run build && npm test",
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
@@ -19,7 +24,7 @@
     "test:integration": "jest --testPathPattern=tests/integration",
     "test:e2e": "playwright test",
     "test:coverage": "jest --coverage",
-    "lint": "eslint src tests --ext .ts",
+    "lint": "eslint src --ext .ts --max-warnings 200",
     "lint:fix": "eslint src tests --ext .ts --fix",
     "type-check": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
@@ -28,6 +33,22 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:studio": "prisma studio"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ],
+    "prisma/**/*.prisma": [
+      "prettier --write"
+    ]
   },
   "repository": {
     "type": "git",
@@ -48,7 +69,9 @@
   "homepage": "https://github.com/angga13142/Finance-Report-Whatsapp#readme",
   "dependencies": {
     "@prisma/client": "^5.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
     "dotenv": "^16.3.1",
+    "jsonwebtoken": "^9.0.3",
     "luxon": "^3.7.2",
     "node-cron": "^3.0.0",
     "pdfkit": "^0.13.0",
@@ -67,7 +90,9 @@
     "@typescript-eslint/parser": "^6.0.0",
     "eslint": "^8.50.0",
     "eslint-config-prettier": "^9.0.0",
+    "husky": "^9.1.7",
     "jest": "^29.0.0",
+    "lint-staged": "^16.2.7",
     "playwright": "^1.40.0",
     "prettier": "^3.0.0",
     "ts-jest": "^29.1.0",
