@@ -1,7 +1,8 @@
-import { TransactionType, ApprovalStatus, Transaction } from "@prisma/client";
+import { TransactionType, Transaction } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { TransactionModel } from "../../models/transaction";
 import { TransactionValidator } from "./validator";
+import { ApprovalService } from "./approval";
 import { logger } from "../../lib/logger";
 import { parseAmount } from "../../lib/currency";
 import { formatCurrency } from "../../lib/currency";
@@ -36,18 +37,30 @@ export class TransactionProcessor {
       // Parse amount
       const amount = parseAmount(String(data.amount));
 
-      // Determine approval status (Employee transactions auto-approve)
-      // Suspicious transactions will be flagged in approval service (Phase 4)
-      const approvalStatus: ApprovalStatus = "approved";
+      // Analyze transaction for suspicious patterns
+      const approvalDecision = await ApprovalService.analyzeTransaction(
+        data.userId,
+        data.type,
+        amount,
+        data.category,
+        data.description,
+      );
 
-      // Create transaction
+      logger.info("Transaction approval decision", {
+        userId: data.userId,
+        status: approvalDecision.status,
+        requiresManualApproval: approvalDecision.requiresManualApproval,
+        confidenceScore: approvalDecision.confidenceScore,
+      });
+
+      // Create transaction with approval status
       const transaction = await TransactionModel.create({
         userId: data.userId,
         type: data.type,
         category: data.category,
         amount,
         description: data.description,
-        approvalStatus,
+        approvalStatus: approvalDecision.status,
       });
 
       // Log audit

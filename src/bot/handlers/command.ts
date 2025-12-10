@@ -46,6 +46,11 @@ export class CommandHandler {
     this.aliasMap.set("discuss", "discuss");
     this.aliasMap.set("rekomendasi", "recommendations");
     this.aliasMap.set("alerts", "recommendations");
+    this.aliasMap.set("pending", "pending");
+    this.aliasMap.set("approve", "approve");
+    this.aliasMap.set("reject", "reject");
+    this.aliasMap.set("setujui", "approve");
+    this.aliasMap.set("tolak", "reject");
 
     logger.info("Command handler initialized", {
       aliases: Array.from(this.aliasMap.keys()),
@@ -202,6 +207,33 @@ export class CommandHandler {
 
         case "recommendations":
           await this.handleRecommendationsCommand(
+            message,
+            user.id,
+            user.role,
+            parsed.args,
+          );
+          break;
+
+        case "pending":
+          await this.handlePendingCommand(
+            message,
+            user.id,
+            user.role,
+            parsed.args,
+          );
+          break;
+
+        case "approve":
+          await this.handleApproveCommand(
+            message,
+            user.id,
+            user.role,
+            parsed.args,
+          );
+          break;
+
+        case "reject":
+          await this.handleRejectCommand(
             message,
             user.id,
             user.role,
@@ -551,6 +583,108 @@ export class CommandHandler {
 
     const { RecommendationHandler } = await import("./recommendation");
     await RecommendationHandler.handleDiscussWithTeam(message, userId, args[0]);
+  }
+
+  /**
+   * Handle /pending command - View pending approvals (Boss only)
+   */
+  private static async handlePendingCommand(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    _args: string[],
+  ): Promise<void> {
+    // Check role
+    if (userRole !== "boss" && userRole !== "dev") {
+      await message.reply(
+        "❌ Command ini hanya untuk Boss dan Dev.\n\nAnda tidak memiliki akses.",
+      );
+      return;
+    }
+
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      await message.reply("❌ User tidak ditemukan");
+      return;
+    }
+
+    const { ApprovalHandler } = await import("./approval");
+    await ApprovalHandler.handlePendingApprovals(user, message);
+  }
+
+  /**
+   * Handle /approve command - Approve transaction (Boss only)
+   */
+  private static async handleApproveCommand(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    args: string[],
+  ): Promise<void> {
+    // Check role
+    if (userRole !== "boss" && userRole !== "dev") {
+      await message.reply(
+        "❌ Command ini hanya untuk Boss dan Dev.\n\nAnda tidak memiliki akses.",
+      );
+      return;
+    }
+
+    if (args.length === 0) {
+      await message.reply(
+        "❌ Format: `/approve <transaction-id>`\n\n" +
+          "Contoh: `/approve abc12345`\n\n" +
+          "Gunakan `/pending` untuk melihat transaksi yang perlu approval.",
+      );
+      return;
+    }
+
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      await message.reply("❌ User tidak ditemukan");
+      return;
+    }
+
+    const { ApprovalHandler } = await import("./approval");
+    await ApprovalHandler.handleApprove(user, args[0], message);
+  }
+
+  /**
+   * Handle /reject command - Reject transaction (Boss only)
+   */
+  private static async handleRejectCommand(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    args: string[],
+  ): Promise<void> {
+    // Check role
+    if (userRole !== "boss" && userRole !== "dev") {
+      await message.reply(
+        "❌ Command ini hanya untuk Boss dan Dev.\n\nAnda tidak memiliki akses.",
+      );
+      return;
+    }
+
+    if (args.length === 0) {
+      await message.reply(
+        "❌ Format: `/reject <transaction-id> [reason]`\n\n" +
+          "Contoh: `/reject abc12345 Jumlah tidak sesuai`\n\n" +
+          "Gunakan `/pending` untuk melihat transaksi yang perlu approval.",
+      );
+      return;
+    }
+
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      await message.reply("❌ User tidak ditemukan");
+      return;
+    }
+
+    const transactionId = args[0];
+    const reason = args.slice(1).join(" ") || undefined;
+
+    const { ApprovalHandler } = await import("./approval");
+    await ApprovalHandler.handleReject(user, transactionId, reason, message);
   }
 
   /**

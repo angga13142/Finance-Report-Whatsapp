@@ -363,11 +363,11 @@ This document contains actionable, dependency-ordered implementation tasks organ
 
 ### Transaction Approval Workflow
 
-- [ ] T126 Implement suspicious transaction detection (duplicates, unrealistic amounts) in src/services/transaction/approval.ts
-- [ ] T127 Implement approval workflow service (auto-approve, flagged-pending, manually-approved/rejected) in src/services/transaction/approval.ts
-- [ ] T128 Implement approval status tracking in src/models/transaction.ts
-- [ ] T129 Implement Boss approval/rejection handlers in src/bot/handlers/approval.ts
-- [ ] T129a [US1] Verify approval workflow state machine (auto-approve → flagged-pending → manually-approved/rejected) covers FR-075 and FR-076 requirements
+- [x] T126 Implement suspicious transaction detection (duplicates, unrealistic amounts) in src/services/transaction/approval.ts
+- [x] T127 Implement approval workflow service (auto-approve, flagged-pending, manually-approved/rejected) in src/services/transaction/approval.ts
+- [x] T128 Implement approval status tracking in src/models/transaction.ts
+- [x] T129 Implement Boss approval/rejection handlers in src/bot/handlers/approval.ts
+- [x] T129a [US1] Verify approval workflow state machine (auto-approve → flagged-pending → manually-approved/rejected) covers FR-075 and FR-076 requirements
 
 ### Low-Priority Features (Phase 2+)
 

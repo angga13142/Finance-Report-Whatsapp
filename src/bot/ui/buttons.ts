@@ -417,6 +417,36 @@ export class ButtonMenu {
   static validateButtonLabel(label: string): boolean {
     return label.length <= MAX_BUTTON_LABEL_LENGTH;
   }
+
+  /**
+   * Generate approval action buttons for Boss
+   */
+  static generateApprovalButtons(transactionId: string): Buttons {
+    return new Buttons(
+      "Pilih aksi untuk transaksi ini",
+      [
+        { body: "✅ Setujui", id: `approve_${transactionId}` },
+        { body: "❌ Tolak", id: `reject_${transactionId}` },
+        { body: "ℹ️ Detail", id: `approval_detail_${transactionId}` },
+      ],
+      "Approval Transaksi",
+    );
+  }
+
+  /**
+   * Generate approval management menu for Boss
+   */
+  static generateApprovalMenuButtons(): Buttons {
+    return new Buttons(
+      "Kelola approval transaksi",
+      [
+        { body: "⏳ Lihat Pending", id: "approval_pending" },
+        { body: "📊 Statistik", id: "approval_stats" },
+        { body: "🏠 Menu Utama", id: "menu_main" },
+      ],
+      "Menu Approval",
+    );
+  }
 }
 
 export default ButtonMenu;
