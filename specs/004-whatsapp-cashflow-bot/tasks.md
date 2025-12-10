@@ -246,12 +246,12 @@ This document contains actionable, dependency-ordered implementation tasks organ
 
 ### User Story 6 Tasks
 
-- [ ] T083 [US6] Implement on-demand report request handler in src/bot/handlers/report.ts
-- [ ] T084 [US6] Implement role-based data filtering for reports in src/services/report/generator.ts
-- [ ] T085 [US6] Implement Excel export service in src/services/report/excel.ts
-- [ ] T086 [US6] Implement custom date range report calculation in src/services/report/generator.ts
-- [ ] T087 [US6] Implement weekly/monthly report aggregation in src/services/report/generator.ts
-- [ ] T088 [US6] Implement report request response time optimization (<5 seconds) in src/services/report/generator.ts
+- [x] T083 [US6] Implement on-demand report request handler in src/bot/handlers/report.ts
+- [x] T084 [US6] Implement role-based data filtering for reports in src/services/report/generator.ts
+- [x] T085 [US6] Implement Excel export service in src/services/report/excel.ts
+- [x] T086 [US6] Implement custom date range report calculation in src/services/report/generator.ts
+- [x] T087 [US6] Implement weekly/monthly report aggregation in src/services/report/generator.ts
+- [x] T088 [US6] Implement report request response time optimization (<5 seconds) in src/services/report/generator.ts
 
 ---
 

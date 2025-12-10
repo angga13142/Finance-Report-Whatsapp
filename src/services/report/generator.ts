@@ -102,15 +102,22 @@ export class ReportGenerator {
     role: UserRole,
     startDate: Date,
     endDate: Date,
+    userId?: string,
   ): Promise<RoleReportData> {
     logger.debug("Generating role-specific report", {
       role,
       startDate,
       endDate,
+      userId,
     });
 
     // Base query - filter by role permissions
-    const whereClause = this.buildWhereClauseForRole(role, startDate, endDate);
+    const whereClause = this.buildWhereClauseForRole(
+      role,
+      startDate,
+      endDate,
+      userId,
+    );
 
     // Get summary statistics
     const summary = await this.calculateSummary(whereClause);
@@ -127,6 +134,7 @@ export class ReportGenerator {
       startDate,
       endDate,
       summary,
+      userId,
     );
 
     return {
@@ -145,6 +153,7 @@ export class ReportGenerator {
     role: UserRole,
     startDate: Date,
     endDate: Date,
+    userId?: string,
   ): Record<string, unknown> {
     const baseWhere: Record<string, unknown> = {
       timestamp: {
@@ -158,7 +167,9 @@ export class ReportGenerator {
     switch (role) {
       case "employee":
         // Employees only see their own transactions
-        // We'll need to pass userId for this, for now aggregate all
+        if (userId) {
+          baseWhere.userId = userId;
+        }
         break;
       case "investor":
         // Investor sees aggregated data only (no individual transactions in detail)
@@ -313,6 +324,7 @@ export class ReportGenerator {
     startDate: Date,
     _endDate: Date,
     currentSummary: TransactionSummary,
+    userId?: string,
   ): Promise<{
     vsYesterday: {
       income: number;
@@ -340,6 +352,7 @@ export class ReportGenerator {
       role,
       yesterday,
       yesterdayEnd,
+      userId,
     );
     const yesterdaySummary = await this.calculateSummary(yesterdayWhere);
 
@@ -351,6 +364,7 @@ export class ReportGenerator {
       role,
       sevenDaysAgo,
       startDate,
+      userId,
     );
     const sevenDaySummary = await this.calculateSummary(sevenDayWhere);
 
