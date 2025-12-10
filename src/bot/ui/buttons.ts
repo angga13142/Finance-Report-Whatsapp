@@ -108,14 +108,108 @@ export class ButtonMenu {
   /**
    * Generate error recovery buttons
    */
-  static generateErrorRecoveryButtons(): Buttons {
+  static generateErrorRecoveryButtons(context?: string): Buttons {
     return new Buttons(
       "Silakan coba lagi atau kembali ke menu utama",
       [
+        {
+          body: "🔄 Coba Lagi",
+          id: context ? `retry_${context}` : "error_retry",
+        },
+        { body: "🏠 Menu Utama", id: "menu_main" },
+        { body: "❓ Bantuan", id: "help" },
+      ],
+      "Terjadi kesalahan",
+    );
+  }
+
+  /**
+   * Generate validation error buttons with examples
+   */
+  static generateValidationErrorButtons(): Buttons {
+    return new Buttons(
+      "Perbaiki input Anda",
+      [
+        { body: "📖 Lihat Contoh", id: "show_examples" },
         { body: "🔄 Coba Lagi", id: "error_retry" },
         { body: "🏠 Menu Utama", id: "menu_main" },
       ],
-      "Terjadi kesalahan",
+      "Input tidak valid",
+    );
+  }
+
+  /**
+   * Generate transaction error recovery buttons
+   */
+  static generateTransactionErrorButtons(): Buttons {
+    return new Buttons(
+      "Pilih aksi untuk transaksi",
+      [
+        { body: "🔄 Coba Lagi", id: "retry_transaction" },
+        { body: "✏️ Edit Data", id: "edit_transaction" },
+        { body: "🏠 Menu Utama", id: "menu_main" },
+      ],
+      "Transaksi gagal",
+    );
+  }
+
+  /**
+   * Generate report error recovery buttons
+   */
+  static generateReportErrorButtons(): Buttons {
+    return new Buttons(
+      "Pilih aksi untuk laporan",
+      [
+        { body: "🔄 Coba Lagi", id: "retry_report" },
+        { body: "📅 Ganti Period", id: "change_period" },
+        { body: "🏠 Menu Utama", id: "menu_main" },
+      ],
+      "Laporan gagal",
+    );
+  }
+
+  /**
+   * Generate session error recovery buttons
+   */
+  static generateSessionErrorButtons(): Buttons {
+    return new Buttons(
+      "Sesi berakhir atau terputus",
+      [
+        { body: "🔄 Reconnect", id: "session_reconnect" },
+        { body: "🆕 Mulai Baru", id: "session_restart" },
+        { body: "❓ Bantuan", id: "help" },
+      ],
+      "Session error",
+    );
+  }
+
+  /**
+   * Generate database error recovery buttons
+   */
+  static generateDatabaseErrorButtons(): Buttons {
+    return new Buttons(
+      "Masalah koneksi database",
+      [
+        { body: "🔄 Coba Lagi", id: "retry_database" },
+        { body: "⏰ Tunggu & Retry", id: "wait_retry" },
+        { body: "🏠 Menu Utama", id: "menu_main" },
+      ],
+      "Database error",
+    );
+  }
+
+  /**
+   * Generate permission error buttons
+   */
+  static generatePermissionErrorButtons(): Buttons {
+    return new Buttons(
+      "Anda tidak memiliki akses",
+      [
+        { body: "ℹ️ Info Role", id: "show_role_info" },
+        { body: "📞 Hubungi Admin", id: "contact_admin" },
+        { body: "🏠 Menu Utama", id: "menu_main" },
+      ],
+      "Akses ditolak",
     );
   }
 

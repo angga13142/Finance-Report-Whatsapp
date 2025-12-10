@@ -33,9 +33,10 @@ export function setupEventHandlers(client: Client): void {
     logger.error("WhatsApp authentication failed", { error: msg });
   });
 
-  // Disconnect event
+  // Disconnect event with reconnection logic
   client.on("disconnected", (reason) => {
     logger.warn("WhatsApp client disconnected", { reason });
+    void handleDisconnection(client, reason);
   });
 
   // Message event - handle incoming messages
@@ -114,6 +115,192 @@ export function routeMessage(message: Message): void {
     from: message.from,
     body: message.body?.substring(0, 50),
   });
+}
+
+/**
+ * Session state management
+ */
+interface SessionState {
+  isReconnecting: boolean;
+  reconnectAttempts: number;
+  lastDisconnectTime: Date | null;
+  reconnectTimer: NodeJS.Timeout | null;
+}
+
+const sessionState: SessionState = {
+  isReconnecting: false,
+  reconnectAttempts: 0,
+  lastDisconnectTime: null,
+  reconnectTimer: null,
+};
+
+// Reconnection configuration
+const RECONNECT_CONFIG = {
+  MAX_ATTEMPTS: 5,
+  INITIAL_DELAY_MS: 2000, // 2 seconds
+  MAX_DELAY_MS: 60000, // 60 seconds
+  BACKOFF_MULTIPLIER: 2,
+};
+
+/**
+ * Handle WhatsApp disconnection with auto-reconnection
+ */
+function handleDisconnection(client: Client, reason: string): void {
+  logger.warn("Handling WhatsApp disconnection", {
+    reason,
+    isReconnecting: sessionState.isReconnecting,
+    attempts: sessionState.reconnectAttempts,
+  });
+
+  // Mark disconnection time
+  sessionState.lastDisconnectTime = new Date();
+
+  // Clear any existing reconnect timer
+  if (sessionState.reconnectTimer) {
+    clearTimeout(sessionState.reconnectTimer);
+    sessionState.reconnectTimer = null;
+  }
+
+  // If already reconnecting, don't start another attempt
+  if (sessionState.isReconnecting) {
+    logger.info("Reconnection already in progress, skipping");
+    return;
+  }
+
+  // Check if we've exceeded max attempts
+  if (sessionState.reconnectAttempts >= RECONNECT_CONFIG.MAX_ATTEMPTS) {
+    logger.error("Max reconnection attempts reached", {
+      attempts: sessionState.reconnectAttempts,
+      maxAttempts: RECONNECT_CONFIG.MAX_ATTEMPTS,
+    });
+    sessionState.isReconnecting = false;
+    sessionState.reconnectAttempts = 0;
+    return;
+  }
+
+  // Start reconnection process
+  sessionState.isReconnecting = true;
+  sessionState.reconnectAttempts++;
+
+  // Calculate delay with exponential backoff
+  const delay = Math.min(
+    RECONNECT_CONFIG.INITIAL_DELAY_MS *
+      Math.pow(
+        RECONNECT_CONFIG.BACKOFF_MULTIPLIER,
+        sessionState.reconnectAttempts - 1,
+      ),
+    RECONNECT_CONFIG.MAX_DELAY_MS,
+  );
+
+  logger.info("Scheduling reconnection attempt", {
+    attempt: sessionState.reconnectAttempts,
+    maxAttempts: RECONNECT_CONFIG.MAX_ATTEMPTS,
+    delayMs: delay,
+  });
+
+  // Schedule reconnection
+  sessionState.reconnectTimer = setTimeout(() => {
+    void attemptReconnection(client);
+  }, delay);
+}
+
+/**
+ * Attempt to reconnect to WhatsApp
+ */
+async function attemptReconnection(client: Client): Promise<void> {
+  logger.info("Attempting WhatsApp reconnection", {
+    attempt: sessionState.reconnectAttempts,
+  });
+
+  try {
+    // Check if client is already connected
+    const state = await client.getState();
+
+    if (state && String(state) === "CONNECTED") {
+      logger.info("WhatsApp already connected, reset reconnection state");
+      resetReconnectionState();
+      return;
+    }
+
+    // Try to initialize the client
+    await client.initialize();
+
+    logger.info("WhatsApp reconnection successful", {
+      attempts: sessionState.reconnectAttempts,
+    });
+
+    // Reset reconnection state on success
+    resetReconnectionState();
+  } catch (error) {
+    logger.error("Reconnection attempt failed", {
+      attempt: sessionState.reconnectAttempts,
+      error,
+    });
+
+    // Reset isReconnecting flag to allow next attempt
+    sessionState.isReconnecting = false;
+
+    // If we haven't exceeded max attempts, schedule another try
+    if (sessionState.reconnectAttempts < RECONNECT_CONFIG.MAX_ATTEMPTS) {
+      const client = getWhatsAppClient();
+      if (client) {
+        handleDisconnection(client, "reconnection_failed");
+      }
+    } else {
+      logger.error("Max reconnection attempts exhausted");
+      resetReconnectionState();
+    }
+  }
+}
+
+/**
+ * Reset reconnection state after successful connection
+ */
+function resetReconnectionState(): void {
+  sessionState.isReconnecting = false;
+  sessionState.reconnectAttempts = 0;
+  sessionState.lastDisconnectTime = null;
+
+  if (sessionState.reconnectTimer) {
+    clearTimeout(sessionState.reconnectTimer);
+    sessionState.reconnectTimer = null;
+  }
+
+  logger.info("Reconnection state reset");
+}
+
+/**
+ * Get current session status
+ */
+export function getSessionStatus(): {
+  isReconnecting: boolean;
+  reconnectAttempts: number;
+  lastDisconnectTime: Date | null;
+} {
+  return {
+    isReconnecting: sessionState.isReconnecting,
+    reconnectAttempts: sessionState.reconnectAttempts,
+    lastDisconnectTime: sessionState.lastDisconnectTime,
+  };
+}
+
+/**
+ * Manually trigger reconnection
+ */
+export async function manualReconnect(): Promise<void> {
+  logger.info("Manual reconnection triggered");
+
+  const client = getWhatsAppClient();
+  if (!client) {
+    logger.error("Cannot reconnect: client not initialized");
+    throw new Error("WhatsApp client not initialized");
+  }
+
+  // Reset state before attempting
+  resetReconnectionState();
+
+  // Attempt reconnection
+  await attemptReconnection(client);
 }
 
 export default setupEventHandlers;

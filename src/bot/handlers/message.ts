@@ -219,10 +219,181 @@ export class MessageHandler {
       return;
     }
 
-    await client.sendMessage(
-      message.from,
-      "Maaf, saya hanya memproses teks. Silakan gunakan tombol di atas atau ketik /menu.",
+    logger.info("Media message received, sending help response", {
+      from: message.from,
+      type: message.type,
+      hasMedia: message.hasMedia,
+    });
+
+    // Send user-friendly message about media not being supported
+    const mediaMessage = MessageFormatter.getErrorMessage(
+      "media_not_supported",
     );
+    await client.sendMessage(message.from, mediaMessage);
+
+    // Also send quick access buttons
+    const buttons = ButtonMenu.generateErrorRecoveryButtons("media");
+    await message.reply(buttons);
+  }
+
+  /**
+   * Handle invalid input with format examples
+   */
+  static async handleInvalidInput(
+    message: Message,
+    field: string,
+    value: string,
+    examples: string[],
+  ): Promise<void> {
+    const client = getWhatsAppClient();
+    if (!client) {
+      return;
+    }
+
+    logger.warn("Invalid input detected", {
+      from: message.from,
+      field,
+      value,
+    });
+
+    // Send validation error with examples
+    const errorMessage = MessageFormatter.formatValidationError(
+      field,
+      value,
+      examples,
+    );
+    await client.sendMessage(message.from, errorMessage);
+
+    // Send validation error buttons
+    const buttons = ButtonMenu.generateValidationErrorButtons();
+    await message.reply(buttons);
+  }
+
+  /**
+   * Handle numeric input validation
+   */
+  static validateNumericInput(
+    input: string,
+    fieldName: string,
+  ): { valid: boolean; value?: number; error?: string } {
+    const trimmed = input.trim().replace(/,/g, ""); // Remove commas
+
+    // Check if it's a valid number
+    if (!/^\d+(\.\d+)?$/.test(trimmed)) {
+      return {
+        valid: false,
+        error: `${fieldName} harus berupa angka positif`,
+      };
+    }
+
+    const value = parseFloat(trimmed);
+
+    // Check if positive
+    if (value <= 0) {
+      return {
+        valid: false,
+        error: `${fieldName} harus lebih besar dari 0`,
+      };
+    }
+
+    // Check reasonable limits (max 1 billion)
+    if (value > 1000000000) {
+      return {
+        valid: false,
+        error: `${fieldName} terlalu besar (max 1 miliar)`,
+      };
+    }
+
+    return { valid: true, value };
+  }
+
+  /**
+   * Handle date input validation
+   */
+  static validateDateInput(input: string): {
+    valid: boolean;
+    date?: Date;
+    error?: string;
+  } {
+    const trimmed = input.trim();
+
+    // Try DD/MM/YYYY format
+    const ddmmyyyyPattern = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+    const ddmmyyyyMatch = trimmed.match(ddmmyyyyPattern);
+
+    if (ddmmyyyyMatch) {
+      const [, day, month, year] = ddmmyyyyMatch;
+      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+
+      if (isNaN(date.getTime())) {
+        return { valid: false, error: "Tanggal tidak valid" };
+      }
+
+      return { valid: true, date };
+    }
+
+    // Try YYYY-MM-DD format
+    const yyyymmddPattern = /^(\d{4})-(\d{1,2})-(\d{1,2})$/;
+    const yyyymmddMatch = trimmed.match(yyyymmddPattern);
+
+    if (yyyymmddMatch) {
+      const [, year, month, day] = yyyymmddMatch;
+      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+
+      if (isNaN(date.getTime())) {
+        return { valid: false, error: "Tanggal tidak valid" };
+      }
+
+      return { valid: true, date };
+    }
+
+    return {
+      valid: false,
+      error: "Format tanggal salah. Gunakan DD/MM/YYYY atau YYYY-MM-DD",
+    };
+  }
+
+  /**
+   * Handle category input validation
+   */
+  static validateCategoryInput(input: string): {
+    valid: boolean;
+    category?: string;
+    error?: string;
+  } {
+    const trimmed = input.trim();
+
+    // Check if empty
+    if (!trimmed) {
+      return { valid: false, error: "Kategori tidak boleh kosong" };
+    }
+
+    // Check minimum length
+    if (trimmed.length < 2) {
+      return {
+        valid: false,
+        error: "Kategori terlalu pendek (min 2 karakter)",
+      };
+    }
+
+    // Check maximum length
+    if (trimmed.length > 50) {
+      return {
+        valid: false,
+        error: "Kategori terlalu panjang (max 50 karakter)",
+      };
+    }
+
+    // Check for valid characters (letters, numbers, spaces, hyphens)
+    if (!/^[a-zA-Z0-9\s-]+$/.test(trimmed)) {
+      return {
+        valid: false,
+        error:
+          "Kategori hanya boleh mengandung huruf, angka, spasi, dan tanda hubung",
+      };
+    }
+
+    return { valid: true, category: trimmed };
   }
 
   /**

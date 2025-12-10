@@ -355,11 +355,11 @@ This document contains actionable, dependency-ordered implementation tasks organ
 
 ### Error Handling & Recovery
 
-- [ ] T121 Implement user-friendly error messages (Indonesian) in src/bot/ui/messages.ts
-- [ ] T122 Implement error recovery buttons ([🔄 Coba Lagi] [🏠 Menu Utama]) in src/bot/ui/buttons.ts
-- [ ] T123 Implement WhatsApp session disconnection detection and reconnection in src/bot/client/events.ts
-- [ ] T124 Implement invalid input handling with format examples in src/bot/handlers/message.ts
-- [ ] T125 Implement media message handling (graceful ignore) in src/bot/handlers/message.ts
+- [x] T121 Implement user-friendly error messages (Indonesian) in src/bot/ui/messages.ts
+- [x] T122 Implement error recovery buttons ([🔄 Coba Lagi] [🏠 Menu Utama]) in src/bot/ui/buttons.ts
+- [x] T123 Implement WhatsApp session disconnection detection and reconnection in src/bot/client/events.ts
+- [x] T124 Implement invalid input handling with format examples in src/bot/handlers/message.ts
+- [x] T125 Implement media message handling (graceful ignore) in src/bot/handlers/message.ts
 
 ### Transaction Approval Workflow
 

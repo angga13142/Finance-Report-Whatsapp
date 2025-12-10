@@ -222,6 +222,202 @@ export class MessageFormatter {
       `Ketik /menu untuk kembali ke menu utama.`
     );
   }
+
+  /**
+   * Error message catalog (Indonesian)
+   */
+  static getErrorMessage(
+    errorType: string,
+    context?: Record<string, unknown>,
+  ): string {
+    const errors: Record<string, string> = {
+      // General errors
+      unknown:
+        "❌ *Terjadi Kesalahan*\n\nMaaf, terjadi kesalahan yang tidak terduga.\nSilakan coba lagi atau hubungi admin jika masalah berlanjut.",
+
+      network:
+        "🌐 *Koneksi Bermasalah*\n\nTidak dapat terhubung ke server.\nPeriksa koneksi internet Anda dan coba lagi.",
+
+      timeout:
+        "⏱️ *Request Timeout*\n\nPermintaan memakan waktu terlalu lama.\nSilakan coba lagi dengan koneksi yang lebih stabil.",
+
+      // Authentication errors
+      unauthorized:
+        "🔒 *Akses Ditolak*\n\nAnda tidak memiliki izin untuk operasi ini.\nSilakan hubungi admin untuk bantuan.",
+
+      session_expired:
+        "⏰ *Sesi Berakhir*\n\nSesi Anda telah berakhir.\nSilakan mulai lagi dengan mengetik /start atau /menu.",
+
+      user_not_found:
+        "👤 *User Tidak Ditemukan*\n\nAkun Anda tidak terdaftar dalam sistem.\nSilakan registrasi terlebih dahulu atau hubungi admin.",
+
+      // Input validation errors
+      invalid_input:
+        "❌ *Input Tidak Valid*\n\nFormat input Anda tidak sesuai.\nPeriksa kembali dan pastikan format sudah benar.",
+
+      invalid_amount: `💰 *Jumlah Tidak Valid*\n\nJumlah harus berupa angka positif.\n\n*Contoh yang benar:*\n• 50000\n• 1000000\n• 250000.50`,
+
+      invalid_category:
+        "📁 *Kategori Tidak Valid*\n\nKategori harus diisi dan tidak boleh kosong.\n\n*Contoh kategori:*\n• Sales\n• Transport\n• Office Supplies\n• Marketing",
+
+      invalid_date:
+        "📅 *Format Tanggal Salah*\n\nFormat tanggal tidak valid.\n\n*Format yang benar:*\n• DD/MM/YYYY (contoh: 10/12/2025)\n• YYYY-MM-DD (contoh: 2025-12-10)",
+
+      invalid_command:
+        "❓ *Command Tidak Dikenal*\n\nCommand yang Anda ketik tidak ditemukan.\n\nKetik /help untuk melihat daftar command.",
+
+      // Transaction errors
+      transaction_failed:
+        "💸 *Transaksi Gagal*\n\nGagal menyimpan transaksi.\nSilakan coba lagi atau hubungi admin.",
+
+      duplicate_transaction:
+        "⚠️ *Transaksi Duplikat*\n\nTransaksi serupa baru saja dicatat.\nApakah Anda yakin ingin mencatat transaksi ini lagi?",
+
+      transaction_not_found:
+        "🔍 *Transaksi Tidak Ditemukan*\n\nTransaksi yang Anda cari tidak ada dalam sistem.",
+
+      approval_failed:
+        "⏳ *Approval Gagal*\n\nGagal memproses approval transaksi.\nSilakan coba lagi.",
+
+      // Report errors
+      report_generation_failed:
+        "📊 *Gagal Generate Laporan*\n\nTerjadi kesalahan saat membuat laporan.\nSilakan coba lagi dalam beberapa saat.",
+
+      no_data_available:
+        "📭 *Tidak Ada Data*\n\nTidak ada data untuk periode yang dipilih.\nCoba pilih periode lain.",
+
+      export_failed:
+        "📄 *Export Gagal*\n\nGagal export laporan ke Excel.\nSilakan coba lagi.",
+
+      // Database errors
+      database_error:
+        "💾 *Database Error*\n\nTerjadi kesalahan pada database.\nSilakan coba lagi atau hubungi admin.",
+
+      connection_failed:
+        "🔌 *Koneksi Database Gagal*\n\nTidak dapat terhubung ke database.\nSilakan coba lagi.",
+
+      // WhatsApp errors
+      message_send_failed:
+        "📱 *Gagal Kirim Pesan*\n\nTidak dapat mengirim pesan.\nPeriksa koneksi WhatsApp Anda.",
+
+      button_not_supported:
+        "🔘 *Button Tidak Didukung*\n\nDevice Anda tidak mendukung button.\nGunakan nomor (1, 2, 3) atau command (/) untuk navigasi.",
+
+      media_not_supported:
+        "🖼️ *Media Tidak Didukung*\n\nMaaf, bot ini hanya menerima pesan teks.\n\nGunakan format teks untuk mencatat transaksi:\n`/catat [type] [amount] [category] [description]`",
+
+      // Rate limiting
+      rate_limit_exceeded:
+        "⏸️ *Terlalu Banyak Request*\n\nAnda mengirim terlalu banyak pesan dalam waktu singkat.\nTunggu beberapa detik sebelum mencoba lagi.",
+
+      // System errors
+      service_unavailable:
+        "🚧 *Layanan Sedang Maintenance*\n\nSistem sedang dalam maintenance.\nSilakan coba lagi nanti.",
+
+      feature_disabled:
+        "🔒 *Fitur Dinonaktifkan*\n\nFitur ini sedang dinonaktifkan oleh admin.\nHubungi admin untuk informasi lebih lanjut.",
+    };
+
+    let message = errors[errorType] || errors.unknown;
+
+    // Add context-specific information
+    if (context) {
+      if (context.field && typeof context.field === "string") {
+        message += `\n\n*Field:* ${context.field}`;
+      }
+      if (context.value && typeof context.value === "string") {
+        message += `\n*Value:* ${context.value}`;
+      }
+      if (context.hint && typeof context.hint === "string") {
+        message += `\n\n💡 *Tip:* ${context.hint}`;
+      }
+    }
+
+    return message;
+  }
+
+  /**
+   * Format error with recovery options
+   */
+  static formatErrorWithRecovery(
+    errorType: string,
+    context?: Record<string, unknown>,
+  ): string {
+    let message = this.getErrorMessage(errorType, context);
+
+    message += `\n\n_Pilih aksi selanjutnya dengan button di bawah_`;
+    message += `\n_atau ketik /menu untuk kembali ke menu utama_`;
+
+    return message;
+  }
+
+  /**
+   * Format validation error with examples
+   */
+  static formatValidationError(
+    field: string,
+    value: string,
+    examples: string[],
+  ): string {
+    let message = `❌ *Input Tidak Valid: ${field}*\n\n`;
+    message += `Value yang Anda masukkan: \`${value}\`\n\n`;
+    message += `*Contoh format yang benar:*\n`;
+    examples.forEach((example, index) => {
+      message += `${index + 1}. ${example}\n`;
+    });
+    message += `\nSilakan coba lagi dengan format yang benar.`;
+
+    return message;
+  }
+
+  /**
+   * Format WhatsApp session error
+   */
+  static formatSessionError(status: string): string {
+    const statusMessages: Record<string, string> = {
+      disconnected:
+        "🔌 *WhatsApp Terputus*\n\nKoneksi WhatsApp terputus.\nSistem sedang mencoba reconnect otomatis...",
+
+      reconnecting:
+        "🔄 *Reconnecting...*\n\nSedang mencoba terhubung kembali ke WhatsApp.\nMohon tunggu sebentar...",
+
+      reconnected:
+        "✅ *Berhasil Terhubung*\n\nKoneksi WhatsApp berhasil dipulihkan.\nAnda dapat melanjutkan aktivitas.",
+
+      failed:
+        "❌ *Koneksi Gagal*\n\nGagal terhubung ke WhatsApp setelah beberapa percobaan.\nSilakan restart bot atau hubungi admin.",
+
+      qr_required:
+        "📱 *Scan QR Required*\n\nSilakan scan QR code untuk login ke WhatsApp.\nCek terminal untuk melihat QR code.",
+    };
+
+    return statusMessages[status] || statusMessages.failed;
+  }
+
+  /**
+   * Format retry suggestion
+   */
+  static formatRetryMessage(
+    attemptNumber: number,
+    maxAttempts: number,
+  ): string {
+    return (
+      `🔄 *Mencoba Ulang (${attemptNumber}/${maxAttempts})*\n\n` +
+      `Operasi gagal, mencoba ulang otomatis...\n` +
+      `Mohon tunggu sebentar.`
+    );
+  }
+
+  /**
+   * Format success recovery message
+   */
+  static formatRecoverySuccessMessage(): string {
+    return (
+      `✅ *Berhasil Dipulihkan*\n\n` +
+      `Operasi berhasil setelah retry.\n` +
+      `Terima kasih atas kesabaran Anda.`
+    );
+  }
 }
 
 export default MessageFormatter;
