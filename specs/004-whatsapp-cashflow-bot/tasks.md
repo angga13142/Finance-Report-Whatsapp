@@ -164,8 +164,8 @@ This document contains actionable, dependency-ordered implementation tasks organ
 
 ### User Story 2 Tasks
 
-- [ ] T058 [US2] Create Report model operations in src/models/report.ts
-- [ ] T059 [US2] Implement report data aggregation service in src/services/report/generator.ts
+- [x] T058 [US2] Create Report model operations in src/models/report.ts
+- [x] T059 [US2] Implement report data aggregation service in src/services/report/generator.ts
 - [ ] T060 [US2] Implement text report formatter in src/services/report/formatter.ts
 - [ ] T061 [US2] Implement PDF generation with charts in src/services/report/pdf.ts
 - [ ] T062 [US2] Implement daily report cron job (23:55 WITA) in src/services/scheduler/daily-report.ts
