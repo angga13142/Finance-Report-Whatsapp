@@ -412,49 +412,49 @@ This document contains actionable, dependency-ordered implementation tasks organ
 
 ### Documentation & Deployment
 
-- [ ] T141 Generate OpenAPI/Swagger documentation from contracts in docs/api/
-- [ ] T142 Create CHANGELOG.md with version history
-- [ ] T143 Create production Dockerfile in docker/Dockerfile
-- [ ] T144 Create Azure deployment configuration (Container Apps or App Service) in infra/
-- [ ] T145 Create database backup automation (daily at 01:00 WITA) in src/services/system/backup.ts
-- [ ] T145a [Polish] Implement backup verification and restore testing in tests/integration/system/backup.test.ts
-- [ ] T146 Create quickstart guide updates based on implementation in quickstart.md
+- [x] T141 Generate OpenAPI/Swagger documentation from contracts in docs/api/
+- [x] T142 Create CHANGELOG.md with version history
+- [x] T143 Create production Dockerfile in docker/Dockerfile
+- [x] T144 Create Azure deployment configuration (Container Apps or App Service) in infra/
+- [x] T145 Create database backup automation (daily at 01:00 WITA) in src/services/system/backup.ts
+- [x] T145a [Polish] Implement backup verification and restore testing in tests/integration/system/backup.test.ts
+- [x] T146 Create quickstart guide updates based on implementation in quickstart.md
 
 ### Testing
 
-- [ ] T147 Write unit tests for transaction validation (70% coverage target) in tests/unit/services/transaction/
-- [ ] T148 Write unit tests for report generation calculations in tests/unit/services/report/
-- [ ] T149 Write integration tests for database operations in tests/integration/database/
-- [ ] T150 Write integration tests for WhatsApp client interactions in tests/integration/wwebjs/
-- [ ] T151 Write integration tests for Redis session management in tests/integration/redis/
-- [ ] T152 Write E2E tests for User Story 1 (transaction input) in tests/e2e/user-stories/us1/
-- [ ] T153 Write E2E tests for User Story 2 (automated reports) in tests/e2e/user-stories/us2/
-- [ ] T154 Write E2E tests for User Story 3 (multi-step editing) in tests/e2e/user-stories/us3/
-- [ ] T155 Write E2E tests for role-based access control in tests/e2e/roles/
-- [ ] T156 Write performance tests for 50 concurrent users in tests/integration/load/
+- [x] T147 Write unit tests for transaction validation (70% coverage target) in tests/unit/services/transaction/
+- [x] T148 Write unit tests for report generation calculations in tests/unit/services/report/
+- [x] T149 Write integration tests for database operations in tests/integration/database/
+- [x] T150 Write integration tests for WhatsApp client interactions in tests/integration/wwebjs/
+- [x] T151 Write integration tests for Redis session management in tests/integration/redis/
+- [x] T152 Write E2E tests for User Story 1 (transaction input) in tests/e2e/user-stories/us1/
+- [x] T153 Write E2E tests for User Story 2 (automated reports) in tests/e2e/user-stories/us2/
+- [x] T154 Write E2E tests for User Story 3 (multi-step editing) in tests/e2e/user-stories/us3/
+- [x] T155 Write E2E tests for role-based access control in tests/e2e/roles/
+- [x] T156 Write performance tests for 50 concurrent users in tests/integration/load/
 
 ### Success Criteria Validation
 
-- [ ] T157 [SC] Validate SC-001: Employee transaction input <5 min per transaction, <2% error rate in tests/e2e/success-criteria/sc001.test.ts
-- [ ] T158 [SC] Validate SC-002: Automated daily reports 99% delivery rate over 30 days in tests/integration/success-criteria/sc002.test.ts
-- [ ] T159 [SC] Validate SC-003: On-demand report generation <5 seconds in tests/integration/success-criteria/sc003.test.ts
-- [ ] T160 [SC] Validate SC-004: 50 concurrent users <2s response time, zero data corruption in tests/integration/load/sc004.test.ts
-- [ ] T161 [SC] Validate SC-005: Button interface 98% render success rate in tests/e2e/success-criteria/sc005.test.ts
-- [ ] T162 [SC] Validate SC-006: Role-based access control 100% unauthorized access prevention in tests/e2e/roles/sc006.test.ts
-- [ ] T163 [SC] Validate SC-007: Recommendation engine 95% anomaly detection within 2 hours in tests/integration/success-criteria/sc007.test.ts
-- [ ] T164 [SC] Validate SC-008: System 99.5% uptime, session recovery <2 minutes in tests/integration/success-criteria/sc008.test.ts
-- [ ] T165 [SC] Validate SC-009: 90% first-time transaction success without help in tests/e2e/success-criteria/sc009.test.ts
-- [ ] T166 [SC] Validate SC-010: 100% transaction audit trail coverage in tests/integration/success-criteria/sc010.test.ts
-- [ ] T167 [SC] Validate SC-011: 7-year data retention compliance in tests/integration/success-criteria/sc011.test.ts
-- [ ] T168 [SC] Validate SC-012: Multi-language support 95% readability in tests/e2e/success-criteria/sc012.test.ts
-- [ ] T169 [SC] Validate SC-013: Cost per transaction <Rp 100 in tests/integration/success-criteria/sc013.test.ts
-- [ ] T170 [SC] Validate SC-014: 85% Boss user satisfaction (requires user survey, mark as manual validation)
-- [ ] T171 [SC] Validate SC-015: Negative cashflow alerts >90% precision in tests/integration/success-criteria/sc015.test.ts
-- [ ] T172 [SC] Validate SC-016: Database backup zero data loss in tests/integration/system/sc016.test.ts
-- [ ] T173 [SC] Validate SC-017: Excel export <10 seconds for 30-day period in tests/integration/success-criteria/sc017.test.ts
-- [ ] T174 [SC] Validate SC-018: Session recovery <1 minute on bot restart in tests/integration/success-criteria/sc018.test.ts
-- [ ] T175 [SC] Validate SC-019: New user registration <5 minutes in tests/e2e/success-criteria/sc019.test.ts
-- [ ] T176 [SC] Validate SC-020: Category addition without code deployment in tests/integration/success-criteria/sc020.test.ts
+- [x] T157 [SC] Validate SC-001: Employee transaction input <5 min per transaction, <2% error rate in tests/e2e/success-criteria/sc001.test.ts
+- [x] T158 [SC] Validate SC-002: Automated daily reports 99% delivery rate over 30 days in tests/integration/success-criteria/sc002.test.ts
+- [x] T159 [SC] Validate SC-003: On-demand report generation <5 seconds in tests/integration/success-criteria/sc003.test.ts
+- [x] T160 [SC] Validate SC-004: 50 concurrent users <2s response time, zero data corruption in tests/integration/load/sc004.test.ts
+- [x] T161 [SC] Validate SC-005: Button interface 98% render success rate in tests/e2e/success-criteria/sc005.test.ts
+- [x] T162 [SC] Validate SC-006: Role-based access control 100% unauthorized access prevention in tests/e2e/roles/sc006.test.ts
+- [x] T163 [SC] Validate SC-007: Recommendation engine 95% anomaly detection within 2 hours in tests/integration/success-criteria/sc007.test.ts
+- [x] T164 [SC] Validate SC-008: System 99.5% uptime, session recovery <2 minutes in tests/integration/success-criteria/sc008.test.ts
+- [x] T165 [SC] Validate SC-009: 90% first-time transaction success without help in tests/e2e/success-criteria/sc009.test.ts
+- [x] T166 [SC] Validate SC-010: 100% transaction audit trail coverage in tests/integration/success-criteria/sc010.test.ts
+- [x] T167 [SC] Validate SC-011: 7-year data retention compliance in tests/integration/success-criteria/sc011.test.ts
+- [x] T168 [SC] Validate SC-012: Multi-language support 95% readability in tests/e2e/success-criteria/sc012.test.ts
+- [x] T169 [SC] Validate SC-013: Cost per transaction <Rp 100 in tests/integration/success-criteria/sc013.test.ts
+- [x] T170 [SC] Validate SC-014: 85% Boss user satisfaction (requires user survey, mark as manual validation)
+- [x] T171 [SC] Validate SC-015: Negative cashflow alerts >90% precision in tests/integration/success-criteria/sc015.test.ts
+- [x] T172 [SC] Validate SC-016: Database backup zero data loss in tests/integration/system/sc016.test.ts
+- [x] T173 [SC] Validate SC-017: Excel export <10 seconds for 30-day period in tests/integration/success-criteria/sc017.test.ts
+- [x] T174 [SC] Validate SC-018: Session recovery <1 minute on bot restart in tests/integration/success-criteria/sc018.test.ts
+- [x] T175 [SC] Validate SC-019: New user registration <5 minutes in tests/e2e/success-criteria/sc019.test.ts
+- [x] T176 [SC] Validate SC-020: Category addition without code deployment in tests/integration/success-criteria/sc020.test.ts
 
 ---
 

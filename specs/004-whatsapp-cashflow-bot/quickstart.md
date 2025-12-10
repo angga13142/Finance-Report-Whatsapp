@@ -263,18 +263,176 @@ DEBUG=* npm run dev
 ## Production Deployment
 
 See deployment documentation for:
-- Azure Container Apps setup
-- Database migration strategy
-- Environment variable management
-- Monitoring and alerting configuration
+- **Azure Container Apps**: See `infra/bicep/README.md` for complete deployment guide
+- **Docker Build**: Production Dockerfile in `docker/Dockerfile`
+- **Database Backup**: Automated daily backups at 01:00 WITA (see `src/services/system/backup.ts`)
+- **Environment Configuration**: All secrets in Azure Key Vault
+- **Monitoring**: Prometheus metrics + Grafana dashboards (see `infra/grafana/`)
+
+### Quick Production Deploy
+
+```bash
+# Build and push Docker image
+docker build -f docker/Dockerfile -t <registry>/whatsapp-cashflow-bot:latest .
+docker push <registry>/whatsapp-cashflow-bot:latest
+
+# Deploy to Azure Container Apps
+az deployment group create \
+  --resource-group whatsapp-cashflow-bot-prod \
+  --template-file infra/bicep/container-apps.bicep \
+  --parameters infra/bicep/container-apps.parameters.json
+
+# Verify deployment
+az containerapp show \
+  --name whatsapp-cashflow-bot-prod-app \
+  --resource-group whatsapp-cashflow-bot-prod \
+  --query properties.runningStatus
+```
+
+## API Documentation
+
+OpenAPI/Swagger documentation available in `docs/api/`:
+- **Internal API**: `docs/api/internal-api.yaml` (service contracts)
+- **WhatsApp Messages**: `docs/api/whatsapp-messages.yaml` (message formats)
+
+View with Swagger UI:
+```bash
+npm install -g swagger-ui-watcher
+swagger-ui-watcher docs/api/internal-api.yaml
+# Navigate to http://localhost:8000
+```
+
+## Database Backup & Restore
+
+### Manual Backup
+```bash
+# Via bot (Dev role)
+# Send message: /backup
+
+# Via CLI
+npm run backup:create
+```
+
+### Restore from Backup
+```bash
+# List available backups
+npm run backup:list
+
+# Restore specific backup
+npm run backup:restore -- <backup-filename>
+```
+
+### Automated Backups
+- **Daily**: 01:00 WITA (scheduled via cron)
+- **Retention**: 7 days (daily), 30 days (weekly), 365 days (monthly)
+- **Location**: Configured via `BACKUP_DIR` environment variable
+- **Verification**: Automatic integrity checks with MD5 checksums
+
+## Testing
+
+### Run All Tests
+```bash
+# All tests (unit, integration, e2e)
+npm test
+
+# Unit tests only
+npm run test:unit
+
+# Integration tests only
+npm run test:integration
+
+# E2E tests only
+npm run test:e2e
+
+# With coverage
+npm run test:coverage
+```
+
+### Test Structure
+```
+tests/
+├── unit/                    # Unit tests (70% of suite)
+│   ├── lib/                # Utility function tests
+│   ├── models/             # Data model tests
+│   └── services/           # Business logic tests
+├── integration/             # Integration tests (20% of suite)
+│   ├── database/           # Database operation tests
+│   ├── redis/              # Cache and session tests
+│   ├── system/             # Backup and system tests
+│   └── wwebjs/             # WhatsApp integration tests
+└── e2e/                    # End-to-end tests (10% of suite)
+    ├── workflows/          # Complete user workflows
+    ├── roles/              # Role-based access tests
+    └── success-criteria/   # Success criteria validation
+```
+
+## Performance Monitoring
+
+### Metrics Collection
+- **Prometheus**: Metrics exposed at `/metrics` endpoint
+- **Grafana**: Dashboards in `infra/grafana/system-overview-dashboard.json`
+- **Health Check**: `/health` endpoint for liveness/readiness probes
+
+### Key Metrics
+- Button interaction latency (target: <1s, 99th percentile)
+- Text response time (target: <2s, 95th percentile)
+- Report generation time (target: <30s for daily reports)
+- Database query performance (target: <500ms, 95th percentile)
+- WhatsApp message throughput (15-20 msg/min rate limit)
+
+### View Metrics Locally
+```bash
+# Start Prometheus
+docker-compose up -d prometheus
+
+# View metrics at http://localhost:9090
+
+# Start Grafana
+docker-compose up -d grafana
+
+# View dashboards at http://localhost:3001
+# Default credentials: admin/admin
+```
+
+## Security
+
+### Security Features Implemented
+- ✅ SQL injection prevention (Prisma parameterized queries)
+- ✅ Input validation and sanitization
+- ✅ Sensitive data masking in logs
+- ✅ Account lockout after failed authentication
+- ✅ RBAC enforcement (Dev, Boss, Employee, Investor)
+- ✅ Audit trail for all financial transactions
+- ✅ Session encryption (JWT in Redis)
+- ✅ HTTPS only in production
+- ✅ Secrets in Azure Key Vault
+
+### Security Checklist
+- [ ] Update `JWT_SECRET` and `ENCRYPTION_KEY` in production
+- [ ] Enable database SSL connections
+- [ ] Configure network security groups
+- [ ] Set up alert rules for suspicious activity
+- [ ] Review audit logs regularly
+- [ ] Keep dependencies updated (Dependabot enabled)
+- [ ] Run vulnerability scans (npm audit, Snyk)
+
+## Changelog
+
+See [CHANGELOG.md](../../CHANGELOG.md) for version history and release notes.
 
 ## Getting Help
 
-- **Documentation**: See `docs/` directory
-- **Issues**: Create GitHub issue
+- **Documentation**: 
+  - Architecture: `docs/` directory
+  - API Reference: `docs/api/` directory
+  - Deployment: `infra/bicep/README.md`
+  - Testing: `tests/README.md`
+- **Issues**: Create GitHub issue with label `004-whatsapp-cashflow-bot`
 - **Team**: Contact Finance Engineering Team
 
 ---
 
-**Last Updated**: 2025-12-09
+**Last Updated**: 2025-12-10  
+**Version**: 1.0.0  
+**Branch**: `004-whatsapp-cashflow-bot`
 

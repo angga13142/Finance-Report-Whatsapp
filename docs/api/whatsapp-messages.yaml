@@ -1,0 +1,354 @@
+openapi: 3.0.3
+info:
+  title: WhatsApp Cashflow Bot - Message Contracts
+  description: |
+    Contract definitions for WhatsApp message interactions, button callbacks, and 
+    command handling. These contracts define the structure of messages sent to and 
+    received from users via WhatsApp.
+  version: 1.0.0
+  contact:
+    name: Finance Engineering Team
+
+servers:
+  - url: whatsapp://bot
+    description: WhatsApp bot interface
+
+paths:
+  /messages:
+    post:
+      summary: Receive incoming WhatsApp message
+      description: |
+        Handles incoming text messages, button callbacks, and commands from users.
+        Routes to appropriate handler based on message type and user role.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/TextMessage'
+                - $ref: '#/components/schemas/ButtonCallback'
+                - $ref: '#/components/schemas/CommandMessage'
+      responses:
+        '200':
+          description: Message processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          description: Invalid message format
+        '401':
+          description: User not authenticated
+        '403':
+          description: User role does not have permission
+
+  /buttons:
+    post:
+      summary: Send button menu to user
+      description: |
+        Sends a button-based menu to the user. Supports up to 3 buttons per message.
+        Falls back to numbered text menu if button rendering fails.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ButtonMenu'
+      responses:
+        '200':
+          description: Buttons sent successfully
+        '400':
+          description: Invalid button configuration
+
+  /reports:
+    post:
+      summary: Generate and send report
+      description: |
+        Generates a role-specific report and sends it to the user via WhatsApp.
+        Includes text summary and PDF attachment (if applicable).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportRequest'
+      responses:
+        '200':
+          description: Report generated and sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportResponse'
+        '403':
+          description: User role does not have permission for this report type
+
+components:
+  schemas:
+    TextMessage:
+      type: object
+      required:
+        - phone_number
+        - message
+        - timestamp
+      properties:
+        phone_number:
+          type: string
+          pattern: '^(\+62|0)[0-9]{9,12}$'
+          example: '+6281234567890'
+          description: Indonesian phone number format
+        message:
+          type: string
+          maxLength: 4096
+          example: '500000'
+          description: Message text content
+        timestamp:
+          type: string
+          format: date-time
+          description: Message timestamp (UTC)
+
+    ButtonCallback:
+      type: object
+      required:
+        - phone_number
+        - button_id
+        - button_text
+        - timestamp
+      properties:
+        phone_number:
+          type: string
+          pattern: '^(\+62|0)[0-9]{9,12}$'
+          example: '+6281234567890'
+        button_id:
+          type: string
+          example: 'transaction_income'
+          description: Unique button identifier
+        button_text:
+          type: string
+          maxLength: 20
+          example: '💰 Catat Penjualan'
+          description: Button label text
+        timestamp:
+          type: string
+          format: date-time
+
+    CommandMessage:
+      type: object
+      required:
+        - phone_number
+        - command
+        - timestamp
+      properties:
+        phone_number:
+          type: string
+          pattern: '^(\+62|0)[0-9]{9,12}$'
+        command:
+          type: string
+          enum: ['/start', '/help', '/menu', '/laporan', '/catat']
+          example: '/menu'
+          description: Text command (fallback for WhatsApp versions without buttons)
+        args:
+          type: array
+          items:
+            type: string
+          example: ['hari', 'ini']
+          description: Command arguments (optional)
+        timestamp:
+          type: string
+          format: date-time
+
+    ButtonMenu:
+      type: object
+      required:
+        - phone_number
+        - title
+        - buttons
+      properties:
+        phone_number:
+          type: string
+          pattern: '^(\+62|0)[0-9]{9,12}$'
+        title:
+          type: string
+          maxLength: 100
+          example: 'Menu Utama'
+          description: Menu title text
+        body:
+          type: string
+          maxLength: 1024
+          example: 'Silakan pilih opsi di bawah:'
+          description: Menu body text (optional)
+        buttons:
+          type: array
+          minItems: 1
+          maxItems: 3
+          items:
+            $ref: '#/components/schemas/Button'
+        footer:
+          type: string
+          maxLength: 60
+          example: 'Bot Cashflow v1.0'
+          description: Footer text (optional)
+
+    Button:
+      type: object
+      required:
+        - id
+        - text
+      properties:
+        id:
+          type: string
+          example: 'transaction_income'
+          description: Unique button identifier for callback routing
+        text:
+          type: string
+          maxLength: 20
+          example: '💰 Catat Penjualan'
+          description: Button label (emoji + text, ≤20 chars)
+
+    ListMessage:
+      type: object
+      required:
+        - phone_number
+        - title
+        - description
+        - button_text
+        - sections
+      properties:
+        phone_number:
+          type: string
+          pattern: '^(\+62|0)[0-9]{9,12}$'
+        title:
+          type: string
+          maxLength: 24
+          example: 'Pilih Kategori'
+        description:
+          type: string
+          maxLength: 72
+          example: 'Pilih kategori transaksi:'
+        button_text:
+          type: string
+          maxLength: 20
+          example: 'Lihat Kategori'
+        sections:
+          type: array
+          maxItems: 10
+          items:
+            $ref: '#/components/schemas/ListSection'
+
+    ListSection:
+      type: object
+      required:
+        - title
+        - rows
+      properties:
+        title:
+          type: string
+          maxLength: 24
+          example: 'Penjualan'
+        rows:
+          type: array
+          maxItems: 10
+          items:
+            $ref: '#/components/schemas/ListRow'
+
+    ListRow:
+      type: object
+      required:
+        - id
+        - title
+      properties:
+        id:
+          type: string
+          example: 'category_produk_a'
+        title:
+          type: string
+          maxLength: 24
+          example: 'Produk A'
+        description:
+          type: string
+          maxLength: 72
+          example: 'Penjualan produk A'
+
+    MessageResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message_id:
+          type: string
+          format: uuid
+          example: '123e4567-e89b-12d3-a456-426614174000'
+        sent_at:
+          type: string
+          format: date-time
+        next_action:
+          type: string
+          enum: ['menu', 'input', 'confirm', 'complete']
+          example: 'menu'
+          description: Expected next user action
+
+    ReportRequest:
+      type: object
+      required:
+        - phone_number
+        - report_type
+      properties:
+        phone_number:
+          type: string
+          pattern: '^(\+62|0)[0-9]{9,12}$'
+        report_type:
+          type: string
+          enum: ['daily', 'weekly', 'monthly', 'custom']
+          example: 'daily'
+        date_range:
+          $ref: '#/components/schemas/DateRange'
+        format:
+          type: string
+          enum: ['text', 'pdf', 'excel']
+          default: 'text'
+          example: 'pdf'
+
+    DateRange:
+      type: object
+      properties:
+        start_date:
+          type: string
+          format: date
+          example: '2025-12-01'
+        end_date:
+          type: string
+          format: date
+          example: '2025-12-09'
+
+    ReportResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        report_id:
+          type: string
+          format: uuid
+        generated_at:
+          type: string
+          format: date-time
+        text_summary:
+          type: string
+          description: Text summary of report
+        pdf_path:
+          type: string
+          nullable: true
+          description: Path to PDF file (if generated)
+        excel_path:
+          type: string
+          nullable: true
+          description: Path to Excel file (if generated)
+
+  securitySchemes:
+    WhatsAppAuth:
+      type: http
+      scheme: bearer
+      description: |
+        Authentication via WhatsApp phone number verification.
+        User must be registered and have active session.
+

@@ -1,0 +1,53 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "appName": {
+      "value": "whatsapp-cashflow-bot"
+    },
+    "environment": {
+      "value": "prod"
+    },
+    "imageTag": {
+      "value": "latest"
+    },
+    "containerRegistry": {
+      "value": "cashflowbotacr"
+    },
+    "dbServerName": {
+      "value": "cashflowbot-prod-db"
+    },
+    "dbName": {
+      "value": "cashflowbot"
+    },
+    "dbAdminUsername": {
+      "value": "cashflowadmin"
+    },
+    "dbAdminPassword": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.KeyVault/vaults/{keyvault-name}"
+        },
+        "secretName": "db-admin-password"
+      }
+    },
+    "redisCacheName": {
+      "value": "cashflowbot-prod-redis"
+    },
+    "storageAccountName": {
+      "value": "cashflowbotstorage"
+    },
+    "minReplicas": {
+      "value": 1
+    },
+    "maxReplicas": {
+      "value": 5
+    },
+    "cpuCores": {
+      "value": "1.0"
+    },
+    "memorySize": {
+      "value": "2.0Gi"
+    }
+  }
+}
