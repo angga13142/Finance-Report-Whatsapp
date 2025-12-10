@@ -395,10 +395,10 @@ This document contains actionable, dependency-ordered implementation tasks organ
 
 ### Performance & Monitoring
 
-- [ ] T130 Implement Prometheus metrics collection (response time, error rate, message throughput) in src/lib/metrics.ts
-- [ ] T131 Implement health check endpoint in src/index.ts
+- [x] T130 Implement Prometheus metrics collection (response time, error rate, message throughput) in src/lib/metrics.ts
+- [x] T131 Implement health check endpoint in src/index.ts
 - [ ] T132 Configure Grafana dashboards for system health monitoring
-- [ ] T133 Implement performance monitoring middleware in src/bot/middleware/metrics.ts
+- [x] T133 Implement performance monitoring middleware in src/bot/middleware/metrics.ts
 - [ ] T134 Optimize database queries for <500ms target (95th percentile)
 - [ ] T135 Implement Redis caching for daily totals, user roles, category lists in src/lib/redis.ts
 
