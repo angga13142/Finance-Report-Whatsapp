@@ -1,16 +1,18 @@
 import { validateEnv } from "./config/env";
 import { logger } from "./lib/logger";
-import { connectRedis, disconnectRedis } from "./lib/redis";
+import { connectRedis } from "./lib/redis";
 import { database } from "./lib/database";
-import {
-  initializeWhatsAppClient,
-  destroyWhatsAppClient,
-} from "./bot/client/client";
+import { initializeWhatsAppClient } from "./bot/client/client";
 import { initializeEventHandlers } from "./bot/client/events";
 import { SessionManager } from "./bot/middleware/session";
+import { GracefulShutdown } from "./bot/client/shutdown";
 
 async function main(): Promise<void> {
   try {
+    // Initialize graceful shutdown handlers
+    GracefulShutdown.initialize();
+    logger.info("Graceful shutdown handlers initialized");
+
     // Validate environment variables
     const env = validateEnv();
     logger.info("Environment variables validated", { env: env.NODE_ENV });
@@ -41,28 +43,5 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 }
-
-// Handle graceful shutdown
-process.on("SIGTERM", () => {
-  logger.info("SIGTERM received, shutting down gracefully");
-  void (async () => {
-    SessionManager.stopCleanupInterval();
-    await destroyWhatsAppClient();
-    await disconnectRedis();
-    await database.disconnect();
-    process.exit(0);
-  })();
-});
-
-process.on("SIGINT", () => {
-  logger.info("SIGINT received, shutting down gracefully");
-  void (async () => {
-    SessionManager.stopCleanupInterval();
-    await destroyWhatsAppClient();
-    await disconnectRedis();
-    await database.disconnect();
-    process.exit(0);
-  })();
-});
 
 void main();

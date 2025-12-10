@@ -68,6 +68,101 @@ export class ReportDeliveryService {
   }
 
   /**
+   * Manually deliver report for a specific user and date
+   * Used by Dev for manual report generation
+   */
+  static async deliverManualReport(
+    userId: string,
+    reportDate: Date,
+  ): Promise<void> {
+    try {
+      logger.info("Manual report delivery initiated", { userId, reportDate });
+
+      // Get user details
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        logger.warn("User not found for manual report", { userId });
+        return;
+      }
+
+      // Generate role-specific report
+      const startOfDay = new Date(reportDate);
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const endOfDay = new Date(reportDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const reportData = await ReportGenerator.generateRoleSpecificReport(
+        user.role,
+        startOfDay,
+        endOfDay,
+        userId,
+      );
+
+      // Format and send report via WhatsApp
+      const reportText = this.formatReportForWhatsApp(reportData, reportDate);
+
+      // Get WhatsApp client and send
+      const client = getWhatsAppClient();
+      if (!client) {
+        logger.error("WhatsApp client not initialized");
+        throw new Error("WhatsApp client not available");
+      }
+
+      const chatId = `${user.phoneNumber}@c.us`;
+      await client.sendMessage(chatId, reportText);
+
+      logger.info("Manual report delivery completed", { userId, reportDate });
+    } catch (error) {
+      logger.error("Manual report delivery failed", {
+        error,
+        userId,
+        reportDate,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Format report data for WhatsApp message
+   */
+  private static formatReportForWhatsApp(
+    reportData: RoleReportData,
+    reportDate: Date,
+  ): string {
+    const dateStr = reportDate.toLocaleDateString("id-ID", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    let text = `📊 *LAPORAN HARIAN*\n${dateStr}\n\n`;
+
+    text += `💰 *Ringkasan Keuangan*\n`;
+    text += `Pemasukan: Rp ${Number(reportData.summary.totalIncome).toLocaleString("id-ID")}\n`;
+    text += `Pengeluaran: Rp ${Number(reportData.summary.totalExpense).toLocaleString("id-ID")}\n`;
+    text += `Net Cashflow: Rp ${Number(reportData.summary.netCashflow).toLocaleString("id-ID")}\n\n`;
+
+    text += `📈 *Statistik*\n`;
+    text += `Total Transaksi: ${reportData.summary.transactionCount}\n`;
+    text += `Pemasukan: ${reportData.summary.incomeCount} transaksi\n`;
+    text += `Pengeluaran: ${reportData.summary.expenseCount} transaksi\n\n`;
+
+    if (reportData.categoryBreakdown.length > 0) {
+      text += `📂 *Breakdown Kategori*\n`;
+      reportData.categoryBreakdown.slice(0, 5).forEach((cat) => {
+        text += `• ${cat.category}: Rp ${Number(cat.amount).toLocaleString("id-ID")} (${cat.percentage.toFixed(1)}%)\n`;
+      });
+    }
+
+    return text;
+  }
+
+  /**
    * Execute report delivery
    */
   static async executeDelivery(): Promise<void> {

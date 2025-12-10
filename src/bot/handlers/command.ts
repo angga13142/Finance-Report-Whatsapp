@@ -60,6 +60,12 @@ export class CommandHandler {
     this.aliasMap.set("ubah", "edit");
     this.aliasMap.set("delete", "delete");
     this.aliasMap.set("hapus", "delete");
+    this.aliasMap.set("admin", "admin");
+    this.aliasMap.set("users", "users");
+    this.aliasMap.set("user-activity", "user-activity");
+    this.aliasMap.set("aktivitas", "user-activity");
+    this.aliasMap.set("generate-report", "generate-report");
+    this.aliasMap.set("report-manual", "generate-report");
 
     logger.info("Command handler initialized", {
       aliases: Array.from(this.aliasMap.keys()),
@@ -323,6 +329,33 @@ export class CommandHandler {
 
         case "delete":
           await this.handleDeleteCommand(
+            message,
+            user.id,
+            user.role,
+            parsed.args,
+          );
+          break;
+
+        case "admin":
+          await this.handleAdminCommand(
+            message,
+            user.id,
+            user.role,
+            parsed.args,
+          );
+          break;
+
+        case "user-activity":
+          await this.handleUserActivityCommand(
+            message,
+            user.id,
+            user.role,
+            parsed.args,
+          );
+          break;
+
+        case "generate-report":
+          await this.handleGenerateReportCommand(
             message,
             user.id,
             user.role,
@@ -973,6 +1006,52 @@ export class CommandHandler {
       // Handle confirmation
       await ProfileHandler.handleAccountDeletionConfirm(user, args[0], message);
     }
+  }
+
+  /**
+   * Handle /admin command - Show admin menu (Dev only)
+   */
+  private static async handleAdminCommand(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    _args: string[],
+  ): Promise<void> {
+    const { AdminHandler } = await import("./admin");
+    await AdminHandler.handleAdminMenu(message, userId, userRole);
+  }
+
+  /**
+   * Handle /user-activity command - Show user activity summary (Boss/Dev)
+   */
+  private static async handleUserActivityCommand(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    _args: string[],
+  ): Promise<void> {
+    const { AdminHandler } = await import("./admin");
+    await AdminHandler.handleUserActivitySummary(message, userId, userRole);
+  }
+
+  /**
+   * Handle /generate-report command - Manual report generation (Dev only)
+   */
+  private static async handleGenerateReportCommand(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    args: string[],
+  ): Promise<void> {
+    const reportDate = args.length > 0 ? args[0] : undefined;
+
+    const { AdminHandler } = await import("./admin");
+    await AdminHandler.handleManualReportGeneration(
+      message,
+      userId,
+      userRole,
+      reportDate,
+    );
   }
 
   /**

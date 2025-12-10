@@ -373,7 +373,7 @@ This document contains actionable, dependency-ordered implementation tasks organ
 
 - [x] T177 [FR-022] Implement user profile viewing (phone, name, role, registration date) in src/bot/handlers/profile.ts
 - [x] T178 [FR-024] Implement account deletion request workflow in src/bot/handlers/profile.ts
-- [ ] T179 [FR-025] Implement user activity summary display for Boss/Dev in src/bot/handlers/admin.ts
+- [x] T179 [FR-025] Implement user activity summary display for Boss/Dev in src/bot/handlers/admin.ts
 - [x] T180 [FR-034] Implement keyboard shortcuts for power users (number shortcuts: 1, 2, 3) in src/bot/handlers/command.ts
 - [ ] T181 [FR-038] Implement button label customization by Dev role in src/services/system/config.ts
 - [ ] T182 [FR-040] Implement full localization support (Indonesian with English fallback) in src/lib/i18n.ts
@@ -383,14 +383,14 @@ This document contains actionable, dependency-ordered implementation tasks organ
 - [x] T186 [FR-078] Implement transaction editing after submission (same-day edits, previous day by Boss/Dev) in src/bot/handlers/transaction.ts
 - [x] T187 [FR-079] Implement transaction deletion (soft delete) with Boss/Dev permission in src/services/transaction/processor.ts
 - [ ] T188 [FR-080] Implement receipt SMS/WhatsApp confirmation (optional, Dev-enabled) in src/services/notification/receipt.ts
-- [ ] T189 [FR-085] Implement recommendation dismissal tracking in src/models/recommendation.ts
+- [x] T189 [FR-085] Implement recommendation dismissal tracking in src/models/recommendation.ts (✅ Already implemented in Phase 10)
 - [ ] T190 [FR-087] Implement recommendation learning from user acknowledgment patterns in src/services/recommendation/learning.ts
 - [ ] T191 [FR-088] Implement custom recommendation rules creation by Dev/Boss in src/services/recommendation/rules.ts
 - [ ] T192 [FR-089] Implement monthly trending insights generation in src/services/recommendation/trending.ts
 - [ ] T193 [FR-090] Implement recommendation export to email/Slack in src/services/recommendation/export.ts
-- [ ] T194 [FR-098] Implement manual report generation trigger for Dev in src/bot/handlers/admin.ts
+- [x] T194 [FR-098] Implement manual report generation trigger for Dev in src/bot/handlers/admin.ts
 - [ ] T195 [FR-099] Implement database backup/restore via bot commands in src/bot/handlers/admin.ts
-- [ ] T196 [FR-100] Implement graceful shutdown with session preservation in src/bot/client/shutdown.ts
+- [x] T196 [FR-100] Implement graceful shutdown with session preservation in src/bot/client/shutdown.ts
 - [ ] T197 [FR-089] Implement monthly insight generation scheduler (runs at month-end) in src/services/scheduler/monthly-insights.ts
 
 ### Performance & Monitoring

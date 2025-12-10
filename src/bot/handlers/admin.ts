@@ -772,6 +772,235 @@ CPU: ${health.components.cpu.details ? String(health.components.cpu.details.usag
   }
 
   /**
+   * Handle user activity summary command
+   * Shows activity summary for all users (Boss/Dev only)
+   */
+  static async handleUserActivitySummary(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+  ): Promise<void> {
+    try {
+      // Only Boss and Dev can view user activity
+      if (userRole !== "boss" && userRole !== "dev") {
+        await message.reply(
+          "⛔ Akses ditolak. Hanya Boss dan Dev yang dapat melihat aktivitas user.",
+        );
+        return;
+      }
+
+      await message.reply("📊 Mengambil data aktivitas user...");
+
+      const result = await UserService.listUsers();
+      const users = result.users;
+
+      if (users.length === 0) {
+        await message.reply("ℹ️ Tidak ada user terdaftar dalam sistem.");
+        return;
+      }
+
+      // Get transaction counts for each user
+      const { TransactionModel } = await import("../../models/transaction");
+      const userActivityData = await Promise.all(
+        users.map(async (user) => {
+          // Get today's transaction count
+          const todayTotals = await TransactionModel.getDailyTotals(user.id);
+
+          // Get total transaction count
+          const allTransactions = await TransactionModel.findByUserId(user.id);
+
+          return {
+            user,
+            todayCount: todayTotals.count,
+            totalCount: allTransactions.length,
+          };
+        }),
+      );
+
+      // Sort by most active (total transactions)
+      userActivityData.sort((a, b) => b.totalCount - a.totalCount);
+
+      // Build summary message
+      let summaryText = `👥 *RINGKASAN AKTIVITAS USER*\n\n`;
+      summaryText += `Total User: ${result.totalUsers}\n`;
+      summaryText += `User Aktif: ${result.activeUsers}\n\n`;
+
+      summaryText += `📊 *Aktivitas Transaksi:*\n`;
+
+      for (const { user, todayCount, totalCount } of userActivityData) {
+        const roleEmoji: Record<string, string> = {
+          employee: "👤",
+          boss: "👨‍💼",
+          investor: "💼",
+          dev: "👨‍💻",
+        };
+        const emoji = roleEmoji[user.role] || "👤";
+
+        const statusEmoji = user.isActive ? "✅" : "❌";
+        const lastActiveText = user.lastActive
+          ? new Date(user.lastActive).toLocaleDateString("id-ID", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })
+          : "Belum pernah";
+
+        summaryText += `\n${emoji} *${user.name || user.phoneNumber}* ${statusEmoji}\n`;
+        summaryText += `  Role: ${user.role.toUpperCase()}\n`;
+        summaryText += `  Hari ini: ${todayCount} transaksi\n`;
+        summaryText += `  Total: ${totalCount} transaksi\n`;
+        summaryText += `  Last Active: ${lastActiveText}\n`;
+      }
+
+      summaryText += `\n_Gunakan /admin untuk kembali ke menu admin_`;
+
+      // Split if too long
+      const chunks = this.splitMessage(summaryText, 4000);
+      for (const chunk of chunks) {
+        await message.reply(chunk);
+      }
+
+      // Log audit
+      await AuditLogger.log(
+        "user_activity_summary_viewed",
+        {
+          viewedBy: userId,
+          userCount: result.totalUsers,
+        },
+        userId,
+      );
+
+      logger.info("User activity summary displayed", { userId, userRole });
+    } catch (error) {
+      logger.error("Error displaying user activity summary", {
+        error,
+        userId,
+      });
+      await message.reply(
+        "❌ Terjadi kesalahan saat mengambil aktivitas user.",
+      );
+    }
+  }
+
+  /**
+   * Handle manual report generation command (Dev only)
+   * Triggers daily report generation manually
+   */
+  static async handleManualReportGeneration(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    reportDate?: string,
+  ): Promise<void> {
+    try {
+      // Only Dev can manually trigger reports
+      if (userRole !== "dev") {
+        await message.reply(
+          "⛔ Akses ditolak. Hanya Dev yang dapat men-trigger report manual.",
+        );
+        return;
+      }
+
+      await message.reply(
+        "🔄 Memulai generate report manual...\n\nProses ini mungkin memakan waktu beberapa menit.",
+      );
+
+      // Parse report date or use today
+      let targetDate: Date;
+      if (reportDate) {
+        // Try to parse date (format: YYYY-MM-DD or DD/MM/YYYY)
+        const parsed = new Date(reportDate);
+        if (isNaN(parsed.getTime())) {
+          await message.reply(
+            "❌ Format tanggal tidak valid.\n\n" +
+              "Gunakan format: YYYY-MM-DD atau DD/MM/YYYY\n" +
+              "Contoh: 2025-12-10 atau 10/12/2025",
+          );
+          return;
+        }
+        targetDate = parsed;
+      } else {
+        targetDate = new Date();
+      }
+
+      // Import report delivery service
+      const { ReportDeliveryService } =
+        await import("../../services/scheduler/delivery");
+
+      // Generate reports
+      logger.info("Manual report generation triggered", {
+        userId,
+        targetDate: targetDate.toISOString(),
+      });
+
+      // Generate and deliver reports for all users
+      const { UserService } = await import("../../services/user/service");
+      const allUsersResult = await UserService.listUsers();
+
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const user of allUsersResult.users) {
+        if (user.isActive) {
+          try {
+            await ReportDeliveryService.deliverManualReport(
+              user.id,
+              targetDate,
+            );
+            successCount++;
+          } catch (error) {
+            logger.error("Failed to deliver report to user", {
+              userId: user.id,
+              error,
+            });
+            failCount++;
+          }
+        }
+      }
+
+      logger.info("Manual report generation summary", {
+        successCount,
+        failCount,
+        totalUsers: allUsersResult.users.length,
+      });
+
+      await message.reply(
+        `✅ *Report berhasil di-generate!*\n\n` +
+          `Tanggal: ${targetDate.toLocaleDateString("id-ID", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })}\n\n` +
+          `Berhasil: ${successCount} user\n` +
+          `Gagal: ${failCount} user\n` +
+          `Total: ${allUsersResult.users.length} user`,
+      );
+
+      // Log audit
+      await AuditLogger.log(
+        "manual_report_generation",
+        {
+          triggeredBy: userId,
+          targetDate: targetDate.toISOString(),
+        },
+        userId,
+      );
+
+      logger.info("Manual report generation completed", {
+        userId,
+        targetDate: targetDate.toISOString(),
+      });
+    } catch (error) {
+      logger.error("Error in manual report generation", { error, userId });
+      await message.reply(
+        "❌ Terjadi kesalahan saat generate report.\n\n" +
+          `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    }
+  }
+
+  /**
    * Split long message into chunks
    */
   private static splitMessage(text: string, maxLength: number): string[] {
