@@ -1,0 +1,33 @@
+# ESLint ignore patterns
+
+# Dependencies
+node_modules/
+vendor/
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Prisma generated
+prisma/migrations/
+
+# K6 load test scripts (external tooling)
+tests/integration/load/*.k6.js
+
+# Environment and config
+.env*
+*.config.js
+*.config.ts
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log

@@ -314,6 +314,178 @@ export class TransactionModel {
       return null;
     }
   }
+
+  /**
+   * Update transaction with optimistic locking
+   * Throws error if version mismatch (concurrent edit detected)
+   */
+  static async updateWithOptimisticLock(
+    id: string,
+    expectedVersion: number,
+    data: {
+      category?: string;
+      amount?: string | number | Decimal;
+      description?: string | null;
+      approvalStatus?: ApprovalStatus;
+      approvalBy?: string;
+    },
+  ): Promise<Transaction> {
+    try {
+      // Check current version
+      const current = await prisma.transaction.findUnique({
+        where: { id },
+        select: { version: true },
+      });
+
+      if (!current) {
+        throw new Error("Transaction not found");
+      }
+
+      if (current.version !== expectedVersion) {
+        throw new Error(
+          `Version mismatch: expected ${expectedVersion}, got ${current.version}. Transaction may have been modified by another user.`,
+        );
+      }
+
+      // Prepare update data
+      const updateData: {
+        category?: string;
+        amount?: Decimal;
+        description?: string | null;
+        approvalStatus?: ApprovalStatus;
+        approvalBy?: string;
+        version: { increment: number };
+        approvedAt?: Date;
+      } = {
+        category: data.category,
+        description: data.description,
+        approvalStatus: data.approvalStatus,
+        approvalBy: data.approvalBy,
+        version: { increment: 1 },
+      };
+
+      // Handle amount update
+      if (data.amount !== undefined) {
+        const amountDecimal: Decimal =
+          typeof data.amount === "string" || typeof data.amount === "number"
+            ? parseAmount(String(data.amount))
+            : data.amount;
+        validateAmountRange(amountDecimal);
+        updateData.amount = amountDecimal;
+      }
+
+      // Set approved_at if approval status changes
+      if (data.approvalStatus && data.approvalBy) {
+        updateData.approvedAt = new Date();
+      }
+
+      // Update with version check in WHERE clause
+      const updated = await prisma.transaction.updateMany({
+        where: {
+          id,
+          version: expectedVersion,
+        },
+        data: updateData,
+      });
+
+      if (updated.count === 0) {
+        throw new Error(
+          "Failed to update transaction. It may have been modified by another user.",
+        );
+      }
+
+      // Fetch updated transaction
+      const transaction = await prisma.transaction.findUnique({
+        where: { id },
+        include: {
+          user: true,
+          approver: true,
+        },
+      });
+
+      if (!transaction) {
+        throw new Error("Transaction not found after update");
+      }
+
+      logger.info("Transaction updated with optimistic lock", {
+        id,
+        oldVersion: expectedVersion,
+        newVersion: transaction.version,
+      });
+
+      return transaction;
+    } catch (error) {
+      logger.error("Error updating transaction with optimistic lock", {
+        error,
+        id,
+        expectedVersion,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Retry update with optimistic locking
+   * Automatically retries on version mismatch
+   */
+  static async updateWithRetry(
+    id: string,
+    data: {
+      category?: string;
+      amount?: string | number | Decimal;
+      description?: string | null;
+      approvalStatus?: ApprovalStatus;
+      approvalBy?: string;
+    },
+    maxRetries = 3,
+  ): Promise<Transaction> {
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // Fetch current version
+        const current = await this.findById(id);
+        if (!current) {
+          throw new Error("Transaction not found");
+        }
+
+        // Attempt update with current version
+        return await this.updateWithOptimisticLock(id, current.version, data);
+      } catch (error) {
+        lastError = error as Error;
+
+        if (
+          lastError.message.includes("Version mismatch") ||
+          lastError.message.includes("modified by another user")
+        ) {
+          logger.warn("Optimistic lock conflict, retrying", {
+            id,
+            attempt,
+            maxRetries,
+          });
+
+          if (attempt < maxRetries) {
+            // Exponential backoff
+            const delay = Math.min(100 * Math.pow(2, attempt - 1), 1000);
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            continue;
+          }
+        }
+
+        // Non-version-mismatch error or max retries reached
+        throw lastError;
+      }
+    }
+
+    logger.error("Failed to update transaction after max retries", {
+      id,
+      maxRetries,
+      error: lastError,
+    });
+    throw new Error(
+      `Failed to update transaction: ${lastError?.message || "Unknown error"}`,
+    );
+  }
 }
 
 export default TransactionModel;

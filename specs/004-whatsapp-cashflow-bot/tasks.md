@@ -220,13 +220,13 @@ This document contains actionable, dependency-ordered implementation tasks organ
 
 ### User Story 8 Tasks
 
-- [ ] T076 [US8] Implement button debouncing middleware (3-second cooldown) in src/bot/middleware/debounce.ts
-- [ ] T077 [US8] Implement message rate limiting middleware in src/bot/middleware/rate-limit.ts
-- [ ] T078 [US8] Configure database connection pool (min 5, max 50) in src/lib/database.ts
-- [ ] T079 [US8] Implement optimistic locking for concurrent transaction edits in src/models/transaction.ts
-- [ ] T080 [US8] Implement Redis session isolation for concurrent users in src/bot/middleware/session.ts
-- [ ] T081 [US8] Implement concurrent report generation queue in src/services/report/generator.ts
-- [ ] T082 [US8] Add load testing scenarios for 50 concurrent users in tests/integration/load/
+- [x] T076 [US8] Implement button debouncing middleware (3-second cooldown) in src/bot/middleware/debounce.ts
+- [x] T077 [US8] Implement message rate limiting middleware in src/bot/middleware/rate-limit.ts
+- [x] T078 [US8] Configure database connection pool (min 5, max 50) in src/lib/database.ts
+- [x] T079 [US8] Implement optimistic locking for concurrent transaction edits in src/models/transaction.ts
+- [x] T080 [US8] Implement Redis session isolation for concurrent users in src/bot/middleware/session.ts
+- [x] T081 [US8] Implement concurrent report generation queue in src/services/report/generator.ts
+- [x] T082 [US8] Add load testing scenarios for 50 concurrent users in tests/integration/load/
 
 ---
 

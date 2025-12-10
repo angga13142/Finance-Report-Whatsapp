@@ -1,16 +1,13 @@
 import { validateEnv } from "./config/env";
 import { logger } from "./lib/logger";
 import { connectRedis, disconnectRedis } from "./lib/redis";
+import { database } from "./lib/database";
 import {
   initializeWhatsAppClient,
   destroyWhatsAppClient,
 } from "./bot/client/client";
 import { initializeEventHandlers } from "./bot/client/events";
 import { SessionManager } from "./bot/middleware/session";
-import { PrismaClient } from "@prisma/client";
-
-// Initialize Prisma Client
-const prisma = new PrismaClient();
 
 async function main(): Promise<void> {
   try {
@@ -22,9 +19,9 @@ async function main(): Promise<void> {
     await connectRedis();
     logger.info("Redis connection established");
 
-    // Test database connection
-    await prisma.$connect();
-    logger.info("Database connection established");
+    // Initialize database with connection pool (Phase 6)
+    await database.connect();
+    logger.info("Database connection pool established");
 
     // Initialize WhatsApp client
     await initializeWhatsAppClient();
@@ -52,7 +49,7 @@ process.on("SIGTERM", () => {
     SessionManager.stopCleanupInterval();
     await destroyWhatsAppClient();
     await disconnectRedis();
-    await prisma.$disconnect();
+    await database.disconnect();
     process.exit(0);
   })();
 });
@@ -63,7 +60,7 @@ process.on("SIGINT", () => {
     SessionManager.stopCleanupInterval();
     await destroyWhatsAppClient();
     await disconnectRedis();
-    await prisma.$disconnect();
+    await database.disconnect();
     process.exit(0);
   })();
 });

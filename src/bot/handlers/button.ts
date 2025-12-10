@@ -3,6 +3,7 @@ import { User } from "@prisma/client";
 import { logger } from "../../lib/logger";
 import { AuthMiddleware } from "../middleware/auth";
 import { SessionManager } from "../middleware/session";
+import { DebounceMiddleware } from "../middleware/debounce";
 import { ButtonMenu } from "../ui/buttons";
 import { ListMenu } from "../ui/lists";
 import { MessageFormatter } from "../ui/messages";
@@ -42,6 +43,17 @@ export class ButtonHandler {
         logger.warn("No button ID found", {
           messageId: message.id._serialized,
         });
+        return;
+      }
+
+      // Check button debouncing (prevent duplicate clicks within 3 seconds)
+      const isDebounced = await DebounceMiddleware.shouldDebounce(
+        user.id,
+        buttonId,
+      );
+      if (isDebounced) {
+        logger.debug("Button click debounced", { userId: user.id, buttonId });
+        // Silently ignore duplicate click
         return;
       }
 
