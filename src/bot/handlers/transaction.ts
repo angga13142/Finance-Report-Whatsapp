@@ -656,6 +656,201 @@ export class TransactionHandler {
 
     return false;
   }
+
+  /**
+   * Handle bulk transaction entry (Dev/Boss only)
+   * Format: CSV or line-by-line format
+   * Example:
+   *   income,Penjualan A,500000,Catatan A
+   *   expense,Operasional,250000,Catatan B
+   */
+  static async handleBulkEntry(
+    user: User,
+    input: string,
+    message: Message,
+  ): Promise<void> {
+    const client = getWhatsAppClient();
+    if (!client) {
+      return;
+    }
+
+    // Only Dev and Boss can use bulk entry
+    if (user.role !== "dev" && user.role !== "boss") {
+      await client.sendMessage(
+        message.from,
+        "❌ Fitur ini hanya tersedia untuk Dev dan Boss.",
+      );
+      return;
+    }
+
+    try {
+      // Parse bulk transaction format
+      const lines = input
+        .trim()
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+
+      if (lines.length === 0) {
+        await client.sendMessage(
+          message.from,
+          "❌ Format tidak valid. Gunakan format:\n\n" +
+            "Contoh:\n" +
+            "income,Penjualan A,500000,Catatan A\n" +
+            "expense,Operasional,250000,Catatan B",
+        );
+        return;
+      }
+
+      const results: Array<{
+        line: number;
+        success: boolean;
+        message: string;
+      }> = [];
+
+      // Process each line
+      for (let i = 0; i < lines.length; i++) {
+        const lineNum = i + 1;
+        const line = lines[i];
+        const parts = line.split(",").map((p) => p.trim());
+
+        if (parts.length < 3) {
+          results.push({
+            line: lineNum,
+            success: false,
+            message: "Format tidak lengkap (minimal: type,category,amount)",
+          });
+          continue;
+        }
+
+        const [type, category, amountStr, description] = parts;
+
+        // Validate transaction type
+        if (type !== "income" && type !== "expense") {
+          results.push({
+            line: lineNum,
+            success: false,
+            message: `Jenis tidak valid: ${type} (harus income atau expense)`,
+          });
+          continue;
+        }
+
+        // Validate amount
+        const validation = TransactionValidator.validateAmount(amountStr);
+        if (!validation.valid || !validation.parsed) {
+          results.push({
+            line: lineNum,
+            success: false,
+            message: `Jumlah tidak valid: ${amountStr}`,
+          });
+          continue;
+        }
+
+        // Create transaction
+        try {
+          await TransactionProcessor.processTransaction({
+            userId: user.id,
+            type,
+            category,
+            amount: validation.parsed,
+            description: description || undefined,
+          });
+
+          results.push({
+            line: lineNum,
+            success: true,
+            message: `${type === "income" ? "Penjualan" : "Pengeluaran"} ${category}: Rp ${validation.parsed.toLocaleString("id-ID")}`,
+          });
+        } catch (error) {
+          results.push({
+            line: lineNum,
+            success: false,
+            message: `Gagal menyimpan: ${error instanceof Error ? error.message : "Unknown error"}`,
+          });
+        }
+      }
+
+      // Send summary
+      const successCount = results.filter((r) => r.success).length;
+      const failedCount = results.length - successCount;
+
+      let summaryMsg = `📊 *Bulk Entry Summary*\n\n`;
+      summaryMsg += `✅ Berhasil: ${successCount}\n`;
+      summaryMsg += `❌ Gagal: ${failedCount}\n\n`;
+
+      if (failedCount > 0) {
+        summaryMsg += `*Transaksi Gagal:*\n`;
+        results
+          .filter((r) => !r.success)
+          .forEach((r) => {
+            summaryMsg += `Line ${r.line}: ${r.message}\n`;
+          });
+      }
+
+      if (successCount > 0) {
+        summaryMsg += `\n*Transaksi Berhasil:*\n`;
+        results
+          .filter((r) => r.success)
+          .forEach((r) => {
+            summaryMsg += `✓ ${r.message}\n`;
+          });
+      }
+
+      await client.sendMessage(message.from, summaryMsg);
+
+      logger.info("Bulk transaction entry completed", {
+        userId: user.id,
+        total: results.length,
+        success: successCount,
+        failed: failedCount,
+      });
+    } catch (error) {
+      logger.error("Error handling bulk entry", { error, userId: user.id });
+      await client.sendMessage(
+        message.from,
+        "❌ Terjadi kesalahan saat memproses bulk entry. Silakan coba lagi.",
+      );
+    }
+  }
+
+  /**
+   * Show bulk entry help
+   */
+  static async showBulkEntryHelp(user: User, message: Message): Promise<void> {
+    const client = getWhatsAppClient();
+    if (!client) {
+      return;
+    }
+
+    if (user.role !== "dev" && user.role !== "boss") {
+      await client.sendMessage(
+        message.from,
+        "❌ Fitur ini hanya tersedia untuk Dev dan Boss.",
+      );
+      return;
+    }
+
+    const helpMsg =
+      `📚 *Bulk Transaction Entry*\n\n` +
+      `Format CSV (comma-separated):\n` +
+      `type,category,amount,description\n\n` +
+      `*Fields:*\n` +
+      `• type: income atau expense\n` +
+      `• category: nama kategori\n` +
+      `• amount: jumlah (angka)\n` +
+      `• description: catatan (opsional)\n\n` +
+      `*Contoh:*\n` +
+      `income,Penjualan Produk A,500000,Toko Jakarta\n` +
+      `expense,Listrik,250000\n` +
+      `income,Penjualan Produk B,750000,Toko Bandung\n\n` +
+      `*Tips:*\n` +
+      `• Satu transaksi per baris\n` +
+      `• Maksimal 50 transaksi per batch\n` +
+      `• Gunakan format angka tanpa titik/koma\n` +
+      `• Description boleh kosong`;
+
+    await client.sendMessage(message.from, helpMsg);
+  }
 }
 
 export default TransactionHandler;

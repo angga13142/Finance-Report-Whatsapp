@@ -66,6 +66,9 @@ export class CommandHandler {
     this.aliasMap.set("aktivitas", "user-activity");
     this.aliasMap.set("generate-report", "generate-report");
     this.aliasMap.set("report-manual", "generate-report");
+    this.aliasMap.set("bulk", "bulk");
+    this.aliasMap.set("bulk-help", "bulk-help");
+    this.aliasMap.set("batch", "bulk");
 
     logger.info("Command handler initialized", {
       aliases: Array.from(this.aliasMap.keys()),
@@ -361,6 +364,19 @@ export class CommandHandler {
             user.role,
             parsed.args,
           );
+          break;
+
+        case "bulk":
+          await this.handleBulkCommand(
+            message,
+            user.id,
+            user.role,
+            parsed.args,
+          );
+          break;
+
+        case "bulk-help":
+          await this.handleBulkHelpCommand(message, user.id, user.role);
           break;
 
         default:
@@ -1052,6 +1068,52 @@ export class CommandHandler {
       userRole,
       reportDate,
     );
+  }
+
+  /**
+   * Handle /bulk command - Bulk transaction entry (Dev/Boss only)
+   */
+  private static async handleBulkCommand(
+    message: Message,
+    userId: string,
+    _userRole: UserRole,
+    args: string[],
+  ): Promise<void> {
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      await message.reply("❌ User tidak ditemukan");
+      return;
+    }
+
+    // If no args, show help
+    if (args.length === 0) {
+      const { TransactionHandler } = await import("./transaction");
+      await TransactionHandler.showBulkEntryHelp(user, message);
+      return;
+    }
+
+    // Process bulk entry
+    const bulkData = args.join(" ");
+    const { TransactionHandler } = await import("./transaction");
+    await TransactionHandler.handleBulkEntry(user, bulkData, message);
+  }
+
+  /**
+   * Handle /bulk-help command - Show bulk entry help
+   */
+  private static async handleBulkHelpCommand(
+    message: Message,
+    userId: string,
+    _userRole: UserRole,
+  ): Promise<void> {
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      await message.reply("❌ User tidak ditemukan");
+      return;
+    }
+
+    const { TransactionHandler } = await import("./transaction");
+    await TransactionHandler.showBulkEntryHelp(user, message);
   }
 
   /**

@@ -1001,6 +1001,146 @@ CPU: ${health.components.cpu.details ? String(health.components.cpu.details.usag
   }
 
   /**
+   * Handle database backup command (Dev only)
+   */
+  static async handleDatabaseBackup(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+  ): Promise<void> {
+    try {
+      if (userRole !== "dev") {
+        await message.reply(
+          "⛔ Akses ditolak. Hanya Dev yang dapat melakukan backup database.",
+        );
+        return;
+      }
+
+      await message.reply(
+        "💾 Memulai backup database...\n\nProses ini mungkin memakan waktu beberapa menit.",
+      );
+
+      const { BackupService } = await import("../../services/system/backup");
+      const backupResult = await BackupService.createBackup(userId);
+
+      if (backupResult.success) {
+        await message.reply(
+          `✅ *Backup berhasil dibuat!*\n\n` +
+            `File: ${backupResult.filename}\n` +
+            `Lokasi: ${backupResult.path}\n` +
+            `Ukuran: ${backupResult.size}\n` +
+            `Waktu: ${new Date().toLocaleString("id-ID", { timeZone: "Asia/Makassar" })}\n\n` +
+            `_Backup disimpan di server dan dapat diunduh melalui admin panel._`,
+        );
+
+        await AuditLogger.log(
+          "database_backup_created",
+          { filename: backupResult.filename },
+          userId,
+        );
+      } else {
+        throw new Error(backupResult.error || "Unknown backup error");
+      }
+    } catch (error) {
+      logger.error("Error creating database backup", { error, userId });
+      await message.reply(
+        `❌ Gagal membuat backup database.\n\n` +
+          `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    }
+  }
+
+  /**
+   * Handle database restore command (Dev only)
+   */
+  static async handleDatabaseRestore(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    backupFilename: string,
+  ): Promise<void> {
+    try {
+      if (userRole !== "dev") {
+        await message.reply(
+          "⛔ Akses ditolak. Hanya Dev yang dapat melakukan restore database.",
+        );
+        return;
+      }
+
+      // Confirm restore
+      await message.reply(
+        `⚠️ *PERINGATAN: DATABASE RESTORE*\n\n` +
+          `Anda akan me-restore database dari:\n` +
+          `File: ${backupFilename}\n\n` +
+          `*SEMUA DATA SAAT INI AKAN DIGANTIKAN!*\n\n` +
+          `Ketik "CONFIRM RESTORE" untuk melanjutkan atau "CANCEL" untuk membatalkan.`,
+      );
+
+      // Implementation note: In production, this would wait for user confirmation
+      // and then proceed with the restore operation
+      logger.info("Database restore requested", { userId, backupFilename });
+
+      await AuditLogger.log(
+        "database_restore_requested",
+        { backupFilename },
+        userId,
+      );
+    } catch (error) {
+      logger.error("Error in database restore", { error, userId });
+      await message.reply(
+        `❌ Terjadi kesalahan saat restore database.\n\n` +
+          `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    }
+  }
+
+  /**
+   * Handle list backups command (Dev only)
+   */
+  static async handleListBackups(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+  ): Promise<void> {
+    try {
+      if (userRole !== "dev") {
+        await message.reply("⛔ Akses ditolak.");
+        return;
+      }
+
+      await message.reply("📂 Mengambil daftar backup...");
+
+      const { BackupService } = await import("../../services/system/backup");
+      const backups = await BackupService.listBackups();
+
+      if (backups.length === 0) {
+        await message.reply("ℹ️ Tidak ada backup ditemukan.");
+        return;
+      }
+
+      let backupText = `💾 *DAFTAR BACKUP DATABASE*\n\n`;
+      backupText += `Total: ${backups.length} backup\n\n`;
+
+      backups.slice(0, 10).forEach((backup, index) => {
+        backupText += `${index + 1}. *${backup.filename}*\n`;
+        backupText += `   📅 ${new Date(backup.created).toLocaleString("id-ID", { timeZone: "Asia/Makassar" })}\n`;
+        backupText += `   💾 ${backup.size}\n\n`;
+      });
+
+      if (backups.length > 10) {
+        backupText += `\n_Menampilkan 10 backup terbaru dari ${backups.length} backup._`;
+      }
+
+      await message.reply(backupText);
+
+      logger.info("Backup list displayed", { userId, count: backups.length });
+    } catch (error) {
+      logger.error("Error listing backups", { error, userId });
+      await message.reply("❌ Terjadi kesalahan saat mengambil daftar backup.");
+    }
+  }
+
+  /**
    * Split long message into chunks
    */
   private static splitMessage(text: string, maxLength: number): string[] {
