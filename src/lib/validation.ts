@@ -1,3 +1,4 @@
+/* eslint-disable no-useless-escape */
 import { PHONE_NUMBER_REGEX, AMOUNT_INPUT_PATTERNS } from "../config/constants";
 import { parseAmount } from "./currency";
 
