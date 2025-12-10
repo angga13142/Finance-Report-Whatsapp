@@ -399,7 +399,7 @@ This document contains actionable, dependency-ordered implementation tasks organ
 - [x] T131 Implement health check endpoint in src/index.ts
 - [ ] T132 Configure Grafana dashboards for system health monitoring
 - [x] T133 Implement performance monitoring middleware in src/bot/middleware/metrics.ts
-- [ ] T134 Optimize database queries for <500ms target (95th percentile)
+- [x] T134 Optimize database queries for <500ms target (95th percentile)
 - [x] T135 Implement Redis caching for daily totals, user roles, category lists in src/lib/redis.ts
 
 ### Security & Compliance
