@@ -1,7 +1,11 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
 echo "🔍 Running pre-push checks..."
+
+# Run preflight checks before push
+echo "🚀 Running preflight checks..."
+node scripts/preflight/check-build-prerequisites.js || {
+  echo "❌ Preflight checks failed. Please fix the issues above."
+  exit 1
+}
 
 # Type check
 echo "📝 Type checking..."
