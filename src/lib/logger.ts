@@ -18,13 +18,15 @@ export const logger = winston.createLogger({
           winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
           winston.format.errors({ stack: true }),
           winston.format.colorize(),
-          winston.format.printf(({ timestamp, level, message, ...meta }) => {
+          winston.format.printf((info) => {
+            const { timestamp, level, message, ...meta } = info;
             const metaStr = Object.keys(meta).length
               ? JSON.stringify(meta, null, 2)
               : "";
-            const timestampStr = String(timestamp ?? "");
-            const levelStr = String(level ?? "");
-            const messageStr = String(message ?? "");
+            // Type assertion untuk winston info object
+            const timestampStr = String(timestamp as string);
+            const levelStr = String(level);
+            const messageStr = String(message as string);
             return `${timestampStr} [${levelStr}]: ${messageStr} ${metaStr}`;
           }),
         ),
@@ -60,7 +62,8 @@ export const logger = winston.createLogger({
 import { mkdirSync } from "fs";
 try {
   mkdirSync("logs", { recursive: true });
-} catch (error) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+} catch (_error) {
   // Directory might already exist, ignore
 }
 

@@ -70,7 +70,8 @@ export function validateAmountFormat(input: string): boolean {
   // Try to parse to ensure it's a valid number
   try {
     parseAmount(input);
-  } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (_error) {
     throw new Error("Invalid amount value");
   }
 
