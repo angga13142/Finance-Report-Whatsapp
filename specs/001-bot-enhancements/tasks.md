@@ -28,11 +28,11 @@ description: "Task list for WhatsApp Cashflow Bot Enhancements implementation"
 
 **Purpose**: Project initialization and Docker containerization setup
 
-- [ ] T001 Create Docker directory structure (docker/, docker/Dockerfile, docker/docker-compose.yml, docker/.dockerignore)
-- [ ] T002 [P] Create Dockerfile with Node.js 20+ base image, non-root user (UID 1000, GID 1000), and volume mount point for WhatsApp session in docker/Dockerfile
-- [ ] T003 [P] Create docker-compose.yml with whatsapp-session named volume, service definition, and health check configuration in docker/docker-compose.yml
-- [ ] T004 [P] Create .dockerignore file to exclude unnecessary files from Docker build context in docker/.dockerignore
-- [ ] T005 [P] Update package.json with Docker-related scripts (docker:build, docker:up, docker:down) if these scripts don't already exist in package.json scripts section
+- [x] T001 Create Docker directory structure (docker/, docker/Dockerfile, docker/docker-compose.yml, docker/.dockerignore)
+- [x] T002 [P] Create Dockerfile with Node.js 20+ base image, non-root user (UID 1000, GID 1000), and volume mount point for WhatsApp session in docker/Dockerfile
+- [x] T003 [P] Create docker-compose.yml with whatsapp-session named volume, service definition, and health check configuration in docker/docker-compose.yml
+- [x] T004 [P] Create .dockerignore file to exclude unnecessary files from Docker build context in docker/.dockerignore
+- [x] T005 [P] Update package.json with Docker-related scripts (docker:build, docker:up, docker:down) if these scripts don't already exist in package.json scripts section
 
 ---
 
@@ -42,14 +42,14 @@ description: "Task list for WhatsApp Cashflow Bot Enhancements implementation"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 Create Prisma migration for SystemConfig model (id, key, value, description, updatedAt, updatedBy) in prisma/migrations/
-- [ ] T007 Create Prisma migration for MessageTemplate model (id, name, content, description, updatedAt, updatedBy) in prisma/migrations/
-- [ ] T008 [P] Create SystemConfig model with Prisma schema methods (findByKey, create, update, delete) in src/models/config.ts
-- [ ] T009 [P] Create MessageTemplate model with Prisma schema methods (findByName, list, create, update, delete) in src/models/template.ts
-- [ ] T010 [P] Enhance User model with new methods (list with role filter, activate, deactivate, delete with validation) in src/models/user.ts
-- [ ] T011 [P] Enhance AuditLog model usage for new action types (user.create, user.update, user.delete, config.set, template.edit, etc.) in src/models/audit.ts
-- [ ] T012 [P] Enhance environment configuration with DEV_PHONE_NUMBER variable and validation schema in src/config/env.ts
-- [ ] T013 Setup correlation ID generation utility (UUID v4) with in-memory storage for active message flows in src/lib/correlation.ts. Correlation IDs MUST be stored in a Map<string, string> keyed by message ID, with automatic cleanup after message processing completes (TTL: 5 minutes). For distributed tracing, correlation IDs are passed through request context and logged with each operation.
+- [x] T006 Create Prisma migration for SystemConfig model (id, key, value, description, updatedAt, updatedBy) in prisma/migrations/
+- [x] T007 Create Prisma migration for MessageTemplate model (id, name, content, description, updatedAt, updatedBy) in prisma/migrations/
+- [x] T008 [P] Create SystemConfig model with Prisma schema methods (findByKey, create, update, delete) in src/models/config.ts
+- [x] T009 [P] Create MessageTemplate model with Prisma schema methods (findByName, list, create, update, delete) in src/models/template.ts
+- [x] T010 [P] Enhance User model with new methods (list with role filter, activate, deactivate, delete with validation) in src/models/user.ts
+- [x] T011 [P] Enhance AuditLog model usage for new action types (user.create, user.update, user.delete, config.set, template.edit, etc.) in src/models/audit.ts
+- [x] T012 [P] Enhance environment configuration with DEV_PHONE_NUMBER variable and validation schema in src/config/env.ts
+- [x] T013 Setup correlation ID generation utility (UUID v4) with in-memory storage for active message flows in src/lib/correlation.ts. Correlation IDs MUST be stored in a Map<string, string> keyed by message ID, with automatic cleanup after message processing completes (TTL: 5 minutes). For distributed tracing, correlation IDs are passed through request context and logged with each operation.
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 

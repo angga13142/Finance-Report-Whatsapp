@@ -115,6 +115,9 @@ const envSchema = z.object({
     .transform((val) => val === "true" || val === "1")
     .pipe(z.boolean())
     .default("true"),
+
+  // Developer Configuration
+  DEV_PHONE_NUMBER: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

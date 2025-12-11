@@ -76,13 +76,14 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/package.json ./package.json
 
-# Create directories for WhatsApp session and logs
+# Create directories for WhatsApp session and logs with proper permissions (UID 1000, GID 1000, mode 755)
 RUN mkdir -p .wwebjs_auth logs && \
-    chmod 755 .wwebjs_auth logs
+    chmod 755 .wwebjs_auth logs && \
+    chown -R nodejs:nodejs .wwebjs_auth logs
 
-# Create non-root user for security
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001 && \
+# Create non-root user for security (UID 1000, GID 1000 per requirements)
+RUN addgroup -g 1000 -S nodejs && \
+    adduser -S nodejs -u 1000 && \
     chown -R nodejs:nodejs /app
 
 # Switch to non-root user

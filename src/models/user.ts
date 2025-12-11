@@ -171,6 +171,62 @@ export class UserModel {
       throw error;
     }
   }
+
+  /**
+   * List users with optional role filter
+   */
+  static async list(filters?: {
+    role?: UserRole;
+    isActive?: boolean;
+  }): Promise<User[]> {
+    try {
+      const where: {
+        role?: UserRole;
+        isActive?: boolean;
+      } = {};
+
+      if (filters?.role !== undefined) {
+        where.role = filters.role;
+      }
+
+      if (filters?.isActive !== undefined) {
+        where.isActive = filters.isActive;
+      }
+
+      return await prisma.user.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+      });
+    } catch (error) {
+      logger.error("Error listing users", { error, filters });
+      throw error;
+    }
+  }
+
+  /**
+   * Delete user with validation
+   * Prevents deletion of dev role users
+   */
+  static async delete(id: string): Promise<User> {
+    try {
+      const user = await this.findById(id);
+      if (!user) {
+        throw new Error(`User with ID '${id}' not found`);
+      }
+
+      // Prevent deletion of dev role users
+      if (user.role === "dev") {
+        throw new Error("Cannot delete dev role user");
+      }
+
+      return await prisma.user.delete({
+        where: { id },
+      });
+    } catch (error) {
+      logger.error("Error deleting user", { error, id });
+      throw error;
+    }
+  }
 }
 
 export default UserModel;

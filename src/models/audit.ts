@@ -31,6 +31,14 @@ export interface CreateAuditLogData {
 /**
  * Audit log model operations
  * Provides CRUD operations for audit logs
+ *
+ * Supported action types:
+ * - User management: "user.create", "user.update", "user.delete", "user.activate", "user.deactivate"
+ * - Configuration: "config.set", "config.view"
+ * - Templates: "template.edit", "template.preview"
+ * - Roles: "role.grant", "role.revoke"
+ * - Cache: "cache.clear"
+ * - System: "system.status", "system.logs"
  */
 export class AuditLogModel {
   /**
