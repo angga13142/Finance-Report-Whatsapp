@@ -47,7 +47,9 @@ export class ConfigService {
     this.prisma = new PrismaClient();
     this.enableLegacyButtons = env.ENABLE_LEGACY_BUTTONS;
     // Start periodic config refresh to ensure 60-second propagation
-    const intervalId = setInterval(() => this.refreshConfig(), 10000); // Check every 10 seconds
+    const intervalId = setInterval(() => {
+      void this.refreshConfig(); // Explicitly void the promise to satisfy linter
+    }, 10000); // Check every 10 seconds
     // Unref to prevent keeping process alive (allows graceful shutdown)
     if (typeof intervalId.unref === "function") {
       intervalId.unref();
@@ -402,10 +404,7 @@ export class ConfigService {
    * Get ENABLE_LEGACY_BUTTONS flag with override precedence:
    * user override > role override > global config (per FR-036)
    */
-  async getEnableLegacyButtons(
-    userId?: string,
-    userRole?: string,
-  ): Promise<boolean> {
+  getEnableLegacyButtons(userId?: string, userRole?: string): boolean {
     // Check user override first (highest precedence)
     if (userId && this.userOverrides.has(userId)) {
       return this.userOverrides.get(userId)!;

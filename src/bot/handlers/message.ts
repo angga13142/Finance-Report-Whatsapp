@@ -44,7 +44,7 @@ export class MessageHandler {
       const body = message.body?.trim().toLowerCase() || "";
 
       // T023: Check ENABLE_LEGACY_BUTTONS flag and route commands
-      const enableLegacyButtons = await configService.getEnableLegacyButtons(
+      const enableLegacyButtons = configService.getEnableLegacyButtons(
         user.id,
         user.role,
       );
