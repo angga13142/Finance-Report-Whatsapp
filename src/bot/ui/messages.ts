@@ -1,30 +1,32 @@
-import { formatCurrency } from "../../lib/currency";
 import { formatDateWITA } from "../../lib/date";
 import { UserRole } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { USER_ROLES } from "../../config/constants";
+import { FontFormatter, FontStyle } from "../../lib/font-formatter";
 
 /**
  * Message formatting utilities (Indonesian)
  */
 export class MessageFormatter {
   /**
-   * Format welcome message
+   * Format welcome message with enhanced formatting
    */
   static formatWelcomeMessage(role: UserRole, userName?: string): string {
     const greeting = userName ? `Halo ${userName}!` : "Halo!";
     const roleLabel = this.getRoleLabel(role);
+    const roleLabelFormatted = FontFormatter.convert(roleLabel, FontStyle.BOLD);
 
-    return (
+    const message =
       `${greeting}\n\n` +
-      `Selamat datang di WhatsApp Cashflow Bot.\n` +
-      `Anda login sebagai: ${roleLabel}\n\n` +
-      `Gunakan tombol di bawah untuk memulai.`
-    );
+      `${FontFormatter.convert("Selamat datang di WhatsApp Cashflow Bot.", FontStyle.BOLD)}\n` +
+      `Anda login sebagai: ${roleLabelFormatted}\n\n` +
+      `Gunakan tombol di bawah untuk memulai.`;
+
+    return this.applyLengthLimit(message);
   }
 
   /**
-   * Format transaction confirmation message
+   * Format transaction confirmation message with enhanced formatting
    */
   static formatConfirmationMessage(data: {
     type: "income" | "expense";
@@ -35,22 +37,38 @@ export class MessageFormatter {
   }): string {
     const typeLabel =
       data.type === "income" ? "💰 Penjualan" : "💸 Pengeluaran";
-    const amount = formatCurrency(data.amount);
     const date = formatDateWITA(new Date());
     const desc = data.description ? `\nCatatan: ${data.description}` : "";
 
-    return (
-      `📋 Konfirmasi Transaksi\n\n` +
-      `${typeLabel}\n` +
-      `Kategori: ${data.category}\n` +
-      `Jumlah: ${amount}\n` +
-      `Tanggal: ${date}${desc}\n\n` +
-      `Apakah data sudah benar?`
+    // Apply visual hierarchy: bold header, monospace numeric
+    const header = FontFormatter.convert(
+      "📋 Konfirmasi Transaksi",
+      FontStyle.BOLD,
     );
+    const typeLabelFormatted = FontFormatter.convert(typeLabel, FontStyle.BOLD);
+    const amountFormatted = FontFormatter.formatCurrency(
+      typeof data.amount === "string" ? parseFloat(data.amount) : data.amount,
+    );
+    const amountMonospace = FontFormatter.convert(
+      amountFormatted.replace("Rp ", ""),
+      FontStyle.MONOSPACE,
+    );
+    const amountFinal = `Rp ${amountMonospace}`;
+
+    const message =
+      `${header}\n\n` +
+      `${typeLabelFormatted}\n` +
+      `Kategori: ${data.category}\n` +
+      `Jumlah: ${amountFinal}\n` +
+      `Tanggal: ${date}${desc}\n\n` +
+      `Apakah data sudah benar?`;
+
+    // Apply message length limit
+    return this.applyLengthLimit(message);
   }
 
   /**
-   * Format success message
+   * Format success message with enhanced formatting
    */
   static formatSuccessMessage(
     transaction: {
@@ -61,18 +79,31 @@ export class MessageFormatter {
     },
     dailyTotal?: string,
   ): string {
-    const amount = formatCurrency(transaction.amount);
+    const amountNum =
+      transaction.amount instanceof Decimal
+        ? transaction.amount.toNumber()
+        : typeof transaction.amount === "string"
+          ? parseFloat(transaction.amount)
+          : transaction.amount;
+    const amountFormatted = FontFormatter.formatCurrency(amountNum);
+    const amountMonospace = FontFormatter.convert(
+      amountFormatted.replace("Rp ", ""),
+      FontStyle.MONOSPACE,
+    );
+    const amountFinal = `Rp ${amountMonospace}`;
+
     const typeLabel =
       transaction.type === "income" ? "Pemasukan" : "Pengeluaran";
+    const typeLabelFormatted = FontFormatter.convert(typeLabel, FontStyle.BOLD);
     const timestamp =
       transaction.timestamp instanceof Date
         ? transaction.timestamp
         : new Date(transaction.timestamp);
 
     let message =
-      `✅ Transaksi berhasil disimpan!\n\n` +
-      `${typeLabel}: ${transaction.category}\n` +
-      `Jumlah: ${amount}\n` +
+      `✅ ${FontFormatter.convert("Transaksi berhasil disimpan!", FontStyle.BOLD)}\n\n` +
+      `${typeLabelFormatted}: ${transaction.category}\n` +
+      `Jumlah: ${amountFinal}\n` +
       `Tanggal: ${formatDateWITA(timestamp)}\n`;
 
     if (dailyTotal) {
@@ -81,52 +112,79 @@ export class MessageFormatter {
 
     message += `\n\nTerima kasih!`;
 
-    return message;
+    return this.applyLengthLimit(message);
   }
 
   /**
-   * Format error message
+   * Format error message with enhanced formatting
    */
   static formatErrorMessage(error: string): string {
-    return `❌ Terjadi kesalahan\n\n${error}\n\nSilakan coba lagi atau hubungi admin.`;
+    const header = FontFormatter.convert(
+      "❌ Terjadi kesalahan",
+      FontStyle.BOLD,
+    );
+    const message = `${header}\n\n${error}\n\nSilakan coba lagi atau hubungi admin.`;
+    return this.applyLengthLimit(message);
   }
 
   /**
-   * Format help message
+   * Format help message with enhanced formatting
    */
   static formatHelpMessage(role: UserRole): string {
     const roleHelp = this.getRoleHelp(role);
 
-    return (
-      `❓ Bantuan\n\n` +
-      `Cara menggunakan bot:\n\n` +
+    const header = FontFormatter.convert("❓ Bantuan", FontStyle.BOLD);
+    const sectionHeader = FontFormatter.convert(
+      "Cara menggunakan bot:",
+      FontStyle.BOLD,
+    );
+    const exampleAmount = FontFormatter.convert("500000", FontStyle.MONOSPACE);
+    const exampleAmount2 = FontFormatter.convert(
+      "500.000",
+      FontStyle.MONOSPACE,
+    );
+
+    const message =
+      `${header}\n\n` +
+      `${sectionHeader}\n\n` +
       `1. Gunakan tombol untuk navigasi\n` +
       `2. Pilih kategori dari daftar\n` +
-      `3. Masukkan jumlah (contoh: 500000 atau 500.000)\n` +
+      `3. Masukkan jumlah (contoh: ${exampleAmount} atau ${exampleAmount2})\n` +
       `4. Konfirmasi transaksi\n\n` +
       `${roleHelp}\n\n` +
-      `Untuk bantuan lebih lanjut, hubungi admin.`
-    );
+      `Untuk bantuan lebih lanjut, hubungi admin.`;
+
+    return this.applyLengthLimit(message);
   }
 
   /**
-   * Format amount input prompt
+   * Format amount input prompt with enhanced formatting
    */
   static formatAmountInputPrompt(
     category: string,
     lastAmount?: string,
   ): string {
-    let message = `💰 Masukkan Jumlah\n\n` + `Kategori: ${category}\n\n`;
+    const header = FontFormatter.convert("💰 Masukkan Jumlah", FontStyle.BOLD);
+    let message = `${header}\n\n` + `Kategori: ${category}\n\n`;
 
     if (lastAmount) {
-      message += `Jumlah terakhir: ${formatCurrency(lastAmount)}\n\n`;
+      const lastAmountNum =
+        typeof lastAmount === "string" ? parseFloat(lastAmount) : lastAmount;
+      const lastAmountFormatted = FontFormatter.formatCurrency(lastAmountNum);
+      const lastAmountMonospace = FontFormatter.convert(
+        lastAmountFormatted.replace("Rp ", ""),
+        FontStyle.MONOSPACE,
+      );
+      message += `Jumlah terakhir: Rp ${lastAmountMonospace}\n\n`;
     }
 
+    const example1 = FontFormatter.convert("500000", FontStyle.MONOSPACE);
+    const example2 = FontFormatter.convert("500.000", FontStyle.MONOSPACE);
     message +=
-      `Masukkan jumlah (contoh: 500000 atau 500.000)\n` +
+      `Masukkan jumlah (contoh: ${example1} atau ${example2})\n` +
       `Atau ketik "batal" untuk membatalkan.`;
 
-    return message;
+    return this.applyLengthLimit(message);
   }
 
   /**
@@ -395,28 +453,58 @@ export class MessageFormatter {
   }
 
   /**
+   * Apply message length limit (4096 characters) with truncation
+   * Preserves formatting structure while truncating
+   */
+  static applyLengthLimit(message: string, maxLength: number = 4096): string {
+    if (message.length <= maxLength) {
+      return message;
+    }
+
+    // Try to truncate at a newline to preserve formatting
+    const truncated = message.substring(0, maxLength - 3);
+    const lastNewline = truncated.lastIndexOf("\n");
+
+    if (lastNewline > maxLength * 0.8) {
+      // Truncate at newline if it's not too early
+      return message.substring(0, lastNewline) + "\n...";
+    }
+
+    // Otherwise truncate and add ellipsis
+    return truncated + "...";
+  }
+
+  /**
    * Format retry suggestion
    */
   static formatRetryMessage(
     attemptNumber: number,
     maxAttempts: number,
   ): string {
-    return (
-      `🔄 *Mencoba Ulang (${attemptNumber}/${maxAttempts})*\n\n` +
-      `Operasi gagal, mencoba ulang otomatis...\n` +
-      `Mohon tunggu sebentar.`
+    const header = FontFormatter.convert(
+      `🔄 Mencoba Ulang (${attemptNumber}/${maxAttempts})`,
+      FontStyle.BOLD,
     );
+    const message =
+      `${header}\n\n` +
+      `Operasi gagal, mencoba ulang otomatis...\n` +
+      `Mohon tunggu sebentar.`;
+    return this.applyLengthLimit(message);
   }
 
   /**
    * Format success recovery message
    */
   static formatRecoverySuccessMessage(): string {
-    return (
-      `✅ *Berhasil Dipulihkan*\n\n` +
-      `Operasi berhasil setelah retry.\n` +
-      `Terima kasih atas kesabaran Anda.`
+    const header = FontFormatter.convert(
+      "✅ Berhasil Dipulihkan",
+      FontStyle.BOLD,
     );
+    const message =
+      `${header}\n\n` +
+      `Operasi berhasil setelah retry.\n` +
+      `Terima kasih atas kesabaran Anda.`;
+    return this.applyLengthLimit(message);
   }
 }
 
