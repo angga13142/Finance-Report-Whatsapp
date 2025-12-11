@@ -144,25 +144,25 @@ description: "Task list for WhatsApp Cashflow Bot Enhancements implementation"
 
 ### Tests for User Story 4
 
-- [ ] T045 [P] [US4] Unit test for UserManagerService (create, list, update, delete, activate, deactivate) in tests/unit/services/user/manager.test.ts
-- [ ] T046 [P] [US4] Unit test for phone number validation and normalization in tests/unit/services/user/manager.test.ts
-- [ ] T047 [P] [US4] Unit test for RBAC enforcement (boss/dev only) in tests/unit/services/user/manager.test.ts
-- [ ] T048 [P] [US4] Integration test for user management commands via WhatsApp in tests/integration/bot/handlers/user-management.test.ts
-- [ ] T049 [P] [US4] E2E test for user management workflow in tests/e2e/workflows/user-management.spec.ts
+- [x] T045 [P] [US4] Unit test for UserManagerService (create, list, update, delete, activate, deactivate) in tests/unit/services/user/manager.test.ts
+- [x] T046 [P] [US4] Unit test for phone number validation and normalization in tests/unit/services/user/manager.test.ts
+- [x] T047 [P] [US4] Unit test for RBAC enforcement (boss/dev only) in tests/unit/services/user/manager.test.ts
+- [x] T048 [P] [US4] Integration test for user management commands via WhatsApp in tests/integration/bot/handlers/user-management.test.ts
+- [x] T049 [P] [US4] E2E test for user management workflow in tests/e2e/workflows/user-management.spec.ts
 
 ### Implementation for User Story 4
 
-- [ ] T050 [US4] Create UserManagerService with CRUD operations (create, list, update, delete, activate, deactivate) in src/services/user/manager.ts
-- [ ] T051 [US4] Add phone number validation and normalization using existing utilities in src/services/user/manager.ts
-- [ ] T052 [US4] Add role validation (enum: dev|boss|employee|investor) and duplicate phone number prevention in src/services/user/manager.ts
-- [ ] T053 [US4] Add RBAC checks (boss/dev only) and permission error messages in src/services/user/manager.ts
-- [ ] T054 [US4] Add audit logging for all user management operations (user.create, user.update, user.delete, user.activate, user.deactivate) in src/services/user/manager.ts
-- [ ] T055 [US4] Add session invalidation for deleted/updated users in Redis in src/services/user/manager.ts
-- [ ] T056 [US4] Add concurrent operation handling (database transactions, optimistic locking) in src/services/user/manager.ts
-- [ ] T057 [US4] Create user-management handler with command parsing (/user add, /user list, /user update, /user delete, /user activate, /user deactivate) in src/bot/handlers/user-management.ts
-- [ ] T058 [US4] Add command registration in message router/command parser in src/bot/handlers/command.parser.ts or appropriate file
-- [ ] T059 [US4] Add formatted response messages with masked phone numbers for user management commands in src/bot/handlers/user-management.ts
-- [ ] T060 [US4] Add error handling and clear error messages for user management commands in src/bot/handlers/user-management.ts
+- [x] T050 [US4] Create UserManagerService with CRUD operations (create, list, update, delete, activate, deactivate) in src/services/user/manager.ts
+- [x] T051 [US4] Add phone number validation and normalization using existing utilities in src/services/user/manager.ts
+- [x] T052 [US4] Add role validation (enum: dev|boss|employee|investor) and duplicate phone number prevention in src/services/user/manager.ts
+- [x] T053 [US4] Add RBAC checks (boss/dev only) and permission error messages in src/services/user/manager.ts
+- [x] T054 [US4] Add audit logging for all user management operations (user.create, user.update, user.delete, user.activate, user.deactivate) in src/services/user/manager.ts
+- [x] T055 [US4] Add session invalidation for deleted/updated users in Redis in src/services/user/manager.ts
+- [x] T056 [US4] Add concurrent operation handling (database transactions, optimistic locking) in src/services/user/manager.ts
+- [x] T057 [US4] Create user-management handler with command parsing (/user add, /user list, /user update, /user delete, /user activate, /user deactivate) in src/bot/handlers/user-management.ts
+- [x] T058 [US4] Add command registration in message router/command parser in src/bot/handlers/command.parser.ts or appropriate file
+- [x] T059 [US4] Add formatted response messages with masked phone numbers for user management commands in src/bot/handlers/user-management.ts
+- [x] T060 [US4] Add error handling and clear error messages for user management commands in src/bot/handlers/user-management.ts
 
 **Checkpoint**: At this point, User Stories 1, 2, 3, AND 4 should all work independently
 

@@ -446,6 +446,15 @@ export class CommandHandler {
           );
           break;
 
+        case "user":
+          await this.handleUserCommand(
+            message,
+            user.id,
+            user.role,
+            parsed.args,
+          );
+          break;
+
         case "generate-report":
           await this.handleGenerateReportCommand(
             message,
@@ -1448,6 +1457,140 @@ export class CommandHandler {
   ): Promise<void> {
     const { AdminHandler } = await import("./admin");
     await AdminHandler.handleUserActivitySummary(message, userId, userRole);
+  }
+
+  /**
+   * Handle /user command - User management (Boss/Dev only)
+   */
+  private static async handleUserCommand(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    args: string[],
+  ): Promise<void> {
+    const { UserManagementHandler } = await import("./user-management");
+
+    if (args.length === 0) {
+      await message.reply(
+        "❌ Format: `/user <action> [args]`\n\n" +
+          "Actions:\n" +
+          "• `add <phone> <name> <role>` - Add new user\n" +
+          "• `list [role]` - List users (optional role filter)\n" +
+          "• `update <phone> <field> <value>` - Update user\n" +
+          "• `delete <phone>` - Delete user\n" +
+          "• `activate <phone>` - Activate user\n" +
+          "• `deactivate <phone>` - Deactivate user\n\n" +
+          "Contoh:\n" +
+          "`/user add +6281234567890 John Doe employee`\n" +
+          "`/user list employee`\n" +
+          "`/user update +6281234567890 name John Smith`",
+      );
+      return;
+    }
+
+    const subCommand = args[0].toLowerCase();
+
+    switch (subCommand) {
+      case "add":
+        if (args.length < 4) {
+          await message.reply(
+            "❌ Format: `/user add <phone> <name> <role>`\n\n" +
+              "Contoh: `/user add +6281234567890 John Doe employee`",
+          );
+          return;
+        }
+        await UserManagementHandler.handleAddUser(
+          message,
+          userId,
+          userRole,
+          args[1],
+          args[2],
+          args[3],
+        );
+        break;
+
+      case "list":
+        await UserManagementHandler.handleListUsers(
+          message,
+          userId,
+          userRole,
+          args[1], // Optional role filter
+        );
+        break;
+
+      case "update":
+        if (args.length < 4) {
+          await message.reply(
+            "❌ Format: `/user update <phone> <field> <value>`\n\n" +
+              "Fields: name, role, isActive\n" +
+              "Contoh: `/user update +6281234567890 name John Smith`",
+          );
+          return;
+        }
+        await UserManagementHandler.handleUpdateUser(
+          message,
+          userId,
+          userRole,
+          args[1],
+          args[2],
+          args.slice(3).join(" "), // Value can be multi-word
+        );
+        break;
+
+      case "delete":
+        if (args.length < 2) {
+          await message.reply(
+            "❌ Format: `/user delete <phone>`\n\n" +
+              "Contoh: `/user delete +6281234567890`",
+          );
+          return;
+        }
+        await UserManagementHandler.handleDeleteUser(
+          message,
+          userId,
+          userRole,
+          args[1],
+        );
+        break;
+
+      case "activate":
+        if (args.length < 2) {
+          await message.reply(
+            "❌ Format: `/user activate <phone>`\n\n" +
+              "Contoh: `/user activate +6281234567890`",
+          );
+          return;
+        }
+        await UserManagementHandler.handleActivateUser(
+          message,
+          userId,
+          userRole,
+          args[1],
+        );
+        break;
+
+      case "deactivate":
+        if (args.length < 2) {
+          await message.reply(
+            "❌ Format: `/user deactivate <phone>`\n\n" +
+              "Contoh: `/user deactivate +6281234567890`",
+          );
+          return;
+        }
+        await UserManagementHandler.handleDeactivateUser(
+          message,
+          userId,
+          userRole,
+          args[1],
+        );
+        break;
+
+      default:
+        await message.reply(
+          `❌ User sub-command tidak dikenal: \`${subCommand}\`\n\n` +
+            "Gunakan: add, list, update, delete, activate, atau deactivate",
+        );
+    }
   }
 
   /**
