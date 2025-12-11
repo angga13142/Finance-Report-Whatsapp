@@ -15,6 +15,20 @@ import {
 } from "../../lib/date";
 import { USER_ROLES, type UserRoleType } from "../../config/constants";
 
+export interface CategoryBreakdown {
+  category: string;
+  amount: number;
+  percentage: number;
+  type: "income" | "expense";
+}
+
+export interface SavingsGoal {
+  targetAmount: number;
+  currentAmount: number;
+  progress: number; // percentage 0-100
+  deadline?: Date;
+}
+
 export interface FinancialSummary {
   balance: number;
   income: number;
@@ -23,6 +37,8 @@ export interface FinancialSummary {
   pendingCount: number;
   pendingAmount: number;
   trendData?: TrendData;
+  categoryBreakdown?: CategoryBreakdown[]; // T074: Category breakdown with percentages
+  savingsGoal?: SavingsGoal; // T073: Savings goals (when applicable to role)
   calculatedAt: Date;
 }
 
@@ -44,7 +60,11 @@ export type DateRangeType =
   | `custom:${string}:${string}`;
 
 /**
- * Financial summary service with role-based filtering and caching
+ * T078: Financial summary service with performance optimizations
+ * - Redis caching (30-60s TTL) for reduced database queries
+ * - Aggregated queries for Investor role (no individual transaction loading)
+ * - Efficient category breakdown calculation
+ * - Cache invalidation on-demand
  */
 export class FinancialSummaryService {
   private static readonly CACHE_TTL_MIN = 30; // Minimum TTL in seconds
@@ -99,6 +119,7 @@ export class FinancialSummaryService {
         type: TransactionType;
         amount: Decimal;
         approvalStatus: ApprovalStatus;
+        category: string; // T074: Include category for breakdown calculation
       }> = [];
 
       if (role === USER_ROLES.EMPLOYEE) {
@@ -117,6 +138,7 @@ export class FinancialSummaryService {
             type: true,
             amount: true,
             approvalStatus: true,
+            category: true, // T074: Include category
           },
         });
       } else if (role === USER_ROLES.BOSS || role === USER_ROLES.DEV) {
@@ -134,6 +156,7 @@ export class FinancialSummaryService {
             type: true,
             amount: true,
             approvalStatus: true,
+            category: true, // T074: Include category
           },
         });
       } else if (role === USER_ROLES.INVESTOR) {
@@ -254,6 +277,17 @@ export class FinancialSummaryService {
         cashflow,
       );
 
+      // T074: Calculate category breakdown with percentages
+      const categoryBreakdown = this.calculateCategoryBreakdown(
+        approvedTransactions,
+        income,
+        expenses,
+      );
+
+      // T073: Calculate savings goal (placeholder - to be implemented when savings goals feature is added)
+      // For now, this is a placeholder structure
+      const savingsGoal: SavingsGoal | undefined = undefined; // TODO: Implement when savings goals feature is added
+
       const summary: FinancialSummary = {
         balance,
         income,
@@ -262,6 +296,8 @@ export class FinancialSummaryService {
         pendingCount,
         pendingAmount,
         trendData,
+        categoryBreakdown,
+        savingsGoal,
         calculatedAt: new Date(),
       };
 
@@ -351,6 +387,68 @@ export class FinancialSummaryService {
     }
 
     return this.getFinancialSummary(userId, role, startDate, endDate, refresh);
+  }
+
+  /**
+   * T074: Calculate category breakdown with percentages
+   * Groups transactions by category and calculates percentage of total
+   */
+  private static calculateCategoryBreakdown(
+    transactions: Array<{
+      type: TransactionType;
+      amount: Decimal;
+      category: string;
+    }>,
+    totalIncome: number,
+    totalExpenses: number,
+  ): CategoryBreakdown[] {
+    const categoryMap = new Map<string, { income: number; expense: number }>();
+
+    // Aggregate by category
+    for (const txn of transactions) {
+      const category = txn.category || "Uncategorized";
+      const amount = Number(txn.amount);
+
+      if (!categoryMap.has(category)) {
+        categoryMap.set(category, { income: 0, expense: 0 });
+      }
+
+      const current = categoryMap.get(category)!;
+      if (txn.type === "income") {
+        current.income += amount;
+      } else {
+        current.expense += amount;
+      }
+    }
+
+    // Convert to array and calculate percentages
+    const breakdown: CategoryBreakdown[] = [];
+
+    // Convert Map to array to avoid downlevelIteration requirement
+    const categoryEntries = Array.from(categoryMap.entries());
+    for (const [category, amounts] of categoryEntries) {
+      if (amounts.income > 0) {
+        breakdown.push({
+          category,
+          amount: amounts.income,
+          percentage:
+            totalIncome > 0 ? (amounts.income / totalIncome) * 100 : 0,
+          type: "income",
+        });
+      }
+      if (amounts.expense > 0) {
+        breakdown.push({
+          category,
+          amount: amounts.expense,
+          percentage:
+            totalExpenses > 0 ? (amounts.expense / totalExpenses) * 100 : 0,
+          type: "expense",
+        });
+      }
+    }
+
+    // Sort by amount descending, limit to top 10
+    return breakdown.sort((a, b) => b.amount - a.amount).slice(0, 10);
   }
 
   /**

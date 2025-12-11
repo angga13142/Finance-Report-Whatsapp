@@ -30,13 +30,31 @@ module.exports = {
     "!src/**/*.types.ts",
   ],
 
-  // Coverage thresholds - fail if coverage drops below these values
+  // T080: Coverage thresholds - fail if coverage drops below these values
+  // Constitution requirements: 80% lines, 90% branches for business logic
   coverageThreshold: {
     global: {
-      branches: 70,
+      branches: 70, // Overall threshold
       functions: 70,
-      lines: 80,
+      lines: 80, // Meets constitution requirement
       statements: 80,
+    },
+    // Business logic files require 90% branch coverage
+    "src/bot/handlers/command.ts": {
+      branches: 90,
+      lines: 80,
+    },
+    "src/bot/handlers/command.parser.ts": {
+      branches: 90,
+      lines: 80,
+    },
+    "src/services/system/financial-summary.ts": {
+      branches: 90,
+      lines: 80,
+    },
+    "src/bot/ui/message.formatter.ts": {
+      branches: 90,
+      lines: 80,
     },
   },
 

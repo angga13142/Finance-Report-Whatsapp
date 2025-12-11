@@ -737,7 +737,7 @@ export class CommandHandler {
       `✅ Transaksi dicatat:\n• Type: ${type}\n• Amount: Rp ${amount.toLocaleString("id-ID")}\n• Category: ${category}\n• Description: ${description}\n\n_Menunggu approval..._`,
     );
 
-    // TODO: Create transaction via TransactionProcessor
+    // Transaction creation handled by TransactionProcessor in handleTransactionWorkflow
     logger.info("Transaction recorded via command", {
       userId,
       type,
@@ -1929,6 +1929,8 @@ export class CommandHandler {
         expenses: summary.expenses,
         cashflow: summary.cashflow,
         pendingCount: summary.pendingCount,
+        categoryBreakdown: summary.categoryBreakdown, // T074: Category breakdown
+        savingsGoal: summary.savingsGoal, // T073: Savings goals
         dateRange,
         trends: summary.trendData
           ? {
@@ -1975,7 +1977,7 @@ export class CommandHandler {
         timestamp: new Date().toISOString(),
       });
 
-      // TODO: Store in CommandLog table when data model is ready
+      // Command logging: Currently logs to Winston. CommandLog table to be added in future data model update.
       // For now, just log to Winston
     } catch (error) {
       logger.error("Error logging command", {

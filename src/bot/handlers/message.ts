@@ -538,9 +538,8 @@ export class MessageHandler {
         timestamp: new Date().toISOString(),
       });
 
-      // TODO: Store in analytics table when data model is ready
-      // For now, just log to Winston
-      // T079: Analytics reporting service will aggregate this data
+      // Analytics tracking: Currently logs to Winston. Analytics table to be added in future data model update.
+      // T079: Analytics reporting service aggregates this data for reporting
     } catch (error) {
       logger.error("Error tracking interaction analytics", {
         error: error instanceof Error ? error.message : String(error),

@@ -4,6 +4,7 @@
  */
 
 import Fuse from "fuse.js";
+import { z } from "zod";
 import {
   COMMANDS,
   COMMAND_SYNONYMS,
@@ -26,6 +27,109 @@ export interface CommandSuggestion {
   command: CommandName;
   description: string;
   confidence: number;
+}
+
+/**
+ * T072: Zod schemas for command parameter validation per Data Model
+ */
+export const CommandParameterSchemas = {
+  // Transaction command parameters
+  transaction: z.object({
+    amount: z
+      .number()
+      .positive("Amount must be positive")
+      .max(999999999, "Amount exceeds maximum limit"),
+    category: z
+      .string()
+      .min(2, "Category must be at least 2 characters")
+      .max(50, "Category must not exceed 50 characters"),
+    type: z.enum(["income", "expense"], {
+      errorMap: () => ({ message: "Type must be 'income' or 'expense'" }),
+    }),
+    description: z
+      .string()
+      .max(500, "Description must not exceed 500 characters")
+      .optional(),
+  }),
+
+  // Report command parameters
+  report: z.object({
+    dateRange: z.enum(["today", "week", "month", "custom"]).optional(),
+    startDate: z.string().datetime().optional(),
+    endDate: z.string().datetime().optional(),
+    refresh: z.boolean().optional(),
+  }),
+
+  // Balance command parameters (usually none, but for consistency)
+  balance: z.object({}).optional(),
+
+  // Help command parameters
+  help: z
+    .object({
+      command: z.string().optional(), // Specific command to get help for
+    })
+    .optional(),
+
+  // Menu command parameters (none)
+  menu: z.object({}).optional(),
+};
+
+/**
+ * T072: Validate command parameters using Zod schema
+ */
+export function validateCommandParameters(
+  command: CommandName,
+  parameters: Record<string, unknown>,
+): { valid: boolean; errors?: string[]; validated?: unknown } {
+  try {
+    let schema: z.ZodSchema | undefined;
+
+    // Map command to appropriate schema
+    if (
+      command === COMMANDS.RECORD_SALE ||
+      command === COMMANDS.RECORD_EXPENSE
+    ) {
+      schema = CommandParameterSchemas.transaction;
+    } else if (
+      command === COMMANDS.VIEW_REPORT_TODAY ||
+      command === COMMANDS.VIEW_REPORT_WEEK ||
+      command === COMMANDS.VIEW_REPORT_MONTH
+    ) {
+      schema = CommandParameterSchemas.report;
+    } else if (
+      command === COMMANDS.VIEW_BALANCE ||
+      command === COMMANDS.CHECK_BALANCE
+    ) {
+      schema = CommandParameterSchemas.balance;
+    } else if (command === COMMANDS.HELP) {
+      schema = CommandParameterSchemas.help;
+    } else if (command === COMMANDS.MENU) {
+      schema = CommandParameterSchemas.menu;
+    }
+
+    // If no schema defined for command, parameters are optional
+    if (!schema) {
+      return { valid: true, validated: parameters };
+    }
+
+    // Validate parameters
+    const result = schema.safeParse(parameters);
+    if (result.success) {
+      return { valid: true, validated: result.data };
+    } else {
+      const errors = result.error.errors.map((err) => err.message);
+      return { valid: false, errors };
+    }
+  } catch (error) {
+    logger.error("Error validating command parameters", {
+      command,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return {
+      valid: false,
+      errors: ["Validation error occurred"],
+    };
+  }
 }
 
 /**

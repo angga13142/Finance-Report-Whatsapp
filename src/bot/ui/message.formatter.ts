@@ -157,6 +157,20 @@ export function formatErrorMessage(data: ErrorMessageData): string {
 /**
  * Format financial report message
  */
+export interface CategoryBreakdownItem {
+  category: string;
+  amount: number;
+  percentage: number;
+  type: "income" | "expense";
+}
+
+export interface SavingsGoalData {
+  targetAmount: number;
+  currentAmount: number;
+  progress: number;
+  deadline?: Date;
+}
+
 export interface FinancialReportData {
   balance: number;
   income: number;
@@ -169,6 +183,8 @@ export interface FinancialReportData {
     expenseChange?: number;
     cashflowChange?: number;
   };
+  categoryBreakdown?: CategoryBreakdownItem[]; // T074: Category breakdown with percentages
+  savingsGoal?: SavingsGoalData; // T073: Savings goals (when applicable to role)
 }
 
 /**
@@ -208,6 +224,51 @@ export function formatFinancialReport(data: FinancialReportData): string {
       const trendEmoji = data.trends.cashflowChange >= 0 ? "📈" : "📉";
       const sign = data.trends.cashflowChange >= 0 ? "+" : "";
       message += `${trendEmoji} Arus Kas: ${sign}${data.trends.cashflowChange.toFixed(1)}%\n`;
+    }
+  }
+
+  // T074: Category breakdown display with percentages
+  if (data.categoryBreakdown && data.categoryBreakdown.length > 0) {
+    message += `\n\n*📋 Breakdown Kategori:*\n`;
+
+    // Group by type
+    const incomeCategories = data.categoryBreakdown.filter(
+      (c) => c.type === "income",
+    );
+    const expenseCategories = data.categoryBreakdown.filter(
+      (c) => c.type === "expense",
+    );
+
+    if (incomeCategories.length > 0) {
+      message += `\n*Pendapatan:*\n`;
+      for (const cat of incomeCategories.slice(0, 5)) {
+        // Top 5 categories
+        message += `• ${cat.category}: ${formatCurrency(cat.amount)} (${cat.percentage.toFixed(1)}%)\n`;
+      }
+    }
+
+    if (expenseCategories.length > 0) {
+      message += `\n*Pengeluaran:*\n`;
+      for (const cat of expenseCategories.slice(0, 5)) {
+        // Top 5 categories
+        message += `• ${cat.category}: ${formatCurrency(cat.amount)} (${cat.percentage.toFixed(1)}%)\n`;
+      }
+    }
+  }
+
+  // T073: Savings goals display (when applicable to role)
+  if (data.savingsGoal) {
+    const progressBar =
+      "█".repeat(Math.floor(data.savingsGoal.progress / 10)) +
+      "░".repeat(10 - Math.floor(data.savingsGoal.progress / 10));
+    message += `\n\n*🎯 Target Tabungan:*\n`;
+    message += `${progressBar} ${data.savingsGoal.progress.toFixed(1)}%\n`;
+    message += `Terkumpul: ${formatCurrency(data.savingsGoal.currentAmount)} / ${formatCurrency(data.savingsGoal.targetAmount)}\n`;
+    if (data.savingsGoal.deadline) {
+      const deadlineStr = new Date(
+        data.savingsGoal.deadline,
+      ).toLocaleDateString("id-ID");
+      message += `Target: ${deadlineStr}\n`;
     }
   }
 
