@@ -41,6 +41,7 @@ describe("TransactionEditor", () => {
     approvedAt: null,
     version: 1,
     categoryId: null,
+    archivedAt: null,
   });
 
   beforeEach(() => {
@@ -150,6 +151,7 @@ describe("TransactionEditor", () => {
         approvedAt: null,
         version: 1,
         categoryId: null,
+        archivedAt: null,
       };
       const updatedTransaction = { ...mockTxn, amount: new Decimal(75000) };
 
