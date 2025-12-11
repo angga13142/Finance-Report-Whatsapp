@@ -1273,6 +1273,7 @@ export class CommandHandler {
 
   /**
    * T016: Route command using new command parser
+   * T068: Add performance monitoring for response times (simple <2s, data retrieval <5s)
    * Maps parsed intents from command.parser.ts to handler functions
    */
   static async routeCommandWithParser(
@@ -1280,6 +1281,7 @@ export class CommandHandler {
     userId: string,
     userRole: UserRole,
   ): Promise<boolean> {
+    const startTime = Date.now();
     const rawText = message.body?.trim() || "";
     if (!rawText) {
       return false;
@@ -1365,13 +1367,72 @@ export class CommandHandler {
 
           // T051: Log unrecognized command even if confidence is high but command not found
           this.logCommand(userId, rawText, "unrecognized", parsed.confidence);
+
+          // T068: Performance monitoring
+          {
+            const responseTime = Date.now() - startTime;
+            logger.info("Command executed", {
+              userId,
+              command: "unrecognized",
+              rawText,
+              confidence: parsed.confidence,
+              responseTime,
+              result: "not_found",
+            });
+          }
+
           return false;
       }
-    } catch (error) {
-      logger.error("Error routing command with parser", {
-        error,
+
+      // T068: Performance monitoring for successful command execution
+      // parsed is guaranteed to be non-null here due to early return check above
+      const responseTime = Date.now() - startTime;
+      const dataRetrievalCommands = [
+        COMMANDS.VIEW_REPORT_TODAY,
+        COMMANDS.VIEW_REPORT_WEEK,
+        COMMANDS.VIEW_REPORT_MONTH,
+        COMMANDS.VIEW_BALANCE,
+        COMMANDS.CHECK_BALANCE,
+      ] as string[];
+      const isDataRetrieval = dataRetrievalCommands.includes(
+        parsed!.recognizedIntent,
+      );
+
+      const targetTime = isDataRetrieval ? 5000 : 2000; // 5s for data retrieval, 2s for simple
+
+      // T070: Structured logging with context (userId, command, result, latency)
+      logger.info("Command executed", {
         userId,
-        command: parsed.recognizedIntent,
+        command: parsed!.recognizedIntent,
+        rawText,
+        confidence: parsed!.confidence,
+        responseTime,
+        targetTime,
+        isDataRetrieval,
+        result: "success",
+      });
+
+      if (responseTime > targetTime) {
+        logger.warn("Command response time exceeds target", {
+          userId,
+          command: parsed!.recognizedIntent,
+          responseTime,
+          targetTime,
+          isDataRetrieval,
+        });
+      }
+
+      return true;
+    } catch (error) {
+      const responseTime = Date.now() - startTime;
+      // T070: Structured logging with context for errors
+      logger.error("Error routing command with parser", {
+        error: error instanceof Error ? error.message : String(error),
+        userId,
+        command: parsed?.recognizedIntent || "unknown",
+        rawText,
+        responseTime,
+        result: "error",
       });
       await message.reply(
         "❌ Terjadi kesalahan saat memproses perintah. Silakan coba lagi.",

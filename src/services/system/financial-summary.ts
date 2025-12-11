@@ -91,105 +91,159 @@ export class FinancialSummaryService {
       dateRange,
     });
 
-    // Query database based on role
-    let transactions: Array<{
-      id: string;
-      userId: string;
-      type: TransactionType;
-      amount: Decimal;
-      approvalStatus: ApprovalStatus;
-    }> = [];
+    try {
+      // Query database based on role
+      let transactions: Array<{
+        id: string;
+        userId: string;
+        type: TransactionType;
+        amount: Decimal;
+        approvalStatus: ApprovalStatus;
+      }> = [];
 
-    if (role === USER_ROLES.EMPLOYEE) {
-      // Employee: own transactions only
-      transactions = await this.getPrisma().transaction.findMany({
-        where: {
-          userId,
-          timestamp: {
-            gte: startDate,
-            lte: endDate,
+      if (role === USER_ROLES.EMPLOYEE) {
+        // Employee: own transactions only
+        transactions = await this.getPrisma().transaction.findMany({
+          where: {
+            userId,
+            timestamp: {
+              gte: startDate,
+              lte: endDate,
+            },
           },
-        },
-        select: {
-          id: true,
-          userId: true,
-          type: true,
-          amount: true,
-          approvalStatus: true,
-        },
-      });
-    } else if (role === USER_ROLES.BOSS || role === USER_ROLES.DEV) {
-      // Boss/Dev: all transactions
-      transactions = await this.getPrisma().transaction.findMany({
-        where: {
-          timestamp: {
-            gte: startDate,
-            lte: endDate,
+          select: {
+            id: true,
+            userId: true,
+            type: true,
+            amount: true,
+            approvalStatus: true,
           },
-        },
-        select: {
-          id: true,
-          userId: true,
-          type: true,
-          amount: true,
-          approvalStatus: true,
-        },
-      });
-    } else if (role === USER_ROLES.INVESTOR) {
-      // Investor: aggregated only (no individual transactions)
-      // Use aggregate query for better performance
-      const incomeAgg = await this.getPrisma().transaction.aggregate({
-        where: {
-          type: "income",
-          approvalStatus: "approved",
-          timestamp: {
-            gte: startDate,
-            lte: endDate,
+        });
+      } else if (role === USER_ROLES.BOSS || role === USER_ROLES.DEV) {
+        // Boss/Dev: all transactions
+        transactions = await this.getPrisma().transaction.findMany({
+          where: {
+            timestamp: {
+              gte: startDate,
+              lte: endDate,
+            },
           },
-        },
-        _sum: { amount: true },
-        _count: { id: true },
-      });
+          select: {
+            id: true,
+            userId: true,
+            type: true,
+            amount: true,
+            approvalStatus: true,
+          },
+        });
+      } else if (role === USER_ROLES.INVESTOR) {
+        // Investor: aggregated only (no individual transactions)
+        // Use aggregate query for better performance
+        const incomeAgg = await this.getPrisma().transaction.aggregate({
+          where: {
+            type: "income",
+            approvalStatus: "approved",
+            timestamp: {
+              gte: startDate,
+              lte: endDate,
+            },
+          },
+          _sum: { amount: true },
+          _count: { id: true },
+        });
 
-      const expenseAgg = await this.getPrisma().transaction.aggregate({
-        where: {
-          type: "expense",
-          approvalStatus: "approved",
-          timestamp: {
-            gte: startDate,
-            lte: endDate,
+        const expenseAgg = await this.getPrisma().transaction.aggregate({
+          where: {
+            type: "expense",
+            approvalStatus: "approved",
+            timestamp: {
+              gte: startDate,
+              lte: endDate,
+            },
           },
-        },
-        _sum: { amount: true },
-        _count: { id: true },
-      });
+          _sum: { amount: true },
+          _count: { id: true },
+        });
 
-      const income = incomeAgg._sum.amount ? Number(incomeAgg._sum.amount) : 0;
-      const expenses = expenseAgg._sum.amount
-        ? Number(expenseAgg._sum.amount)
-        : 0;
+        const income = incomeAgg._sum.amount
+          ? Number(incomeAgg._sum.amount)
+          : 0;
+        const expenses = expenseAgg._sum.amount
+          ? Number(expenseAgg._sum.amount)
+          : 0;
+        const cashflow = income - expenses;
+
+        // Get pending count (aggregated)
+        const pendingAgg = await this.getPrisma().transaction.aggregate({
+          where: {
+            approvalStatus: "pending",
+            timestamp: {
+              gte: startDate,
+              lte: endDate,
+            },
+          },
+          _sum: { amount: true },
+          _count: { id: true },
+        });
+
+        const pendingCount = pendingAgg._count?.id || 0;
+        const pendingAmount = pendingAgg._sum?.amount
+          ? Number(pendingAgg._sum.amount)
+          : 0;
+
+        // Calculate balance (sum of all approved transactions)
+        const balance = income - expenses;
+
+        // Calculate trends
+        const trendData = await this.calculateTrends(
+          startDate,
+          endDate,
+          income,
+          expenses,
+          cashflow,
+        );
+
+        const summary: FinancialSummary = {
+          balance,
+          income,
+          expenses,
+          cashflow,
+          pendingCount,
+          pendingAmount,
+          trendData,
+          calculatedAt: new Date(),
+        };
+
+        // Cache the result
+        await this.cacheSummary(cacheKey, summary);
+
+        return summary;
+      }
+
+      // Calculate summary from transactions (Employee, Boss, Dev)
+      const approvedTransactions = transactions.filter(
+        (t) => t.approvalStatus === "approved",
+      );
+      const pendingTransactions = transactions.filter(
+        (t) => t.approvalStatus === "pending",
+      );
+
+      const income = approvedTransactions
+        .filter((t) => t.type === "income")
+        .reduce((sum, t) => sum + Number(t.amount), 0);
+
+      const expenses = approvedTransactions
+        .filter((t) => t.type === "expense")
+        .reduce((sum, t) => sum + Number(t.amount), 0);
+
       const cashflow = income - expenses;
-
-      // Get pending count (aggregated)
-      const pendingAgg = await this.getPrisma().transaction.aggregate({
-        where: {
-          approvalStatus: "pending",
-          timestamp: {
-            gte: startDate,
-            lte: endDate,
-          },
-        },
-        _sum: { amount: true },
-        _count: { id: true },
-      });
-
-      const pendingCount = pendingAgg._count?.id || 0;
-      const pendingAmount = pendingAgg._sum?.amount
-        ? Number(pendingAgg._sum.amount)
-        : 0;
-
-      // Calculate balance (sum of all approved transactions)
       const balance = income - expenses;
+
+      const pendingCount = pendingTransactions.length;
+      const pendingAmount = pendingTransactions.reduce(
+        (sum, t) => sum + Number(t.amount),
+        0,
+      );
 
       // Calculate trends
       const trendData = await this.calculateTrends(
@@ -215,57 +269,45 @@ export class FinancialSummaryService {
       await this.cacheSummary(cacheKey, summary);
 
       return summary;
+    } catch (error) {
+      // T069: Comprehensive error handling for financial data retrieval failures
+      logger.error("Error retrieving financial summary", {
+        error: error instanceof Error ? error.message : String(error),
+        userId,
+        role,
+        dateRange,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      });
+
+      // Return empty summary with error indication
+      const errorSummary: FinancialSummary = {
+        balance: 0,
+        income: 0,
+        expenses: 0,
+        cashflow: 0,
+        pendingCount: 0,
+        pendingAmount: 0,
+        calculatedAt: new Date(),
+      };
+
+      // Try to return cached data if available (graceful degradation)
+      const cached = await this.getCachedSummary(cacheKey);
+      if (cached) {
+        logger.info("Returning cached financial summary due to error", {
+          userId,
+          dateRange,
+        });
+        return cached;
+      }
+
+      // If no cache available, return empty summary
+      logger.warn("No cached data available, returning empty summary", {
+        userId,
+        dateRange,
+      });
+      return errorSummary;
     }
-
-    // Calculate summary from transactions (Employee, Boss, Dev)
-    const approvedTransactions = transactions.filter(
-      (t) => t.approvalStatus === "approved",
-    );
-    const pendingTransactions = transactions.filter(
-      (t) => t.approvalStatus === "pending",
-    );
-
-    const income = approvedTransactions
-      .filter((t) => t.type === "income")
-      .reduce((sum, t) => sum + Number(t.amount), 0);
-
-    const expenses = approvedTransactions
-      .filter((t) => t.type === "expense")
-      .reduce((sum, t) => sum + Number(t.amount), 0);
-
-    const cashflow = income - expenses;
-    const balance = income - expenses;
-
-    const pendingCount = pendingTransactions.length;
-    const pendingAmount = pendingTransactions.reduce(
-      (sum, t) => sum + Number(t.amount),
-      0,
-    );
-
-    // Calculate trends
-    const trendData = await this.calculateTrends(
-      startDate,
-      endDate,
-      income,
-      expenses,
-      cashflow,
-    );
-
-    const summary: FinancialSummary = {
-      balance,
-      income,
-      expenses,
-      cashflow,
-      pendingCount,
-      pendingAmount,
-      trendData,
-      calculatedAt: new Date(),
-    };
-
-    // Cache the result
-    await this.cacheSummary(cacheKey, summary);
-
-    return summary;
   }
 
   /**

@@ -171,14 +171,14 @@
 
 **Purpose**: Improvements that affect multiple user stories, performance optimization, error handling, and documentation
 
-- [ ] T064 [P] Implement message pagination for long responses (>4096 chars) in src/bot/ui/message.formatter.ts with continuation indicators ([1/3], [2/3])
-- [ ] T065 [P] Implement conversation context expiration handling in src/lib/redis.ts: check TTL expiration (30 minutes/1800s per FR-007), return expiration status, and automatically clear expired contexts
-- [ ] T066 [US1] Implement context expiration user notification handler in src/bot/handlers/command.ts: detect expired context on user message, send notification "Sesi Anda berakhir. Mulai ulang dengan perintah baru." (per Clarifications §Q2), and clear context (depends on T065)
-- [ ] T067 [P] Add performance monitoring for command parser latency (<100ms target per Plan §Performance Goals) in src/bot/handlers/command.parser.ts
-- [ ] T068 [P] Add performance monitoring for response times (simple <2s, data retrieval <5s) in src/bot/handlers/command.ts
-- [ ] T069 [P] Implement comprehensive error handling for financial data retrieval failures in src/services/system/financial-summary.ts
-- [ ] T070 [P] Add structured logging with context (userId, command, result, latency) in src/bot/handlers/command.ts using Winston
-- [ ] T071 [P] Implement command abbreviation support ("cp" for "catat penjualan", "ll" for "lihat laporan") in src/config/constants.ts and src/bot/handlers/command.parser.ts
+- [x] T064 [P] Implement message pagination for long responses (>4096 chars) in src/bot/ui/message.formatter.ts with continuation indicators ([1/3], [2/3])
+- [x] T065 [P] Implement conversation context expiration handling in src/lib/redis.ts: check TTL expiration (30 minutes/1800s per FR-007), return expiration status, and automatically clear expired contexts
+- [x] T066 [US1] Implement context expiration user notification handler in src/bot/handlers/command.ts: detect expired context on user message, send notification "Sesi Anda berakhir. Mulai ulang dengan perintah baru." (per Clarifications §Q2), and clear context (depends on T065)
+- [x] T067 [P] Add performance monitoring for command parser latency (<100ms target per Plan §Performance Goals) in src/bot/handlers/command.parser.ts
+- [x] T068 [P] Add performance monitoring for response times (simple <2s, data retrieval <5s) in src/bot/handlers/command.ts
+- [x] T069 [P] Implement comprehensive error handling for financial data retrieval failures in src/services/system/financial-summary.ts
+- [x] T070 [P] Add structured logging with context (userId, command, result, latency) in src/bot/handlers/command.ts using Winston
+- [x] T071 [P] Implement command abbreviation support ("cp" for "catat penjualan", "ll" for "lihat laporan") in src/config/constants.ts and src/bot/handlers/command.parser.ts (completed in Phase 2)
 - [ ] T072 [P] Add validation for all command parameters using Zod schemas per Data Model in src/bot/handlers/command.parser.ts
 - [ ] T073 [P] Implement savings goals display (when applicable to role) in src/services/system/financial-summary.ts and src/bot/ui/message.formatter.ts
 - [ ] T074 [P] Implement category breakdown display with percentages in src/services/system/financial-summary.ts and src/bot/ui/message.formatter.ts

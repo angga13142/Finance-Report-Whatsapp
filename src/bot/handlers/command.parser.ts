@@ -75,13 +75,15 @@ export class CommandParser {
   }
 
   /**
-   * Parse user input into recognized command with confidence scoring
+   * T067: Parse user input into recognized command with confidence scoring and performance monitoring
+   * Target: <100ms latency per Plan §Performance Goals
    */
   parseCommand(
     rawText: string,
     userId?: string,
     userRole?: string,
   ): ParsedCommand | null {
+    const startTime = Date.now();
     const trimmed = rawText.trim().toLowerCase();
 
     if (!trimmed) {
@@ -91,6 +93,16 @@ export class CommandParser {
     // Check exact match first (highest confidence)
     const exactMatch = this.findExactMatch(trimmed);
     if (exactMatch) {
+      const latency = Date.now() - startTime;
+      // T067: Performance monitoring
+      if (latency > 100) {
+        logger.warn("Command parser latency exceeds target", {
+          rawText,
+          userId,
+          latency,
+          target: 100,
+        });
+      }
       return {
         rawText,
         recognizedIntent: exactMatch.command,
@@ -102,6 +114,15 @@ export class CommandParser {
     // Check abbreviation match
     const abbrevMatch = COMMAND_ABBREVIATIONS[trimmed];
     if (abbrevMatch) {
+      const latency = Date.now() - startTime;
+      if (latency > 100) {
+        logger.warn("Command parser latency exceeds target", {
+          rawText,
+          userId,
+          latency,
+          target: 100,
+        });
+      }
       return {
         rawText,
         recognizedIntent: abbrevMatch,
@@ -114,6 +135,15 @@ export class CommandParser {
     // Check synonym match
     const synonymMatch = COMMAND_SYNONYMS[trimmed];
     if (synonymMatch) {
+      const latency = Date.now() - startTime;
+      if (latency > 100) {
+        logger.warn("Command parser latency exceeds target", {
+          rawText,
+          userId,
+          latency,
+          target: 100,
+        });
+      }
       return {
         rawText,
         recognizedIntent: synonymMatch,
@@ -129,6 +159,17 @@ export class CommandParser {
       const bestMatch = fuzzyResults[0];
       // Convert Fuse.js score (0 = perfect match, 1 = no match) to confidence (1 = perfect, 0 = no match)
       const confidence = 1 - (bestMatch.score || 0);
+      const latency = Date.now() - startTime;
+
+      // T067: Performance monitoring
+      if (latency > 100) {
+        logger.warn("Command parser latency exceeds target", {
+          rawText,
+          userId,
+          latency,
+          target: 100,
+        });
+      }
 
       return {
         rawText,
@@ -141,7 +182,24 @@ export class CommandParser {
     }
 
     // No match found
-    logger.debug("Command not recognized", { rawText, userId, userRole });
+    const latency = Date.now() - startTime;
+    logger.debug("Command not recognized", {
+      rawText,
+      userId,
+      userRole,
+      latency,
+    });
+
+    // T067: Performance monitoring - log if latency exceeds target
+    if (latency > 100) {
+      logger.warn("Command parser latency exceeds target", {
+        rawText,
+        userId,
+        latency,
+        target: 100,
+      });
+    }
+
     return null;
   }
 

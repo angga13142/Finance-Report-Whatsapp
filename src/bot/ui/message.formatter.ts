@@ -8,6 +8,11 @@ const WHATSAPP_MESSAGE_LIMIT = 4096;
 const PAGINATION_HEADER_LENGTH = 50; // Approximate length for "[1/3]" header
 
 /**
+ * T064: Split long messages into paginated chunks with continuation indicators
+ * Returns PaginatedMessage object with pages array and totalPages count
+ */
+
+/**
  * Format currency amount in Indonesian Rupiah format
  */
 export function formatCurrency(amount: number | string): string {

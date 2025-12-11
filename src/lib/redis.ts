@@ -219,21 +219,54 @@ const CONTEXT_TTL = 1800; // 30 minutes in seconds
 const CONTEXT_KEY_PREFIX = "conversation:";
 
 /**
- * Get conversation context for user
+ * T065: Get conversation context for user with expiration check
+ * Returns context with expiration status, automatically clears expired contexts
  */
+export interface ContextWithExpiration {
+  context: ConversationContext | null;
+  isExpired: boolean;
+}
+
 export async function getContext(
   userId: string,
 ): Promise<ConversationContext | null> {
+  const result = await getContextWithExpiration(userId);
+  return result.context;
+}
+
+/**
+ * T065: Get conversation context with expiration status
+ * Checks TTL expiration (30 minutes/1800s per FR-007), returns expiration status,
+ * and automatically clears expired contexts
+ */
+export async function getContextWithExpiration(
+  userId: string,
+): Promise<ContextWithExpiration> {
   try {
     const key = `${CONTEXT_KEY_PREFIX}${userId}`;
     const data = await redis.get(key);
     if (!data) {
-      return null;
+      return { context: null, isExpired: false };
     }
-    return JSON.parse(data) as ConversationContext;
+
+    const context = JSON.parse(data) as ConversationContext;
+
+    // Check if context is expired
+    const expiresAt = new Date(context.expiresAt);
+    const now = new Date();
+    const isExpired = now > expiresAt;
+
+    if (isExpired) {
+      // T065: Automatically clear expired context
+      await clearContext(userId);
+      logger.info("Expired conversation context cleared", { userId });
+      return { context: null, isExpired: true };
+    }
+
+    return { context, isExpired: false };
   } catch (error) {
     logger.error("Failed to get conversation context", { userId, error });
-    return null;
+    return { context: null, isExpired: false };
   }
 }
 

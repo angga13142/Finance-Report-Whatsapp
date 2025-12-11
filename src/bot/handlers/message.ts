@@ -11,7 +11,7 @@ import { getWhatsAppClient } from "../client/client";
 import { MENU_STATES } from "../../config/constants";
 import { CommandHandler } from "./command";
 import { configService } from "../../services/system/config";
-import { getContext } from "../../lib/redis";
+import { getContextWithExpiration } from "../../lib/redis";
 
 /**
  * Text message routing handler
@@ -89,15 +89,23 @@ export class MessageHandler {
       }
 
       // T023: Check for conversation context first (command-based workflow)
-      const context = await getContext(user.id);
-      if (context?.workflowType === "transaction_entry") {
+      // T065-T066: Check context with expiration status
+      const contextResult = await getContextWithExpiration(user.id);
+      if (contextResult.isExpired) {
+        // T066: Context expiration user notification
+        await message.reply(
+          "⏰ *Sesi Anda berakhir.*\n\nMulai ulang dengan perintah baru.",
+        );
+        return;
+      }
+      if (contextResult.context?.workflowType === "transaction_entry") {
         // User is in command-based transaction workflow
         // Handle workflow step directly (amount, category, confirmation)
         await CommandHandler.handleTransactionWorkflow(
           message,
           user.id,
           user.role,
-          context,
+          contextResult.context,
         );
         return;
       }
