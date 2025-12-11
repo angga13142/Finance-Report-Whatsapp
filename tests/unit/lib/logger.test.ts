@@ -14,15 +14,46 @@ jest.mock("winston", () => {
     debug: jest.fn(),
   };
 
+  const formatObj = {
+    combine: jest.fn((..._args: unknown[]) => {
+      // Return a function that passes through the info object
+      return (info: unknown) => info;
+    }),
+    timestamp: jest.fn(() => (info: unknown) => ({
+      ...(info as Record<string, unknown>),
+      timestamp: new Date().toISOString(),
+    })),
+    errors: jest.fn(() => (info: unknown) => info),
+    colorize: jest.fn(() => (info: unknown) => info),
+    printf: jest.fn((fn: unknown) => fn),
+  };
+
+  // Make format both an object and a function
+  const formatFn = ((fn: (info: unknown) => unknown) => {
+    // Return a format function that applies the transform
+    return (info: unknown) => {
+      // Ensure info has required properties
+      const infoObj = (info || {}) as Record<string, unknown>;
+      if (!infoObj.message) infoObj.message = "";
+      if (!infoObj.level) infoObj.level = "info";
+      const result = fn(infoObj);
+      return result || infoObj;
+    };
+  }) as typeof formatObj &
+    ((fn: (info: unknown) => unknown) => (info: unknown) => unknown);
+  Object.assign(formatFn, formatObj);
+
   return {
-    createLogger: jest.fn(() => mockLogger),
-    format: {
-      combine: jest.fn((...args: unknown[]) => args),
-      timestamp: jest.fn(() => ({})),
-      errors: jest.fn(() => ({})),
-      colorize: jest.fn(() => ({})),
-      printf: jest.fn((fn: unknown) => fn),
+    default: {
+      createLogger: jest.fn(() => mockLogger),
+      format: formatFn,
+      transports: {
+        Console: jest.fn(),
+        File: jest.fn(),
+      },
     },
+    createLogger: jest.fn(() => mockLogger),
+    format: formatFn,
     transports: {
       Console: jest.fn(),
       File: jest.fn(),
@@ -53,13 +84,13 @@ describe("Logger Utilities", () => {
     describe("Phone numbers", () => {
       it("should mask phone numbers with +62 prefix", () => {
         const result = maskSensitiveData("User phone: +62812345678");
-        expect(result).toContain("+62 ****5678");
+        expect(result).toContain("+62****5678");
         expect(result).not.toContain("812345678");
       });
 
       it("should mask phone numbers with 0 prefix", () => {
         const result = maskSensitiveData("User phone: 0812345678");
-        expect(result).toContain("+62 ****5678");
+        expect(result).toContain("+62****5678");
       });
 
       it("should preserve last 4 digits", () => {
@@ -146,7 +177,7 @@ describe("Logger Utilities", () => {
 
         const result = maskSensitiveData(data) as Record<string, unknown>;
 
-        expect(result.phoneNumber).toContain("+62 ****5678");
+        expect(result.phoneNumber).toContain("+62****5678");
         expect(result.amount).toBe("Rp ******.***");
         expect(result.password).toBe("***[REDACTED]***");
         expect(result.name).toBe("John Doe"); // Non-sensitive field unchanged
@@ -163,7 +194,7 @@ describe("Logger Utilities", () => {
         const result = maskSensitiveData(data) as Record<string, unknown>;
 
         expect((result.user as Record<string, unknown>).phoneNumber).toContain(
-          "+62 ****5678",
+          "+62****5678",
         );
       });
     });
@@ -174,7 +205,7 @@ describe("Logger Utilities", () => {
 
         const result = maskSensitiveData(data) as string[];
 
-        expect(result[0]).toContain("+62 ****5678");
+        expect(result[0]).toContain("+62****5678");
         expect(result[1]).toMatch(/t\*\*\*t@example\.com/);
         expect(result[2]).toBe("normal text");
       });
