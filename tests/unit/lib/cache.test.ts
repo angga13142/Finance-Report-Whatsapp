@@ -152,6 +152,9 @@ describe("CacheService", () => {
         createdAt: new Date(),
         lastActive: new Date(),
         authTokenHash: null,
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        lastFailedLoginAt: null,
       };
 
       await CacheService.setUserRole(mockUser);
@@ -176,6 +179,9 @@ describe("CacheService", () => {
         createdAt: mockDate,
         lastActive: mockDate,
         authTokenHash: null,
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        lastFailedLoginAt: null,
       };
 
       // After JSON.stringify, dates become strings
@@ -220,6 +226,9 @@ describe("CacheService", () => {
         createdAt: new Date(),
         lastActive: new Date(),
         authTokenHash: null,
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        lastFailedLoginAt: null,
       };
 
       await CacheService.setUserData(mockUser);

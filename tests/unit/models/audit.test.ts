@@ -69,6 +69,7 @@ describe("AuditLogModel", () => {
         affectedEntityId: "txn123",
         affectedEntityType: "transaction",
         timestamp: new Date(),
+        archivedAt: null,
       };
 
       mockPrismaInstance.auditLog.create.mockResolvedValue(mockAuditLog);
@@ -103,6 +104,7 @@ describe("AuditLogModel", () => {
         affectedEntityId: null,
         affectedEntityType: null,
         timestamp: new Date(),
+        archivedAt: null,
       };
 
       mockPrismaInstance.auditLog.create.mockResolvedValue(mockAuditLog);
@@ -127,6 +129,7 @@ describe("AuditLogModel", () => {
           affectedEntityId: null,
           affectedEntityType: null,
           timestamp: new Date(),
+          archivedAt: null,
         },
       ];
 
@@ -212,6 +215,7 @@ describe("AuditLogModel", () => {
         affectedEntityId: null,
         affectedEntityType: null,
         timestamp: new Date(),
+        archivedAt: null,
       };
 
       mockPrismaInstance.auditLog.findUnique.mockResolvedValue(mockAuditLog);
@@ -246,6 +250,7 @@ describe("AuditLogModel", () => {
           affectedEntityId: null,
           affectedEntityType: null,
           timestamp: new Date(),
+          archivedAt: null,
         },
       ];
 
@@ -287,6 +292,7 @@ describe("AuditLogModel", () => {
           affectedEntityId: null,
           affectedEntityType: null,
           timestamp: new Date(),
+          archivedAt: null,
         },
       ];
 
@@ -319,6 +325,7 @@ describe("AuditLogModel", () => {
           affectedEntityId: "txn123",
           affectedEntityType: "transaction",
           timestamp: new Date(),
+          archivedAt: null,
         },
       ];
 
