@@ -1,0 +1,86 @@
+# Prometheus Alerting Rules for WhatsApp Cashflow Bot
+# These rules define conditions that trigger alerts
+
+groups:
+  - name: whatsapp_bot_alerts
+    interval: 30s
+    rules:
+      # Health check failures
+      - alert: BotHealthCheckFailed
+        expr: up{job="whatsapp-bot"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "WhatsApp Bot health check failed"
+          description: "Bot health endpoint has been down for more than 1 minute"
+
+      # High error rate
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is above 5% for the last 5 minutes"
+
+      # Slow response times
+      - alert: SlowResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 4
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow response times detected"
+          description: "95th percentile response time is above 4 seconds"
+
+      # WhatsApp session disconnected
+      - alert: WhatsAppSessionDisconnected
+        expr: whatsapp_session_status == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "WhatsApp session disconnected"
+          description: "WhatsApp session has been disconnected for more than 2 minutes"
+
+      # Database connection issues
+      - alert: DatabaseConnectionIssue
+        expr: database_health_status == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database connection issue"
+          description: "Database health check has been failing for more than 1 minute"
+
+      # Redis connection issues
+      - alert: RedisConnectionIssue
+        expr: redis_health_status == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis connection issue"
+          description: "Redis health check has been failing for more than 1 minute"
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes / (1024 * 1024 * 1024) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is above 2GB for more than 5 minutes"
+
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: rate(process_cpu_user_seconds_total[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is above 80% for more than 5 minutes"

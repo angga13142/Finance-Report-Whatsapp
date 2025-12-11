@@ -99,11 +99,29 @@ export async function initializeWhatsAppClient(): Promise<Client> {
   // Check for session corruption before initialization
   const isCorrupted = detectSessionCorruption(env.WHATSAPP_SESSION_PATH);
   if (isCorrupted) {
-    logger.warn("Session corruption detected, recovering", {
+    logger.warn("Session corruption detected, attempting restore from backup", {
       correlationId,
       sessionPath: env.WHATSAPP_SESSION_PATH,
     });
-    recoverFromSessionCorruption(env.WHATSAPP_SESSION_PATH);
+
+    // Try to restore from backup first
+    const { SessionBackupService } =
+      await import("../../services/system/session-backup");
+    const restoreResult = await SessionBackupService.restoreIfCorrupted();
+
+    if (!restoreResult.success) {
+      // If restore failed, delete corrupted session and trigger QR auth
+      logger.warn("Backup restore failed, deleting corrupted session", {
+        correlationId,
+        error: restoreResult.error,
+      });
+      recoverFromSessionCorruption(env.WHATSAPP_SESSION_PATH);
+    } else {
+      logger.info("Session restored from backup successfully", {
+        correlationId,
+        restoredFrom: restoreResult.restoredFrom,
+      });
+    }
   }
 
   // Attempt session restoration with retry logic (3 attempts, 5-second delays)

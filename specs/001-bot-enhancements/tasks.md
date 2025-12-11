@@ -211,17 +211,17 @@ description: "Task list for WhatsApp Cashflow Bot Enhancements implementation"
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T084 [P] Update documentation (README.md, API docs) with new commands and features
-- [ ] T085 [P] Code cleanup and refactoring across all new files
-- [ ] T086 [P] Performance optimization (font conversion caching, log write queue tuning)
-- [ ] T087 [P] Security hardening (RBAC validation, audit logging coverage verification)
-- [ ] T088 [P] Run quickstart.md validation tests
-- [ ] T089 [P] Add integration tests for cross-story interactions (e.g., user management + admin commands)
-- [ ] T090 [P] Add monitoring and alerting configuration for health check endpoint
-- [ ] T091 [P] Update Docker documentation with deployment instructions
-- [ ] T092 [US1] Implement session backup service with automatic backups every 5 minutes, storing backups in `.wwebjs_auth/session-cashflow-bot/.backups/` with timestamped filenames (format: `session-backup-YYYYMMDD-HHMMSS.tar.gz`) in src/services/system/session-backup.ts
-- [ ] T093 [US1] Implement session backup cleanup (keep last 10 backups, remove older backups) and restore functionality (restore from most recent backup on corruption detection) in src/services/system/session-backup.ts
-- [ ] T094 [P] Add load testing task to validate NFR-005 (performance degradation under load, 2x baseline maximum) using performance testing tools (e.g., k6, Artillery) in tests/performance/load-test.spec.ts
+- [x] T084 [P] Update documentation (README.md, API docs) with new commands and features
+- [x] T085 [P] Code cleanup and refactoring across all new files
+- [x] T086 [P] Performance optimization (font conversion caching, log write queue tuning)
+- [x] T087 [P] Security hardening (RBAC validation, audit logging coverage verification)
+- [x] T088 [P] Run quickstart.md validation tests
+- [x] T089 [P] Add integration tests for cross-story interactions (e.g., user management + admin commands)
+- [x] T090 [P] Add monitoring and alerting configuration for health check endpoint
+- [x] T091 [P] Update Docker documentation with deployment instructions
+- [x] T092 [US1] Implement session backup service with automatic backups every 5 minutes, storing backups in `.wwebjs_auth/session-cashflow-bot/.backups/` with timestamped filenames (format: `session-backup-YYYYMMDD-HHMMSS.tar.gz`) in src/services/system/session-backup.ts
+- [x] T093 [US1] Implement session backup cleanup (keep last 10 backups, remove older backups) and restore functionality (restore from most recent backup on corruption detection) in src/services/system/session-backup.ts
+- [x] T094 [P] Add load testing task to validate NFR-005 (performance degradation under load, 2x baseline maximum) using performance testing tools (e.g., k6, Artillery) in tests/performance/load-test.spec.ts
 
 ---
 

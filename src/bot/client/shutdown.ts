@@ -1,6 +1,7 @@
 import { logger } from "../../lib/logger";
 import { getWhatsAppClient } from "./client";
 import { getRedisClient } from "../../lib/redis";
+import { SessionBackupService } from "../../services/system/session-backup";
 
 /**
  * Graceful shutdown handler
@@ -81,12 +82,16 @@ export class GracefulShutdown {
       logger.info("Step 4: Closing Redis connections");
       await this.closeRedisConnections();
 
-      // Step 5: Close database connections
-      logger.info("Step 5: Closing database connections");
+      // Step 5: Stop automatic backups
+      logger.info("Step 5: Stopping automatic session backups");
+      SessionBackupService.stopAutomaticBackups();
+
+      // Step 6: Close database connections
+      logger.info("Step 6: Closing database connections");
       await this.closeDatabaseConnections();
 
-      // Step 6: Final cleanup
-      logger.info("Step 6: Final cleanup");
+      // Step 7: Final cleanup
+      logger.info("Step 7: Final cleanup");
       await this.finalCleanup();
 
       logger.info("Graceful shutdown completed successfully");

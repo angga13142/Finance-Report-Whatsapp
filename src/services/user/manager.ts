@@ -189,6 +189,20 @@ export class UserManagerService {
         updatedByUserId,
       );
 
+      // Log audit (UserService.updateUser already logs, but we add manager-level audit)
+      await AuditLogger.log(
+        "user.update",
+        {
+          phoneNumber: normalizedPhone,
+          changes: data,
+          previousRole: user.role,
+          newRole: data.role || user.role,
+        },
+        updatedByUserId,
+        user.id,
+        "User",
+      );
+
       // Invalidate session if role or isActive changed
       if (data.role || data.isActive !== undefined) {
         await this.invalidateUserSession(user.id);

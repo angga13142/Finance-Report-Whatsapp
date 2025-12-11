@@ -24,16 +24,21 @@ An interactive WhatsApp chatbot for daily cashflow reporting with role-based acc
 
 ## Features
 
-- 📱 **WhatsApp Integration**: Button-based interactive interface using WhatsApp Web.js with persistent session management
+- 📱 **WhatsApp Integration**: Button-based interactive interface using WhatsApp Web.js with persistent session management and automatic backups
 - 💰 **Transaction Management**: Quick transaction recording with automatic category selection and amount validation
 - 📊 **Automated Reports**: Daily financial reports delivered precisely at 24:00 WITA with email/PDF options
 - 👥 **Role-Based Access Control (RBAC)**: 4 roles (Dev, Boss, Employee, Investor) with granular permission enforcement
+- 👤 **User Management**: Dynamic user account management via WhatsApp commands (add, list, update, delete, activate, deactivate) for Boss/Dev roles
+- 🔧 **Developer Capabilities**: System administration via WhatsApp commands (config, templates, roles, diagnostics, cache) for Dev role
+- 🎨 **Enhanced Formatting**: Unicode mathematical alphanumeric symbols for improved message readability with visual hierarchy
+- 📝 **Structured Logging**: Comprehensive WhatsApp event logging with correlation IDs and sensitive data masking
 - 🔔 **Smart Anomaly Detection**: Real-time alerts for unusual transaction patterns and expense spikes
 - 📈 **Advanced Analytics**: Trend analysis, 7-day moving averages, period comparisons, and custom reporting
 - 🔒 **Enterprise Security**: JWT authentication, RBAC enforcement, comprehensive audit trails, encrypted storage
 - 🔄 **Transaction Approval Workflows**: Multi-level approval for transactions exceeding configured thresholds
 - 📱 **Real-time Notifications**: Instant WhatsApp notifications for approvals, reports, and alerts
 - ⚡ **High Performance**: Connection pooling, Redis caching, query optimization, rate limiting
+- 💾 **Session Backup**: Automatic session backups every 5 minutes with restore functionality for corruption recovery
 
 ## Technology Stack
 
@@ -339,7 +344,54 @@ docker-compose -f docker/docker-compose.dev.yml logs -f bot
 
 # Stop services
 docker-compose -f docker/docker-compose.dev.yml down
+
+# Rebuild and restart bot
+docker-compose -f docker/docker-compose.yml up -d --build bot
+
+# Check health status
+curl http://localhost:3000/health
 ```
+
+### Docker Deployment
+
+The bot runs in a Docker container with persistent WhatsApp session storage:
+
+1. **Session Persistence**: WhatsApp session is stored in a Docker volume (`whatsapp-session`) that persists across container restarts
+2. **Automatic Backups**: Session backups are created every 5 minutes in `.wwebjs_auth/session-cashflow-bot/.backups/`
+3. **Session Recovery**: On corruption detection, the system automatically restores from the most recent backup
+4. **Health Checks**: Container includes health check endpoint at `/health` for monitoring
+
+**Volume Configuration:**
+
+- Volume name: `whatsapp-session`
+- Mount path: `/app/.wwebjs_auth`
+- Permissions: UID 1000, GID 1000, mode 755
+- Backup location: `.wwebjs_auth/session-cashflow-bot/.backups/`
+
+**Deployment Steps:**
+
+```bash
+# 1. Build Docker image
+docker build -f docker/Dockerfile -t cashflow-bot .
+
+# 2. Start services (includes PostgreSQL, Redis, Prometheus, Grafana)
+docker-compose -f docker/docker-compose.yml up -d
+
+# 3. Verify health
+curl http://localhost:3000/health
+
+# 4. Check logs for WhatsApp authentication
+docker-compose -f docker/docker-compose.yml logs -f bot
+
+# 5. On first run, scan QR code from logs to authenticate WhatsApp
+```
+
+**Session Backup Management:**
+
+- Backups are automatically created every 5 minutes
+- Last 10 backups are retained (older backups are automatically deleted)
+- Backup format: `session-backup-YYYYMMDD-HHMMSS.tar.gz`
+- Manual restore: Backups can be restored via the session backup service API
 
 ## Project Structure
 
@@ -889,11 +941,57 @@ tests/
 
 Send these commands via WhatsApp:
 
+### Basic Commands
+
 - `/start` - Show welcome menu
 - `/help` - Show help message
 - `/menu` - Return to main menu
 - `/laporan` - View daily report
 - `/catat` - Start transaction input
+
+### User Management Commands (Boss/Dev only)
+
+- `/user add <phone> <name> <role>` - Create new user account
+- `/user list [role]` - List all users (optional role filter: dev, boss, employee, investor)
+- `/user update <phone> <field> <value>` - Update user (fields: name, role, isActive)
+- `/user delete <phone>` - Delete user account
+- `/user activate <phone>` - Activate user account
+- `/user deactivate <phone>` - Deactivate user account
+
+**Examples:**
+```
+
+/user add +6281234567890 John Doe employee
+/user list employee
+/user update +6281234567890 name John Smith
+/user activate +6281234567890
+
+```
+
+### Developer Commands (Dev only)
+
+- `/admin` - Show admin menu
+- `/config view <key>` - View configuration value
+- `/config set <key> <value>` - Set configuration value
+- `/template list` - List all message templates
+- `/template preview <name>` - Preview template content
+- `/template edit <name> <content>` - Edit message template
+- `/role grant <phone> <role>` - Grant role to user
+- `/role revoke <phone> <role>` - Revoke role from user
+- `/system status` - Show system health dashboard
+- `/system logs [limit]` - View recent system logs
+- `/cache clear [pattern]` - Clear cache (optional pattern: user:*, session:*)
+
+**Examples:**
+```
+
+/config view REPORT_DELIVERY_TIME
+/config set REPORT_DELIVERY_TIME 23:00
+/template list
+/role grant +6281234567890 boss
+/system status
+
+```
 
 ## Performance Targets
 

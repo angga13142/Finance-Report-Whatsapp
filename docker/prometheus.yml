@@ -1,9 +1,39 @@
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
+  external_labels:
+    cluster: "whatsapp-cashflow-bot"
+    environment: "production"
+
+# Alertmanager configuration (if alerting is needed)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: ['alertmanager:9093']
+
+# Rule files (for alerting rules)
+# rule_files:
+#   - 'alerts.yml'
 
 scrape_configs:
-  - job_name: 'whatsapp-bot'
+  - job_name: "whatsapp-bot"
     static_configs:
-      - targets: ['bot:3000']
-    metrics_path: '/metrics'
+      - targets: ["bot:3000"]
+    metrics_path: "/metrics"
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    # Health check endpoint monitoring
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: "whatsapp-bot-instance"
+
+  # Optional: Monitor PostgreSQL (if exposed metrics endpoint)
+  # - job_name: 'postgres'
+  #   static_configs:
+  #     - targets: ['postgres:5432']
+
+  # Optional: Monitor Redis (if exposed metrics endpoint)
+  # - job_name: 'redis'
+  #   static_configs:
+  #     - targets: ['redis:6379']

@@ -8,6 +8,7 @@ import { SessionManager } from "./bot/middleware/session";
 import { GracefulShutdown } from "./bot/client/shutdown";
 import { getMetrics, updateWhatsAppSessionStatus } from "./lib/metrics";
 import HealthMonitoringService from "./services/system/health";
+import { SessionBackupService } from "./services/system/session-backup";
 import type { Request, Response, Application } from "express";
 
 // Use require for express to avoid ESM issues
@@ -40,6 +41,10 @@ async function main(): Promise<void> {
     // Start session cleanup interval (Phase 5)
     SessionManager.startCleanupInterval();
     logger.info("Session cleanup interval started");
+
+    // Start automatic session backups (Phase 8)
+    SessionBackupService.startAutomaticBackups();
+    logger.info("Automatic session backup service started");
 
     // Start HTTP server for health checks and metrics (Phase 11)
     const app = express();
