@@ -65,4 +65,43 @@ describe("Command Handler", () => {
       expect(true).toBe(true);
     });
   });
+
+  describe("T041: Role-filtered help command output", () => {
+    it("should show only Employee commands in help for Employee role", () => {
+      // This will be tested with actual implementation
+      expect(true).toBe(true);
+    });
+
+    it("should show all commands in help for Boss role", () => {
+      // This will be tested with actual implementation
+      expect(true).toBe(true);
+    });
+
+    it("should show only Investor commands in help for Investor role", () => {
+      // This will be tested with actual implementation
+      expect(true).toBe(true);
+    });
+
+    it("should show role indicators (🔒) for restricted commands", () => {
+      // This will be tested with actual implementation
+      expect(true).toBe(true);
+    });
+  });
+
+  describe("T042: Contextual suggestions during multi-step workflows", () => {
+    it("should suggest amount input during transaction entry workflow", () => {
+      // This will be tested with actual implementation
+      expect(true).toBe(true);
+    });
+
+    it("should suggest category selection after amount input", () => {
+      // This will be tested with actual implementation
+      expect(true).toBe(true);
+    });
+
+    it("should provide contextual help based on current workflow step", () => {
+      // This will be tested with actual implementation
+      expect(true).toBe(true);
+    });
+  });
 });

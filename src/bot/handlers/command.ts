@@ -3,7 +3,13 @@ import { logger } from "../../lib/logger";
 import { UserModel } from "../../models/user";
 import type { UserRole, TransactionType } from "@prisma/client";
 import { parseCommand, getCommandSuggestions } from "./command.parser";
-import { COMMANDS } from "../../config/constants";
+import {
+  COMMANDS,
+  ROLE_COMMANDS,
+  USER_ROLES,
+  CONFIDENCE_THRESHOLD,
+  type CommandName,
+} from "../../config/constants";
 import {
   getContext,
   setContext,
@@ -17,6 +23,7 @@ import {
   formatCategoryList,
   formatErrorMessage,
   formatFinancialReport,
+  formatHelpMessage,
 } from "../ui/message.formatter";
 import { CategoryModel } from "../../models/category";
 import { TransactionProcessor } from "../../services/transaction/processor";
@@ -508,7 +515,7 @@ export class CommandHandler {
   }
 
   /**
-   * Handle /help command
+   * T046: Handle help command with role-filtered command list
    */
   private static async handleHelpCommand(
     message: Message,
@@ -516,41 +523,66 @@ export class CommandHandler {
     userRole: UserRole,
     _args: string[],
   ): Promise<void> {
-    logger.info("Handling /help command", { userId, userRole });
+    logger.info("Handling help command", { userId, userRole });
 
-    let response = `📖 *Panduan WhatsApp Cashflow Bot*\n\n`;
+    // Get available commands for this role
+    const availableCommands = ROLE_COMMANDS[userRole] || [];
 
-    response += `🔘 *Command Utama:*\n`;
-    response += `• \`/start\` - Informasi awal\n`;
-    response += `• \`/menu\` - Tampilkan menu utama\n`;
-    response += `• \`/help\` - Panduan ini\n\n`;
+    // Build help commands list with descriptions
+    const helpCommands: Array<{
+      command: string;
+      description: string;
+      roleRestricted?: boolean;
+      roleLabel?: string;
+    }> = [];
 
-    response += `📝 *Command Transaksi:*\n`;
-    response += `• \`/catat\` - Catat transaksi baru\n`;
-    response += `• Format: /catat [income/expense] [jumlah] [kategori] [deskripsi]\n`;
-    response += `• Contoh: \`/catat income 500000 Sales Pembayaran Client A\`\n\n`;
+    // Command descriptions mapping
+    const commandDescriptions: Record<CommandName, string> = {
+      [COMMANDS.RECORD_SALE]: "Catat penjualan baru",
+      [COMMANDS.RECORD_EXPENSE]: "Catat pengeluaran baru",
+      [COMMANDS.VIEW_REPORT_TODAY]: "Lihat laporan hari ini",
+      [COMMANDS.VIEW_REPORT_WEEK]: "Lihat laporan minggu ini",
+      [COMMANDS.VIEW_REPORT_MONTH]: "Lihat laporan bulan ini",
+      [COMMANDS.VIEW_BALANCE]: "Lihat saldo saat ini",
+      [COMMANDS.CHECK_BALANCE]: "Cek saldo",
+      [COMMANDS.HELP]: "Tampilkan bantuan",
+      [COMMANDS.MENU]: "Tampilkan menu utama",
+    };
 
-    response += `📊 *Command Laporan:*\n`;
-    response += `• \`/laporan\` - Menu laporan\n`;
-    response += `• \`/laporan daily\` - Laporan harian\n`;
-    response += `• \`/laporan weekly\` - Laporan mingguan\n`;
-    response += `• \`/laporan monthly\` - Laporan bulanan\n\n`;
+    // Command display names (user-friendly)
+    const commandDisplayNames: Record<CommandName, string> = {
+      [COMMANDS.RECORD_SALE]: "catat penjualan",
+      [COMMANDS.RECORD_EXPENSE]: "catat pengeluaran",
+      [COMMANDS.VIEW_REPORT_TODAY]: "lihat laporan hari ini",
+      [COMMANDS.VIEW_REPORT_WEEK]: "lihat laporan minggu ini",
+      [COMMANDS.VIEW_REPORT_MONTH]: "lihat laporan bulan ini",
+      [COMMANDS.VIEW_BALANCE]: "lihat saldo",
+      [COMMANDS.CHECK_BALANCE]: "cek saldo",
+      [COMMANDS.HELP]: "bantu",
+      [COMMANDS.MENU]: "menu",
+    };
 
-    response += `💡 *Command Rekomendasi:*\n`;
-    response += `• \`/rekomendasi\` - List rekomendasi aktif\n`;
-    response += `• \`/detail <ID>\` - Detail rekomendasi\n`;
-    response += `• \`/dismiss <ID>\` - Dismiss rekomendasi\n`;
-    response += `• \`/discuss <ID>\` - Diskusi dengan tim\n\n`;
+    // Build help commands list
+    for (const cmd of availableCommands) {
+      // Check if command is restricted to specific roles
+      const isRestricted =
+        userRole === USER_ROLES.BOSS &&
+        (cmd === COMMANDS.RECORD_SALE || cmd === COMMANDS.RECORD_EXPENSE);
 
-    response += `🔢 *Shortcut Angka:*\n`;
-    response += `Ketik angka (1, 2, 3, dst) untuk memilih menu\n\n`;
+      helpCommands.push({
+        command: commandDisplayNames[cmd],
+        description: commandDescriptions[cmd],
+        roleRestricted: isRestricted,
+        roleLabel: isRestricted ? "Boss only" : undefined,
+      });
+    }
 
-    response += `💬 *Tips:*\n`;
-    response += `• Gunakan button untuk navigasi lebih mudah\n`;
-    response += `• Command bisa pakai bahasa Indonesia atau English\n`;
-    response += `• Ketik /menu untuk kembali ke menu utama\n`;
+    // Format and send help message
+    const helpMessage = formatHelpMessage(helpCommands);
+    await message.reply(helpMessage);
 
-    await message.reply(response);
+    // Log help command usage
+    this.logCommand(userId, message.body || "help", COMMANDS.HELP, 1.0);
   }
 
   /**
@@ -1310,9 +1342,14 @@ export class CommandHandler {
           return true;
 
         default:
-          // Check if confidence is low, show suggestions
-          if (parsed.confidence < 0.7) {
+          // T045: Confidence-based error handling
+          // ≥70% auto-execute (already handled above), <70% show suggestions
+          if (parsed.confidence < CONFIDENCE_THRESHOLD) {
             const suggestions = getCommandSuggestions(rawText, 3);
+
+            // T051: Log unrecognized command for analytics
+            this.logCommand(userId, rawText, "unrecognized", parsed.confidence);
+
             await message.reply(
               formatErrorMessage({
                 unrecognizedCommand: rawText,
@@ -1325,6 +1362,9 @@ export class CommandHandler {
             );
             return true;
           }
+
+          // T051: Log unrecognized command even if confidence is high but command not found
+          this.logCommand(userId, rawText, "unrecognized", parsed.confidence);
           return false;
       }
     } catch (error) {
@@ -1455,11 +1495,16 @@ export class CommandHandler {
         );
         break;
 
-      default:
-        await message.reply(
-          "❌ Sesi tidak valid. Silakan mulai lagi dengan perintah baru.",
-        );
+      default: {
+        // T049: Provide contextual suggestion based on conversation context
+        const suggestion = this._getContextualSuggestion(context);
+        const errorMsg = suggestion
+          ? `❌ Sesi tidak valid. ${suggestion}`
+          : "❌ Sesi tidak valid. Silakan mulai lagi dengan perintah baru.";
+        await message.reply(errorMsg);
         await clearContext(userId);
+        break;
+      }
     }
   }
 
@@ -1483,8 +1528,13 @@ export class CommandHandler {
     // Validate amount
     const validation = TransactionValidator.validateAmount(input);
     if (!validation.valid || !validation.parsed) {
+      // T050: Command syntax error handling with examples
       await message.reply(
-        "❌ Format jumlah tidak valid.\n\nContoh: 500000, 500.000, atau 500,000\n\nKetik 'batal' untuk membatalkan.",
+        this.formatSyntaxErrorMessage(
+          "Format jumlah tidak valid",
+          ["500000", "500.000", "500,000", "Rp 500000", "500000 rupiah"],
+          "Masukkan jumlah dalam format angka",
+        ),
       );
       return;
     }
@@ -1567,8 +1617,19 @@ export class CommandHandler {
     }
 
     if (!selectedCategory) {
+      // T050: Command syntax error handling with examples
+      // T049: Contextual suggestion for category selection
+      const categoryNames = categories
+        .slice(0, 5)
+        .map((cat, idx) => `${idx + 1}. ${cat.name}`)
+        .join("\n");
       await message.reply(
-        "❌ Kategori tidak valid. Silakan pilih nomor atau nama kategori yang tersedia.\n\nKetik 'batal' untuk membatalkan.",
+        this.formatSyntaxErrorMessage(
+          "Kategori tidak valid",
+          categoryNames.split("\n"),
+          "Pilih nomor atau nama kategori yang tersedia",
+        ) +
+          `\n\n*Kategori tersedia:*\n${categoryNames}\n\nKetik 'batal' untuk membatalkan.`,
       );
       return;
     }
@@ -1862,6 +1923,63 @@ export class CommandHandler {
         rawText,
       });
     }
+  }
+
+  /**
+   * T049: Provide contextual suggestions based on conversation context
+   * This method can be used to provide contextual help during multi-step workflows
+   * Currently available for future use in error messages or help prompts
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private static _getContextualSuggestion(
+    context: ConversationContext,
+  ): string | null {
+    const step = context.currentStep || 1;
+    const transactionType = context.pendingTransaction?.type;
+
+    switch (step) {
+      case 1:
+        // Step 1: Amount input
+        return "Masukkan jumlah transaksi (contoh: 500000 atau 500.000)";
+      case 2: {
+        // Step 2: Category selection
+        const typeLabel =
+          transactionType === "income" ? "penjualan" : "pengeluaran";
+        return `Pilih kategori ${typeLabel} dengan mengetik nomor atau nama kategori`;
+      }
+      case 3:
+        // Step 3: Confirmation
+        return 'Ketik "ya" atau "setuju" untuk menyimpan, atau "batal" untuk membatalkan';
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * T050: Format syntax error message with examples and rephrase suggestions
+   */
+  private static formatSyntaxErrorMessage(
+    errorMessage: string,
+    examples: string[],
+    suggestion?: string,
+  ): string {
+    let message = `❌ *${errorMessage}*\n\n`;
+
+    if (suggestion) {
+      message += `💡 *Saran:* ${suggestion}\n\n`;
+    }
+
+    if (examples.length > 0) {
+      message += `*Contoh yang benar:*\n`;
+      examples.forEach((example, index) => {
+        message += `${index + 1}. ${example}\n`;
+      });
+      message += `\n`;
+    }
+
+    message += `_Ketik 'batal' untuk membatalkan._`;
+
+    return message;
   }
 
   /**

@@ -246,3 +246,172 @@ describe("T013: Integration test for complete transaction flow", () => {
     expect(timeDiff).toBeLessThan(1805 * 1000);
   });
 });
+
+describe("T043: Integration test for help command flow with role filtering", () => {
+  let prisma: ReturnType<typeof getPrismaClient>;
+  let redis: ReturnType<typeof getRedisClient>;
+  let employeeUserId: string;
+  let bossUserId: string;
+  let investorUserId: string;
+  let skipTests = false;
+
+  beforeAll(async () => {
+    try {
+      prisma = getPrismaClient();
+      redis = getRedisClient();
+
+      // Skip if Redis not available
+      if (!redis.isOpen) {
+        skipTests = true;
+        return;
+      }
+
+      // Create test users with different roles
+      const timestamp = Date.now().toString().slice(-4);
+      const employee = await prisma.user.upsert({
+        where: { phoneNumber: `+62812345678${timestamp}` },
+        update: {},
+        create: {
+          phoneNumber: `+62812345678${timestamp}`,
+          name: "Test Employee",
+          role: "employee",
+          isActive: true,
+        },
+      });
+      employeeUserId = employee.id;
+
+      const boss = await prisma.user.upsert({
+        where: { phoneNumber: `+62812345679${timestamp}` },
+        update: {},
+        create: {
+          phoneNumber: `+62812345679${timestamp}`,
+          name: "Test Boss",
+          role: "boss",
+          isActive: true,
+        },
+      });
+      bossUserId = boss.id;
+
+      const investor = await prisma.user.upsert({
+        where: { phoneNumber: `+62812345680${timestamp}` },
+        update: {},
+        create: {
+          phoneNumber: `+62812345680${timestamp}`,
+          name: "Test Investor",
+          role: "investor",
+          isActive: true,
+        },
+      });
+      investorUserId = investor.id;
+    } catch (error) {
+      skipTests = true;
+      logger.warn("Help command test setup skipped", { error });
+    }
+  });
+
+  afterAll(async () => {
+    if (skipTests) return;
+
+    try {
+      // Cleanup
+      if (employeeUserId) {
+        await clearContext(employeeUserId).catch(() => {});
+        await prisma.user
+          .delete({ where: { id: employeeUserId } })
+          .catch(() => {});
+      }
+      if (bossUserId) {
+        await clearContext(bossUserId).catch(() => {});
+        await prisma.user.delete({ where: { id: bossUserId } }).catch(() => {});
+      }
+      if (investorUserId) {
+        await clearContext(investorUserId).catch(() => {});
+        await prisma.user
+          .delete({ where: { id: investorUserId } })
+          .catch(() => {});
+      }
+    } catch (_error) {
+      logger.warn("Help command test cleanup failed", { error: _error });
+    } finally {
+      try {
+        await prisma.$disconnect().catch(() => {});
+        await disconnectRedis().catch(() => {});
+      } catch {
+        // Ignore disconnect errors
+      }
+    }
+  });
+
+  beforeEach(async () => {
+    if (skipTests) return;
+    // Clear context before each test
+    await clearContext(employeeUserId).catch(() => {});
+    await clearContext(bossUserId).catch(() => {});
+    await clearContext(investorUserId).catch(() => {});
+  });
+
+  it("should parse help command for Employee role", async () => {
+    if (skipTests) {
+      console.log("Skipping test - Redis or database unavailable");
+      return;
+    }
+
+    const result = parseCommand("bantu", employeeUserId, "employee");
+    expect(result).not.toBeNull();
+    expect(result?.recognizedIntent).toBe(COMMANDS.HELP);
+    expect(result?.confidence).toBeGreaterThanOrEqual(0.7);
+  });
+
+  it("should parse help command for Boss role", async () => {
+    if (skipTests) {
+      console.log("Skipping test - Redis or database unavailable");
+      return;
+    }
+
+    const result = parseCommand("help", bossUserId, "boss");
+    expect(result).not.toBeNull();
+    expect(result?.recognizedIntent).toBe(COMMANDS.HELP);
+    expect(result?.confidence).toBeGreaterThanOrEqual(0.7);
+  });
+
+  it("should parse help command for Investor role", async () => {
+    if (skipTests) {
+      console.log("Skipping test - Redis or database unavailable");
+      return;
+    }
+
+    const result = parseCommand("menu", investorUserId, "investor");
+    expect(result).not.toBeNull();
+    // Menu command should also trigger help
+    expect([COMMANDS.HELP, COMMANDS.MENU]).toContain(result?.recognizedIntent);
+  });
+
+  it("should filter commands by role in help output", async () => {
+    if (skipTests) {
+      console.log("Skipping test - Redis or database unavailable");
+      return;
+    }
+
+    // Employee should have access to transaction commands
+    const employeeResult = parseCommand(
+      "catat penjualan",
+      employeeUserId,
+      "employee",
+    );
+    expect(employeeResult).not.toBeNull();
+    expect(employeeResult?.recognizedIntent).toBe(COMMANDS.RECORD_SALE);
+
+    // Investor should NOT have access to transaction commands
+    const investorResult = parseCommand(
+      "catat penjualan",
+      investorUserId,
+      "investor",
+    );
+    // Investor should get low confidence or unrecognized
+    if (investorResult) {
+      expect(investorResult.confidence).toBeLessThan(0.7);
+    } else {
+      expect(investorResult).toBeNull();
+    }
+  });
+});

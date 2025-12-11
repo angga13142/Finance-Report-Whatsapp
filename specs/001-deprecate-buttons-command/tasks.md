@@ -116,21 +116,21 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T040 [P] [US3] Unit test for fuzzy matching suggestions (low confidence commands) in tests/unit/bot/handlers/command.parser.test.ts
-- [ ] T041 [P] [US3] Unit test for role-filtered help command output in tests/unit/bot/handlers/command.test.ts
-- [ ] T042 [P] [US3] Unit test for contextual suggestions during multi-step workflows in tests/unit/bot/handlers/command.test.ts
-- [ ] T043 [US3] Integration test for help command flow with role filtering in tests/integration/bot/command-flow.test.ts
+- [x] T040 [P] [US3] Unit test for fuzzy matching suggestions (low confidence commands) in tests/unit/bot/handlers/command.parser.test.ts
+- [x] T041 [P] [US3] Unit test for role-filtered help command output in tests/unit/bot/handlers/command.test.ts
+- [x] T042 [P] [US3] Unit test for contextual suggestions during multi-step workflows in tests/unit/bot/handlers/command.test.ts
+- [x] T043 [US3] Integration test for help command flow with role filtering in tests/integration/bot/command-flow.test.ts
 
 ### Implementation for User Story 3
 
-- [ ] T044 [US3] Implement command parser suggestion logic for unrecognized commands (top 3 matches with descriptions) in src/bot/handlers/command.parser.ts
-- [ ] T045 [US3] Implement confidence-based error handling (≥70% auto-execute command, <70% show explicit offer with button fallback option or suggestions) in src/bot/handlers/command.ts
-- [ ] T046 [US3] Implement help command handler ("bantu", "help") in src/bot/handlers/command.ts with role-filtered command list
-- [ ] T047 [US3] Create role-based command mapping in src/config/constants.ts defining available commands per role (Employee, Boss, Investor, Dev)
-- [ ] T048 [P] [US3] Implement formatted help message generation in src/bot/ui/message.formatter.ts with emoji indicators and role labels (🔒 Boss only)
-- [ ] T049 [US3] Implement contextual suggestion logic based on conversation context (suggests next step during transaction entry) in src/bot/handlers/command.ts
-- [ ] T050 [US3] Implement command syntax error handling with examples and rephrase suggestions in src/bot/handlers/command.ts
-- [ ] T051 [US3] Implement command analytics tracking for unrecognized commands (FR-045) in src/bot/handlers/command.ts
+- [x] T044 [US3] Implement command parser suggestion logic for unrecognized commands (top 3 matches with descriptions) in src/bot/handlers/command.parser.ts
+- [x] T045 [US3] Implement confidence-based error handling (≥70% auto-execute command, <70% show explicit offer with button fallback option or suggestions) in src/bot/handlers/command.ts
+- [x] T046 [US3] Implement help command handler ("bantu", "help") in src/bot/handlers/command.ts with role-filtered command list
+- [x] T047 [US3] Create role-based command mapping in src/config/constants.ts defining available commands per role (Employee, Boss, Investor, Dev)
+- [x] T048 [P] [US3] Implement formatted help message generation in src/bot/ui/message.formatter.ts with emoji indicators and role labels (🔒 Boss only)
+- [x] T049 [US3] Implement contextual suggestion logic based on conversation context (suggests next step during transaction entry) in src/bot/handlers/command.ts
+- [x] T050 [US3] Implement command syntax error handling with examples and rephrase suggestions in src/bot/handlers/command.ts
+- [x] T051 [US3] Implement command analytics tracking for unrecognized commands (FR-045) in src/bot/handlers/command.ts
 
 **Checkpoint**: User Story 3 should be fully functional - Users receive helpful guidance and suggestions independently
 

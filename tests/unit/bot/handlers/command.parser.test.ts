@@ -273,4 +273,41 @@ describe("Command Parser", () => {
       expect(result?.confidence).toBeGreaterThan(0.3); // Fuzzy match
     });
   });
+
+  describe("T040: Fuzzy matching suggestions for low confidence commands", () => {
+    it("should provide suggestions for unrecognized commands", () => {
+      const suggestions = parser.getSuggestions("catat penjuaan", 3);
+      expect(suggestions.length).toBeGreaterThan(0);
+      expect(suggestions[0]?.command).toBe(COMMANDS.RECORD_SALE);
+      expect(suggestions[0]?.confidence).toBeGreaterThan(0.3);
+      expect(suggestions[0]?.description).toBeDefined();
+    });
+
+    it("should limit suggestions to specified limit", () => {
+      const suggestions = parser.getSuggestions("laporan", 2);
+      expect(suggestions.length).toBeLessThanOrEqual(2);
+    });
+
+    it("should return empty array for completely unrelated input", () => {
+      const suggestions = parser.getSuggestions("xyzabc123", 3);
+      expect(suggestions.length).toBe(0);
+    });
+
+    it("should provide suggestions with confidence scores", () => {
+      const suggestions = parser.getSuggestions("catat penjualn", 3);
+      expect(suggestions.length).toBeGreaterThan(0);
+      suggestions.forEach((suggestion) => {
+        expect(suggestion.confidence).toBeGreaterThan(0);
+        expect(suggestion.confidence).toBeLessThanOrEqual(1);
+      });
+    });
+
+    it("should filter suggestions by minimum confidence threshold (0.3)", () => {
+      const suggestions = parser.getSuggestions("completely unrelated text", 3);
+      // Should return empty or only very high confidence matches
+      suggestions.forEach((suggestion) => {
+        expect(suggestion.confidence).toBeGreaterThan(0.3);
+      });
+    });
+  });
 });
