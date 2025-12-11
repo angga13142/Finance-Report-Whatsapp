@@ -1,160 +1,167 @@
+/**
+ * RBAC Service
+ * Provides role grant/revoke operations with immediate session permission updates
+ */
+
 import { UserRole } from "@prisma/client";
-import { USER_ROLES } from "../../config/constants";
+import { UserService } from "./service";
+import { UserModel } from "../../models/user";
+import { logger } from "../../lib/logger";
+import { redis } from "../../lib/redis";
+import { AuditLogger } from "../audit/logger";
 
 /**
- * Role-Based Access Control (RBAC) service
+ * RBAC Service
+ * Handles role management with session updates
  */
 export class RBACService {
   /**
-   * Check if user role has permission for action
+   * Grant role to user with immediate session permission update
    */
-  static hasPermission(role: UserRole, action: string): boolean {
-    const permissions = this.getPermissions(role);
-    return permissions.includes(action) || permissions.includes("*");
-  }
-
-  /**
-   * Get all permissions for a role
-   */
-  static getPermissions(role: UserRole): string[] {
-    const permissionMap: Record<UserRole, string[]> = {
-      [USER_ROLES.DEV]: [
-        "*", // All permissions
-      ],
-      [USER_ROLES.BOSS]: [
-        "transaction:create",
-        "transaction:read",
-        "transaction:update",
-        "transaction:delete",
-        "transaction:approve",
-        "report:read",
-        "report:generate",
-        "user:read",
-        "user:create",
-        "user:update",
-        "user:deactivate",
-        "category:read",
-        "category:create",
-        "category:update",
-        "recommendation:read",
-        "audit:read",
-      ],
-      [USER_ROLES.EMPLOYEE]: [
-        "transaction:create",
-        "transaction:read:own",
-        "transaction:update:own",
-        "report:read:own",
-        "category:read",
-      ],
-      [USER_ROLES.INVESTOR]: ["report:read:aggregated", "recommendation:read"],
-    };
-
-    return permissionMap[role] || [];
-  }
-
-  /**
-   * Check if user can create transactions
-   */
-  static canCreateTransaction(role: UserRole): boolean {
-    return this.hasPermission(role, "transaction:create");
-  }
-
-  /**
-   * Check if user can view transactions
-   */
-  static canViewTransactions(
+  static async grantRole(
+    phoneNumber: string,
     role: UserRole,
-    ownOnly: boolean = false,
-  ): boolean {
-    if (ownOnly) {
-      return this.hasPermission(role, "transaction:read:own");
+    grantedBy: string,
+  ): Promise<void> {
+    try {
+      // Get user
+      const user = await UserModel.findByPhoneNumber(phoneNumber);
+      if (!user) {
+        throw new Error(`User with phone number ${phoneNumber} not found`);
+      }
+
+      // Prevent changing dev role
+      if (user.role === "dev" && role !== "dev") {
+        throw new Error("Cannot change dev role");
+      }
+
+      // Prevent granting dev role (security restriction)
+      if (role === "dev") {
+        throw new Error("Cannot grant dev role via command");
+      }
+
+      // Update user role
+      await UserService.changeUserRole(user.id, role, grantedBy);
+
+      // Clear user session cache to force permission refresh
+      await this.clearUserSessionCache(user.id);
+
+      // Log audit
+      await AuditLogger.log(
+        "role.grant",
+        {
+          targetUserId: user.id,
+          targetPhoneNumber: phoneNumber,
+          newRole: role,
+          previousRole: user.role,
+        },
+        grantedBy,
+      );
+
+      logger.info("Role granted", {
+        userId: user.id,
+        phoneNumber,
+        role,
+        grantedBy,
+      });
+    } catch (error) {
+      logger.error("Error granting role", { error, phoneNumber, role });
+      throw error;
     }
-    return (
-      this.hasPermission(role, "transaction:read") ||
-      this.hasPermission(role, "transaction:read:own")
-    );
   }
 
   /**
-   * Check if user can view reports
+   * Revoke role from user (downgrade to employee) with immediate session update
    */
-  static canViewReports(
+  static async revokeRole(
+    phoneNumber: string,
     role: UserRole,
-    aggregatedOnly: boolean = false,
-  ): boolean {
-    if (aggregatedOnly) {
-      return this.hasPermission(role, "report:read:aggregated");
+    revokedBy: string,
+  ): Promise<void> {
+    try {
+      // Get user
+      const user = await UserModel.findByPhoneNumber(phoneNumber);
+      if (!user) {
+        throw new Error(`User with phone number ${phoneNumber} not found`);
+      }
+
+      // Prevent revoking dev role
+      if (user.role === "dev") {
+        throw new Error("Cannot revoke dev role");
+      }
+
+      // Verify user has the role to revoke
+      if (user.role !== role) {
+        throw new Error(`User does not have role ${role}`);
+      }
+
+      // Downgrade to employee
+      await UserService.changeUserRole(user.id, "employee", revokedBy);
+
+      // Clear user session cache to force permission refresh
+      await this.clearUserSessionCache(user.id);
+
+      // Log audit
+      await AuditLogger.log(
+        "role.revoke",
+        {
+          targetUserId: user.id,
+          targetPhoneNumber: phoneNumber,
+          revokedRole: role,
+          newRole: "employee",
+        },
+        revokedBy,
+      );
+
+      logger.info("Role revoked", {
+        userId: user.id,
+        phoneNumber,
+        role,
+        revokedBy,
+      });
+    } catch (error) {
+      logger.error("Error revoking role", { error, phoneNumber, role });
+      throw error;
     }
-    return (
-      this.hasPermission(role, "report:read") ||
-      this.hasPermission(role, "report:read:own") ||
-      this.hasPermission(role, "report:read:aggregated")
-    );
   }
 
   /**
-   * Check if user can manage users
+   * Clear user session cache to force permission refresh
    */
-  static canManageUsers(role: UserRole): boolean {
-    return (
-      this.hasPermission(role, "user:create") ||
-      this.hasPermission(role, "user:update") ||
-      this.hasPermission(role, "user:deactivate")
-    );
-  }
+  private static async clearUserSessionCache(userId: string): Promise<void> {
+    try {
+      // Clear all session-related cache keys for this user
+      const sessionKeys = [
+        `session:${userId}`,
+        `user:${userId}:role`,
+        `user:${userId}:permissions`,
+        `context:${userId}:*`,
+      ];
 
-  /**
-   * Check if user can approve transactions
-   */
-  static canApproveTransactions(role: UserRole): boolean {
-    return this.hasPermission(role, "transaction:approve");
-  }
+      for (const keyPattern of sessionKeys) {
+        try {
+          await redis.del(keyPattern.replace("*", ""));
+          // Also clear pattern-matched keys
+          const keys = await redis.keys(keyPattern);
+          if (keys.length > 0) {
+            for (const key of keys) {
+              await redis.del(key);
+            }
+          }
+        } catch (error) {
+          logger.warn("Failed to clear session cache key", {
+            error,
+            keyPattern,
+            userId,
+          });
+        }
+      }
 
-  /**
-   * Check if user can view audit logs
-   */
-  static canViewAuditLogs(role: UserRole): boolean {
-    return this.hasPermission(role, "audit:read");
-  }
-
-  /**
-   * Check if user can manage categories
-   */
-  static canManageCategories(role: UserRole): boolean {
-    return (
-      this.hasPermission(role, "category:create") ||
-      this.hasPermission(role, "category:update")
-    );
-  }
-
-  /**
-   * Validate role is valid
-   */
-  static isValidRole(role: string): role is UserRole {
-    return Object.values(USER_ROLES).includes(role as UserRole);
-  }
-
-  /**
-   * Get role hierarchy (for permission inheritance)
-   */
-  static getRoleHierarchy(role: UserRole): UserRole[] {
-    const hierarchy: Record<UserRole, UserRole[]> = {
-      [USER_ROLES.DEV]: [
-        USER_ROLES.DEV,
-        USER_ROLES.BOSS,
-        USER_ROLES.EMPLOYEE,
-        USER_ROLES.INVESTOR,
-      ],
-      [USER_ROLES.BOSS]: [
-        USER_ROLES.BOSS,
-        USER_ROLES.EMPLOYEE,
-        USER_ROLES.INVESTOR,
-      ],
-      [USER_ROLES.EMPLOYEE]: [USER_ROLES.EMPLOYEE],
-      [USER_ROLES.INVESTOR]: [USER_ROLES.INVESTOR],
-    };
-
-    return hierarchy[role] || [role];
+      logger.debug("User session cache cleared", { userId });
+    } catch (error) {
+      logger.warn("Error clearing user session cache", { error, userId });
+      // Don't throw - cache clearing is best effort
+    }
   }
 }
 

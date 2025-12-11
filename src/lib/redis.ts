@@ -194,6 +194,38 @@ export const redis = {
       return result === "OK";
     }
   },
+
+  /**
+   * Ping Redis server
+   */
+  async ping(): Promise<string> {
+    const client = getRedisClient();
+    if (!client.isOpen) {
+      await connectRedis();
+    }
+    return await client.ping();
+  },
+
+  /**
+   * Scan Redis keys with pattern matching
+   */
+  async scan(
+    cursor: number,
+    options?: { MATCH?: string; COUNT?: number },
+  ): Promise<{ cursor: number; keys: string[] }> {
+    const client = getRedisClient();
+    if (!client.isOpen) {
+      await connectRedis();
+    }
+    const result = await client.scan(cursor, {
+      MATCH: options?.MATCH,
+      COUNT: options?.COUNT,
+    });
+    return {
+      cursor: result.cursor,
+      keys: result.keys,
+    };
+  },
 };
 
 /**

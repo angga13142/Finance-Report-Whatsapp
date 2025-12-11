@@ -1,6 +1,5 @@
 import { Buttons } from "whatsapp-web.js";
 import { UserRole } from "@prisma/client";
-import { RBACService } from "../../services/user/rbac";
 import { USER_ROLES, MAX_BUTTON_LABEL_LENGTH } from "../../config/constants";
 import { configService } from "../../services/system/config";
 
@@ -24,7 +23,8 @@ export class ButtonMenu {
     const buttonSpecs: Array<{ id?: string; body: string }> = [];
 
     // Transaction buttons (for users who can create transactions)
-    if (RBACService.canCreateTransaction(role)) {
+    // Employee, Boss, and Dev can create transactions
+    if (role === "employee" || role === "boss" || role === "dev") {
       buttonSpecs.push({
         body: "💰 Catat Penjualan",
         id: this.getButtonId("💰 Catat Penjualan"),
@@ -36,12 +36,11 @@ export class ButtonMenu {
     }
 
     // Report button (for all roles)
-    if (RBACService.canViewReports(role)) {
-      buttonSpecs.push({
-        body: "📊 Lihat Laporan",
-        id: this.getButtonId("📊 Lihat Laporan"),
-      });
-    }
+    // All roles can view reports
+    buttonSpecs.push({
+      body: "📊 Lihat Laporan",
+      id: this.getButtonId("📊 Lihat Laporan"),
+    });
 
     // Help button (for all roles)
     buttonSpecs.push({
@@ -278,7 +277,8 @@ export class ButtonMenu {
     const items: Array<{ label: string; id: string }> = [];
 
     // Transaction options
-    if (RBACService.canCreateTransaction(role)) {
+    // Employee, Boss, and Dev can create transactions
+    if (role === "employee" || role === "boss" || role === "dev") {
       items.push({
         label: "💰 Catat Penjualan",
         id: this.getButtonId("💰 Catat Penjualan"),
@@ -290,12 +290,11 @@ export class ButtonMenu {
     }
 
     // Report options
-    if (RBACService.canViewReports(role)) {
-      items.push({
-        label: "📊 Lihat Laporan",
-        id: this.getButtonId("📊 Lihat Laporan"),
-      });
-    }
+    // All roles can view reports
+    items.push({
+      label: "📊 Lihat Laporan",
+      id: this.getButtonId("📊 Lihat Laporan"),
+    });
 
     // Help
     items.push({

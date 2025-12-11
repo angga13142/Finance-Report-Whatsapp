@@ -354,7 +354,7 @@ export class CommandParser {
    * Get human-readable description for command
    */
   private getCommandDescription(command: CommandName): string {
-    const descriptions: Record<CommandName, string> = {
+    const descriptions: Partial<Record<CommandName, string>> = {
       [COMMANDS.RECORD_SALE]: "Catat penjualan",
       [COMMANDS.RECORD_EXPENSE]: "Catat pengeluaran",
       [COMMANDS.VIEW_REPORT_TODAY]: "Lihat laporan hari ini",
@@ -364,6 +364,17 @@ export class CommandParser {
       [COMMANDS.CHECK_BALANCE]: "Cek saldo",
       [COMMANDS.HELP]: "Bantuan",
       [COMMANDS.MENU]: "Menu",
+      [COMMANDS.ADMIN_MENU]: "Admin menu",
+      [COMMANDS.CONFIG_VIEW]: "View config",
+      [COMMANDS.CONFIG_SET]: "Set config",
+      [COMMANDS.TEMPLATE_LIST]: "List templates",
+      [COMMANDS.TEMPLATE_PREVIEW]: "Preview template",
+      [COMMANDS.TEMPLATE_EDIT]: "Edit template",
+      [COMMANDS.ROLE_GRANT]: "Grant role",
+      [COMMANDS.ROLE_REVOKE]: "Revoke role",
+      [COMMANDS.SYSTEM_STATUS]: "System status",
+      [COMMANDS.SYSTEM_LOGS]: "System logs",
+      [COMMANDS.CACHE_CLEAR]: "Clear cache",
     };
 
     return descriptions[command] || command;

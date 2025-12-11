@@ -5,6 +5,11 @@ import { HealthMonitoringService } from "../../services/system/health";
 import { AuditLogModel } from "../../models/audit";
 import { AuditLogger } from "../../services/audit/logger";
 import { UserRole } from "@prisma/client";
+import { ConfigService } from "../../services/system/config";
+import { DiagnosticsService } from "../../services/system/diagnostics";
+import { TemplateService } from "../../services/system/template";
+import { CacheService } from "../../services/system/cache";
+import { RBACService } from "../../services/user/rbac";
 
 /**
  * Admin handler for Dev role
@@ -1137,6 +1142,503 @@ CPU: ${health.components.cpu.details ? String(health.components.cpu.details.usag
     } catch (error) {
       logger.error("Error listing backups", { error, userId });
       await message.reply("❌ Terjadi kesalahan saat mengambil daftar backup.");
+    }
+  }
+
+  /**
+   * Handle template list command
+   */
+  static async handleTemplateList(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+  ): Promise<void> {
+    try {
+      if (userRole !== "dev") {
+        await message.reply("⛔ Akses ditolak.");
+        return;
+      }
+
+      await message.reply("📝 Mengambil daftar template...");
+
+      const templateService = new TemplateService();
+      const templates = await templateService.list();
+
+      if (templates.length === 0) {
+        await message.reply("ℹ️ Tidak ada template ditemukan.");
+        return;
+      }
+
+      let templatesText = `📝 *DAFTAR TEMPLATE*\n\nTotal: ${templates.length} template\n\n`;
+
+      templates.forEach((template, index) => {
+        templatesText += `${index + 1}. *${template.name}*\n`;
+        if (template.description) {
+          templatesText += `   ${template.description}\n`;
+        }
+        templatesText += `   Updated: ${new Date(template.updatedAt).toLocaleDateString("id-ID")}\n\n`;
+      });
+
+      await message.reply(templatesText);
+
+      logger.info("Template list displayed", {
+        userId,
+        count: templates.length,
+      });
+    } catch (error) {
+      logger.error("Error listing templates", { error, userId });
+      await message.reply(
+        "❌ Terjadi kesalahan saat mengambil daftar template.",
+      );
+    }
+  }
+
+  /**
+   * Handle template preview command
+   */
+  static async handleTemplatePreview(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    templateName: string,
+  ): Promise<void> {
+    try {
+      if (userRole !== "dev") {
+        await message.reply("⛔ Akses ditolak.");
+        return;
+      }
+
+      await message.reply(`👁️ Mengambil preview template: ${templateName}...`);
+
+      const templateService = new TemplateService();
+      const template = await templateService.preview(templateName);
+
+      if (!template) {
+        await message.reply(`❌ Template '${templateName}' tidak ditemukan.`);
+        return;
+      }
+
+      const placeholders = templateService.extractPlaceholders(
+        template.content,
+      );
+
+      const previewText = `
+📝 *TEMPLATE PREVIEW*
+
+*Nama*: ${template.name}
+${template.description ? `*Deskripsi*: ${template.description}\n` : ""}
+*Konten*:
+\`\`\`
+${template.content}
+\`\`\`
+
+*Placeholders*: ${placeholders.length > 0 ? placeholders.join(", ") : "Tidak ada"}
+*Updated*: ${new Date(template.updatedAt).toLocaleString("id-ID")}
+${template.updatedBy ? `*Updated By*: ${template.updatedBy}` : ""}
+`.trim();
+
+      await message.reply(previewText);
+
+      logger.info("Template preview displayed", { userId, templateName });
+    } catch (error) {
+      logger.error("Error previewing template", {
+        error,
+        userId,
+        templateName,
+      });
+      await message.reply("❌ Terjadi kesalahan saat preview template.");
+    }
+  }
+
+  /**
+   * Handle template edit command
+   */
+  static async handleTemplateEdit(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    templateName: string,
+    content: string,
+  ): Promise<void> {
+    try {
+      if (userRole !== "dev") {
+        await message.reply("⛔ Akses ditolak.");
+        return;
+      }
+
+      await message.reply(`✏️ Mengupdate template: ${templateName}...`);
+
+      const templateService = new TemplateService();
+      const updated = await templateService.edit(templateName, content, userId);
+
+      await AuditLogger.log(
+        "template.edit",
+        {
+          templateName,
+          contentLength: content.length,
+        },
+        userId,
+      );
+
+      const responseText = `
+✅ *TEMPLATE BERHASIL DIUPDATE*
+
+*Nama*: ${updated.name}
+*Updated*: ${new Date(updated.updatedAt).toLocaleString("id-ID")}
+`.trim();
+
+      await message.reply(responseText);
+
+      logger.info("Template edited", { userId, templateName });
+    } catch (error) {
+      logger.error("Error editing template", { error, userId, templateName });
+
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      await message.reply(`❌ Gagal mengupdate template: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Handle role grant command
+   */
+  static async handleRoleGrant(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    phoneNumber: string,
+    role: UserRole,
+  ): Promise<void> {
+    try {
+      if (userRole !== "dev") {
+        await message.reply("⛔ Akses ditolak.");
+        return;
+      }
+
+      await message.reply(`👔 Memberikan role ${role} ke ${phoneNumber}...`);
+
+      await RBACService.grantRole(phoneNumber, role, userId);
+
+      const responseText = `
+✅ *ROLE BERHASIL DIBERIKAN*
+
+📞 ${phoneNumber}
+👔 Role: ${role}
+
+Session user telah di-refresh dengan permission baru.
+`.trim();
+
+      await message.reply(responseText);
+
+      logger.info("Role granted", { userId, phoneNumber, role });
+    } catch (error) {
+      logger.error("Error granting role", { error, userId, phoneNumber, role });
+
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      await message.reply(`❌ Gagal memberikan role: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Handle role revoke command
+   */
+  static async handleRoleRevoke(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    phoneNumber: string,
+    role: UserRole,
+  ): Promise<void> {
+    try {
+      if (userRole !== "dev") {
+        await message.reply("⛔ Akses ditolak.");
+        return;
+      }
+
+      await message.reply(`👔 Mencabut role ${role} dari ${phoneNumber}...`);
+
+      await RBACService.revokeRole(phoneNumber, role, userId);
+
+      const responseText = `
+✅ *ROLE BERHASIL DICABUT*
+
+📞 ${phoneNumber}
+👔 Role dicabut: ${role}
+👔 Role baru: employee
+
+Session user telah di-refresh dengan permission baru.
+`.trim();
+
+      await message.reply(responseText);
+
+      logger.info("Role revoked", { userId, phoneNumber, role });
+    } catch (error) {
+      logger.error("Error revoking role", { error, userId, phoneNumber, role });
+
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      await message.reply(`❌ Gagal mencabut role: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Handle system status command
+   */
+  static async handleSystemStatus(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+  ): Promise<void> {
+    try {
+      if (userRole !== "dev") {
+        await message.reply("⛔ Akses ditolak.");
+        return;
+      }
+
+      await message.reply("🔍 Memeriksa system diagnostics...");
+
+      const diagnostics = await DiagnosticsService.runFullDiagnostics();
+
+      const statusEmoji = {
+        healthy: "✅",
+        degraded: "⚠️",
+        unhealthy: "❌",
+      };
+
+      const statusText = `
+🏥 *SYSTEM DIAGNOSTICS*
+📅 ${diagnostics.timestamp.toLocaleString("id-ID", { timeZone: "Asia/Makassar" })}
+
+🎯 *Overall*: ${statusEmoji[diagnostics.overall]} ${diagnostics.overall.toUpperCase()}
+
+📊 *Components*
+
+🗄️ *Database*: ${statusEmoji[diagnostics.database.status]} ${diagnostics.database.status}
+  └─ ${diagnostics.database.message}
+  ${diagnostics.database.responseTime ? `└─ Response: ${diagnostics.database.responseTime}ms` : ""}
+
+🔴 *Redis*: ${statusEmoji[diagnostics.redis.status]} ${diagnostics.redis.status}
+  └─ ${diagnostics.redis.message}
+  ${diagnostics.redis.responseTime ? `└─ Response: ${diagnostics.redis.responseTime}ms` : ""}
+
+💬 *WhatsApp*: ${statusEmoji[diagnostics.whatsapp.status]} ${diagnostics.whatsapp.status}
+  └─ ${diagnostics.whatsapp.message}
+  ${diagnostics.whatsapp.responseTime ? `└─ Response: ${diagnostics.whatsapp.responseTime}ms` : ""}
+`.trim();
+
+      await message.reply(statusText);
+
+      await AuditLogger.log(
+        "system.status",
+        {
+          overall: diagnostics.overall,
+        },
+        userId,
+      );
+
+      logger.info("System status displayed", { userId });
+    } catch (error) {
+      logger.error("Error displaying system status", { error, userId });
+      await message.reply("❌ Terjadi kesalahan saat memeriksa system status.");
+    }
+  }
+
+  /**
+   * Handle system logs command
+   */
+  static async handleSystemLogs(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    limit: number = 50,
+  ): Promise<void> {
+    try {
+      if (userRole !== "dev") {
+        await message.reply("⛔ Akses ditolak.");
+        return;
+      }
+
+      await message.reply(`📝 Mengambil ${limit} log terbaru...`);
+
+      // This would read from log files or log service
+      // For now, return audit logs as system logs
+      const auditLogs = await AuditLogModel.findMany({ limit });
+
+      let logsText = `📝 *SYSTEM LOGS*\nTotal: ${auditLogs.length} logs\n\n`;
+
+      auditLogs.slice(0, 10).forEach((log, index) => {
+        const timestamp = new Date(log.timestamp).toLocaleString("id-ID", {
+          timeZone: "Asia/Makassar",
+        });
+        logsText += `${index + 1}. *${log.action}*\n   🕒 ${timestamp}\n\n`;
+      });
+
+      if (auditLogs.length > 10) {
+        logsText += `\n_Menampilkan 10 log terbaru dari ${auditLogs.length} log._`;
+      }
+
+      await message.reply(logsText);
+
+      logger.info("System logs displayed", { userId, limit });
+    } catch (error) {
+      logger.error("Error displaying system logs", { error, userId });
+      await message.reply("❌ Terjadi kesalahan saat mengambil system logs.");
+    }
+  }
+
+  /**
+   * Handle config view command
+   */
+  static async handleConfigView(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    key: string,
+  ): Promise<void> {
+    try {
+      if (userRole !== "dev") {
+        await message.reply("⛔ Akses ditolak.");
+        return;
+      }
+
+      await message.reply(`⚙️ Mengambil config: ${key}...`);
+
+      const configService = ConfigService.getInstance();
+      const config = await configService.view(key);
+
+      if (!config) {
+        await message.reply(`❌ Config '${key}' tidak ditemukan.`);
+        return;
+      }
+
+      const configText = `
+⚙️ *CONFIGURATION*
+
+*Key*: ${config.key}
+*Value*: \`${config.value}\`
+${config.description ? `*Deskripsi*: ${config.description}\n` : ""}
+*Updated*: ${new Date(config.updatedAt).toLocaleString("id-ID")}
+${config.updatedBy ? `*Updated By*: ${config.updatedBy}` : ""}
+${config.id === "env-override" ? "\n⚠️ *Nilai ini di-override oleh environment variable*" : ""}
+`.trim();
+
+      await message.reply(configText);
+
+      logger.info("Config viewed", { userId, key });
+    } catch (error) {
+      logger.error("Error viewing config", { error, userId, key });
+      await message.reply("❌ Terjadi kesalahan saat melihat config.");
+    }
+  }
+
+  /**
+   * Handle config set command
+   */
+  static async handleConfigSet(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    key: string,
+    value: string,
+  ): Promise<void> {
+    try {
+      if (userRole !== "dev") {
+        await message.reply("⛔ Akses ditolak.");
+        return;
+      }
+
+      await message.reply(`⚙️ Mengupdate config: ${key}...`);
+
+      const configService = ConfigService.getInstance();
+      const updated = await configService.set(key, value, userId);
+
+      await AuditLogger.log(
+        "config.set",
+        {
+          key,
+          value: value.substring(0, 100), // Limit logged value length
+        },
+        userId,
+      );
+
+      const responseText = `
+✅ *CONFIG BERHASIL DIUPDATE*
+
+*Key*: ${updated.key}
+*Value*: \`${updated.value}\`
+*Updated*: ${new Date(updated.updatedAt).toLocaleString("id-ID")}
+`.trim();
+
+      await message.reply(responseText);
+
+      logger.info("Config set", { userId, key });
+    } catch (error) {
+      logger.error("Error setting config", { error, userId, key, value });
+
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      await message.reply(`❌ Gagal mengupdate config: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Handle cache clear command
+   */
+  static async handleCacheClear(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    pattern?: string,
+  ): Promise<void> {
+    try {
+      if (userRole !== "dev") {
+        await message.reply("⛔ Akses ditolak.");
+        return;
+      }
+
+      await message.reply(
+        pattern
+          ? `🗑️ Membersihkan cache dengan pattern: ${pattern}...`
+          : "🗑️ Membersihkan semua cache...",
+      );
+
+      const cacheService = new CacheService();
+      const result = pattern
+        ? await cacheService.clear(pattern)
+        : await cacheService.clearAll();
+
+      await AuditLogger.log(
+        "cache.clear",
+        {
+          pattern: pattern || "all",
+          deleted: result.deleted,
+          failed: result.failed,
+        },
+        userId,
+      );
+
+      const responseText = `
+✅ *CACHE BERHASIL DIBERSIHKAN*
+
+${pattern ? `*Pattern*: ${pattern}\n` : "*Scope*: All cache\n"}
+*Deleted*: ${result.deleted} keys
+${result.failed > 0 ? `*Failed*: ${result.failed} keys` : ""}
+`.trim();
+
+      await message.reply(responseText);
+
+      logger.info("Cache cleared", {
+        userId,
+        pattern,
+        deleted: result.deleted,
+      });
+    } catch (error) {
+      logger.error("Error clearing cache", { error, userId, pattern });
+
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      await message.reply(`❌ Gagal membersihkan cache: ${errorMessage}`);
     }
   }
 

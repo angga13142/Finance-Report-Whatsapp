@@ -1,6 +1,11 @@
-import { PrismaClient } from "@prisma/client";
+import {
+  PrismaClient,
+  SystemConfig as PrismaSystemConfig,
+} from "@prisma/client";
+import { z } from "zod";
 import { logger } from "../../lib/logger";
 import { env } from "../../config/env";
+import { SystemConfigModel } from "../../models/config";
 
 /**
  * Configuration management service
@@ -14,6 +19,8 @@ export interface ButtonLabelConfig {
   description?: string;
 }
 
+// Legacy interface - kept for backward compatibility
+// Use PrismaSystemConfig from @prisma/client for database operations
 export interface SystemConfig {
   buttonLabels: Record<string, string>;
   reportSchedule?: string | Record<string, unknown>;
@@ -310,25 +317,25 @@ export class ConfigService {
         customRules: {},
       };
 
-      for (const config of configs) {
+      for (const configItem of configs) {
         try {
-          const value: unknown = JSON.parse(config.config_value);
-          if (config.config_key === "report_schedule") {
+          const value: unknown = JSON.parse(configItem.config_value);
+          if (configItem.config_key === "report_schedule") {
             systemConfig.reportSchedule = value as Record<string, unknown>;
-          } else if (config.config_key.startsWith("notification_")) {
-            systemConfig.notificationSettings![config.config_key] =
+          } else if (configItem.config_key.startsWith("notification_")) {
+            systemConfig.notificationSettings![configItem.config_key] =
               value as Record<string, unknown>;
-          } else if (config.config_key.startsWith("rule_")) {
-            systemConfig.customRules![config.config_key] = value as Record<
+          } else if (configItem.config_key.startsWith("rule_")) {
+            systemConfig.customRules![configItem.config_key] = value as Record<
               string,
               unknown
             >;
           }
         } catch {
           // If not JSON, treat as string
-          if (config.config_key === "report_schedule") {
+          if (configItem.config_key === "report_schedule") {
             systemConfig.reportSchedule =
-              config.config_value as unknown as Record<string, unknown>;
+              configItem.config_value as unknown as Record<string, unknown>;
           }
         }
       }
@@ -601,6 +608,154 @@ export class ConfigService {
     } catch (error) {
       logger.warn("Failed to refresh ENABLE_LEGACY_BUTTONS config", { error });
     }
+  }
+
+  /**
+   * View all configurations
+   */
+  async viewAll(): Promise<PrismaSystemConfig[]> {
+    try {
+      return await SystemConfigModel.list();
+    } catch (error) {
+      logger.error("Error viewing all configurations", { error });
+      throw error;
+    }
+  }
+
+  /**
+   * View configuration by key with environment variable override
+   */
+  async view(key: string): Promise<PrismaSystemConfig | null> {
+    try {
+      // Check environment variable override first
+      const envKey = key.toUpperCase().replace(/-/g, "_");
+      const envValue = process.env[envKey];
+
+      if (envValue) {
+        // Return mock config with env value
+        return {
+          id: "env-override",
+          key,
+          value: envValue,
+          description: `Environment variable override: ${envKey}`,
+          updatedAt: new Date(),
+          updatedBy: "system",
+        } as PrismaSystemConfig;
+      }
+
+      // Fall back to database value
+      return await SystemConfigModel.findByKey(key);
+    } catch (error) {
+      logger.error("Error viewing configuration", { error, key });
+      throw error;
+    }
+  }
+
+  /**
+   * Set configuration value with Zod validation and database persistence
+   * Includes rollback mechanism for invalid changes
+   */
+  async set(
+    key: string,
+    value: string,
+    userId: string,
+  ): Promise<PrismaSystemConfig> {
+    let previousValue: string | null = null;
+    let previousConfig: PrismaSystemConfig | null = null;
+
+    try {
+      // Get previous value for rollback
+      const existing = await SystemConfigModel.findByKey(key);
+      if (existing) {
+        previousValue = existing.value;
+        previousConfig = existing;
+      }
+
+      // Validate value with Zod schema based on key
+      const validatedValue = this.validateConfigValue(key, value);
+
+      let result: PrismaSystemConfig;
+      if (existing) {
+        // Update existing config
+        result = await SystemConfigModel.update(key, {
+          value: validatedValue,
+          updatedBy: userId,
+        });
+      } else {
+        // Create new config
+        result = await SystemConfigModel.create({
+          key,
+          value: validatedValue,
+          updatedBy: userId,
+        });
+      }
+
+      // Clear cache after successful update
+      this.clearCache();
+
+      return result;
+    } catch (error) {
+      logger.error("Error setting configuration", { error, key, value });
+
+      // Rollback: restore previous value if update failed
+      if (previousValue !== null && previousConfig) {
+        try {
+          await SystemConfigModel.update(key, {
+            value: previousValue,
+            updatedBy: userId,
+          });
+          logger.info("Configuration rolled back to previous value", {
+            key,
+            previousValue,
+          });
+        } catch (rollbackError) {
+          logger.error("Failed to rollback configuration", {
+            error: rollbackError,
+            key,
+            previousValue,
+          });
+        }
+      }
+
+      throw error;
+    }
+  }
+
+  /**
+   * Validate configuration value using Zod schema
+   */
+  private validateConfigValue(key: string, value: string): string {
+    // Define Zod schemas for different config keys
+    const schemas: Record<string, z.ZodSchema<string>> = {
+      REPORT_DELIVERY_TIME: z
+        .string()
+        .regex(
+          /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
+          "Invalid time format (HH:MM)",
+        ),
+      MAX_TRANSACTION_AMOUNT: z
+        .string()
+        .regex(/^\d+$/, "Must be a positive integer")
+        .refine((val) => parseInt(val, 10) > 0, "Must be greater than 0"),
+      SESSION_TIMEOUT_MS: z
+        .string()
+        .regex(/^\d+$/, "Must be a positive integer")
+        .refine((val) => parseInt(val, 10) > 0, "Must be greater than 0"),
+    };
+
+    const schema = schemas[key];
+    if (schema) {
+      const result = schema.safeParse(value);
+      if (!result.success) {
+        throw new Error(
+          `Invalid value for ${key}: ${result.error.errors.map((e) => e.message).join(", ")}`,
+        );
+      }
+      return result.data;
+    }
+
+    // Default: accept any string for unknown keys
+    return value;
   }
 }
 

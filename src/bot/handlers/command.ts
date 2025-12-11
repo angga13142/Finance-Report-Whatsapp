@@ -98,6 +98,12 @@ export class CommandHandler {
     this.aliasMap.set("users", "users");
     this.aliasMap.set("user-activity", "user-activity");
     this.aliasMap.set("aktivitas", "user-activity");
+    // Admin sub-commands
+    this.aliasMap.set("config", "config");
+    this.aliasMap.set("template", "template");
+    this.aliasMap.set("role", "role");
+    this.aliasMap.set("system", "system");
+    this.aliasMap.set("cache", "cache");
     this.aliasMap.set("generate-report", "generate-report");
     this.aliasMap.set("report-manual", "generate-report");
     this.aliasMap.set("bulk", "bulk");
@@ -394,6 +400,52 @@ export class CommandHandler {
           );
           break;
 
+        // Admin sub-commands (Dev only)
+        case "config":
+          await this.handleConfigCommand(
+            message,
+            user.id,
+            user.role,
+            parsed.args,
+          );
+          break;
+
+        case "template":
+          await this.handleTemplateCommand(
+            message,
+            user.id,
+            user.role,
+            parsed.args,
+          );
+          break;
+
+        case "role":
+          await this.handleRoleCommand(
+            message,
+            user.id,
+            user.role,
+            parsed.args,
+          );
+          break;
+
+        case "system":
+          await this.handleSystemCommand(
+            message,
+            user.id,
+            user.role,
+            parsed.args,
+          );
+          break;
+
+        case "cache":
+          await this.handleCacheCommand(
+            message,
+            user.id,
+            user.role,
+            parsed.args,
+          );
+          break;
+
         case "generate-report":
           await this.handleGenerateReportCommand(
             message,
@@ -537,7 +589,7 @@ export class CommandHandler {
     }> = [];
 
     // Command descriptions mapping
-    const commandDescriptions: Record<CommandName, string> = {
+    const commandDescriptions: Partial<Record<CommandName, string>> = {
       [COMMANDS.RECORD_SALE]: "Catat penjualan baru",
       [COMMANDS.RECORD_EXPENSE]: "Catat pengeluaran baru",
       [COMMANDS.VIEW_REPORT_TODAY]: "Lihat laporan hari ini",
@@ -550,7 +602,7 @@ export class CommandHandler {
     };
 
     // Command display names (user-friendly)
-    const commandDisplayNames: Record<CommandName, string> = {
+    const commandDisplayNames: Partial<Record<CommandName, string>> = {
       [COMMANDS.RECORD_SALE]: "catat penjualan",
       [COMMANDS.RECORD_EXPENSE]: "catat pengeluaran",
       [COMMANDS.VIEW_REPORT_TODAY]: "lihat laporan hari ini",
@@ -569,9 +621,12 @@ export class CommandHandler {
         userRole === USER_ROLES.BOSS &&
         (cmd === COMMANDS.RECORD_SALE || cmd === COMMANDS.RECORD_EXPENSE);
 
+      const displayName = commandDisplayNames[cmd] || cmd;
+      const description = commandDescriptions[cmd] || cmd;
+
       helpCommands.push({
-        command: commandDisplayNames[cmd],
-        description: commandDescriptions[cmd],
+        command: displayName,
+        description,
         roleRestricted: isRestricted,
         roleLabel: isRestricted ? "Boss only" : undefined,
       });
@@ -1115,10 +1170,271 @@ export class CommandHandler {
     message: Message,
     userId: string,
     userRole: UserRole,
-    _args: string[],
+    args: string[],
   ): Promise<void> {
     const { AdminHandler } = await import("./admin");
-    await AdminHandler.handleAdminMenu(message, userId, userRole);
+
+    // If no sub-command, show menu
+    if (args.length === 0) {
+      await AdminHandler.handleAdminMenu(message, userId, userRole);
+      return;
+    }
+
+    // Route to appropriate sub-command handler
+    const subCommand = args[0].toLowerCase();
+
+    switch (subCommand) {
+      case "menu":
+        await AdminHandler.handleAdminMenu(message, userId, userRole);
+        break;
+      default:
+        await message.reply(
+          `❌ Admin sub-command tidak dikenal: \`${subCommand}\`\n\nGunakan /admin untuk melihat menu admin.`,
+        );
+    }
+  }
+
+  /**
+   * Handle /config command - Configuration management (Dev only)
+   */
+  private static async handleConfigCommand(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    args: string[],
+  ): Promise<void> {
+    const { AdminHandler } = await import("./admin");
+
+    if (args.length === 0) {
+      await message.reply(
+        "❌ Format: `/config view <key>` atau `/config set <key> <value>`\n\n" +
+          "Contoh:\n" +
+          "`/config view REPORT_DELIVERY_TIME`\n" +
+          "`/config set REPORT_DELIVERY_TIME 23:00`",
+      );
+      return;
+    }
+
+    const subCommand = args[0].toLowerCase();
+
+    switch (subCommand) {
+      case "view":
+        if (args.length < 2) {
+          await message.reply(
+            "❌ Format: `/config view <key>`\n\nContoh: `/config view REPORT_DELIVERY_TIME`",
+          );
+          return;
+        }
+        await AdminHandler.handleConfigView(message, userId, userRole, args[1]);
+        break;
+
+      case "set":
+        if (args.length < 3) {
+          await message.reply(
+            "❌ Format: `/config set <key> <value>`\n\nContoh: `/config set REPORT_DELIVERY_TIME 23:00`",
+          );
+          return;
+        }
+        await AdminHandler.handleConfigSet(
+          message,
+          userId,
+          userRole,
+          args[1],
+          args.slice(2).join(" "),
+        );
+        break;
+
+      default:
+        await message.reply(
+          `❌ Config sub-command tidak dikenal: \`${subCommand}\`\n\nGunakan: view atau set`,
+        );
+    }
+  }
+
+  /**
+   * Handle /template command - Template management (Dev only)
+   */
+  private static async handleTemplateCommand(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    args: string[],
+  ): Promise<void> {
+    const { AdminHandler } = await import("./admin");
+
+    if (args.length === 0) {
+      await message.reply(
+        "❌ Format: `/template list`, `/template preview <name>`, atau `/template edit <name> <content>`\n\n" +
+          "Contoh:\n" +
+          "`/template list`\n" +
+          "`/template preview welcome_message`\n" +
+          "`/template edit welcome_message Hello {{name}}`",
+      );
+      return;
+    }
+
+    const subCommand = args[0].toLowerCase();
+
+    switch (subCommand) {
+      case "list":
+        await AdminHandler.handleTemplateList(message, userId, userRole);
+        break;
+
+      case "preview":
+        if (args.length < 2) {
+          await message.reply(
+            "❌ Format: `/template preview <name>`\n\nContoh: `/template preview welcome_message`",
+          );
+          return;
+        }
+        await AdminHandler.handleTemplatePreview(
+          message,
+          userId,
+          userRole,
+          args[1],
+        );
+        break;
+
+      case "edit":
+        if (args.length < 3) {
+          await message.reply(
+            "❌ Format: `/template edit <name> <content>`\n\nContoh: `/template edit welcome_message Hello {{name}}`",
+          );
+          return;
+        }
+        await AdminHandler.handleTemplateEdit(
+          message,
+          userId,
+          userRole,
+          args[1],
+          args.slice(2).join(" "),
+        );
+        break;
+
+      default:
+        await message.reply(
+          `❌ Template sub-command tidak dikenal: \`${subCommand}\`\n\nGunakan: list, preview, atau edit`,
+        );
+    }
+  }
+
+  /**
+   * Handle /role command - Role management (Dev only)
+   */
+  private static async handleRoleCommand(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    args: string[],
+  ): Promise<void> {
+    const { AdminHandler } = await import("./admin");
+
+    if (args.length < 3) {
+      await message.reply(
+        "❌ Format: `/role grant <phone> <role>` atau `/role revoke <phone> <role>`\n\n" +
+          "Contoh:\n" +
+          "`/role grant +6281234567890 boss`\n" +
+          "`/role revoke +6281234567890 boss`",
+      );
+      return;
+    }
+
+    const subCommand = args[0].toLowerCase();
+    const phoneNumber = args[1];
+    const role = args[2] as UserRole;
+
+    switch (subCommand) {
+      case "grant":
+        await AdminHandler.handleRoleGrant(
+          message,
+          userId,
+          userRole,
+          phoneNumber,
+          role,
+        );
+        break;
+
+      case "revoke":
+        await AdminHandler.handleRoleRevoke(
+          message,
+          userId,
+          userRole,
+          phoneNumber,
+          role,
+        );
+        break;
+
+      default:
+        await message.reply(
+          `❌ Role sub-command tidak dikenal: \`${subCommand}\`\n\nGunakan: grant atau revoke`,
+        );
+    }
+  }
+
+  /**
+   * Handle /system command - System diagnostics (Dev only)
+   */
+  private static async handleSystemCommand(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    args: string[],
+  ): Promise<void> {
+    const { AdminHandler } = await import("./admin");
+
+    if (args.length === 0) {
+      await message.reply(
+        "❌ Format: `/system status` atau `/system logs [limit]`\n\n" +
+          "Contoh:\n" +
+          "`/system status`\n" +
+          "`/system logs 50`",
+      );
+      return;
+    }
+
+    const subCommand = args[0].toLowerCase();
+
+    switch (subCommand) {
+      case "status":
+        await AdminHandler.handleSystemStatus(message, userId, userRole);
+        break;
+
+      case "logs": {
+        const limit = args.length > 1 ? parseInt(args[1], 10) : 50;
+        await AdminHandler.handleSystemLogs(message, userId, userRole, limit);
+        break;
+      }
+
+      default:
+        await message.reply(
+          `❌ System sub-command tidak dikenal: \`${subCommand}\`\n\nGunakan: status atau logs`,
+        );
+    }
+  }
+
+  /**
+   * Handle /cache command - Cache management (Dev only)
+   */
+  private static async handleCacheCommand(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    args: string[],
+  ): Promise<void> {
+    const { AdminHandler } = await import("./admin");
+
+    if (args.length === 0 || args[0].toLowerCase() !== "clear") {
+      await message.reply(
+        "❌ Format: `/cache clear [pattern]`\n\n" +
+          "Contoh:\n" +
+          "`/cache clear` (clear all)\n" +
+          "`/cache clear user:*` (clear by pattern)",
+      );
+      return;
+    }
+
+    const pattern = args.length > 1 ? args[1] : undefined;
+    await AdminHandler.handleCacheClear(message, userId, userRole, pattern);
   }
 
   /**
@@ -1386,40 +1702,42 @@ export class CommandHandler {
 
       // T068: Performance monitoring for successful command execution
       // parsed is guaranteed to be non-null here due to early return check above
-      const responseTime = Date.now() - startTime;
-      const dataRetrievalCommands = [
-        COMMANDS.VIEW_REPORT_TODAY,
-        COMMANDS.VIEW_REPORT_WEEK,
-        COMMANDS.VIEW_REPORT_MONTH,
-        COMMANDS.VIEW_BALANCE,
-        COMMANDS.CHECK_BALANCE,
-      ] as string[];
-      const isDataRetrieval = dataRetrievalCommands.includes(
-        parsed!.recognizedIntent,
-      );
+      {
+        const responseTime = Date.now() - startTime;
+        const dataRetrievalCommands = [
+          COMMANDS.VIEW_REPORT_TODAY,
+          COMMANDS.VIEW_REPORT_WEEK,
+          COMMANDS.VIEW_REPORT_MONTH,
+          COMMANDS.VIEW_BALANCE,
+          COMMANDS.CHECK_BALANCE,
+        ] as string[];
+        const isDataRetrieval = dataRetrievalCommands.includes(
+          parsed!.recognizedIntent,
+        );
 
-      const targetTime = isDataRetrieval ? 5000 : 2000; // 5s for data retrieval, 2s for simple
+        const targetTime = isDataRetrieval ? 5000 : 2000; // 5s for data retrieval, 2s for simple
 
-      // T070: Structured logging with context (userId, command, result, latency)
-      logger.info("Command executed", {
-        userId,
-        command: parsed!.recognizedIntent,
-        rawText,
-        confidence: parsed!.confidence,
-        responseTime,
-        targetTime,
-        isDataRetrieval,
-        result: "success",
-      });
-
-      if (responseTime > targetTime) {
-        logger.warn("Command response time exceeds target", {
+        // T070: Structured logging with context (userId, command, result, latency)
+        logger.info("Command executed", {
           userId,
           command: parsed!.recognizedIntent,
+          rawText,
+          confidence: parsed!.confidence,
           responseTime,
           targetTime,
           isDataRetrieval,
+          result: "success",
         });
+
+        if (responseTime > targetTime) {
+          logger.warn("Command response time exceeds target", {
+            userId,
+            command: parsed!.recognizedIntent,
+            responseTime,
+            targetTime,
+            isDataRetrieval,
+          });
+        }
       }
 
       return true;

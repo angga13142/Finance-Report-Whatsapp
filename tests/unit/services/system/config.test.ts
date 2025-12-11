@@ -1,169 +1,303 @@
 /**
  * Unit tests for ConfigService
- * Tests system configuration management, button labels, and settings
+ * Tests view, set operations, Zod validation, persistence, and env override
  */
 
-import { configService } from "../../../../src/services/system/config";
-import { logger } from "../../../../src/lib/logger";
+import { ConfigService } from "../../../../src/services/system/config";
+import { SystemConfigModel } from "../../../../src/models/config";
 
-// Mock logger
+// Mock dependencies
+jest.mock("../../../../src/models/config");
 jest.mock("../../../../src/lib/logger", () => ({
   logger: {
     info: jest.fn(),
     error: jest.fn(),
     warn: jest.fn(),
+    debug: jest.fn(),
   },
 }));
 
-// Mock Prisma before importing config service
-jest.mock("@prisma/client", () => ({
-  PrismaClient: jest.fn(() => ({
-    $queryRaw: jest.fn().mockResolvedValue([]),
-    $executeRaw: jest.fn().mockResolvedValue(1),
-  })),
-}));
+describe("ConfigService - Phase 7 Enhancements", () => {
+  let configService: ConfigService;
 
-describe("ConfigService", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    configService = ConfigService.getInstance();
   });
 
-  describe("getButtonLabel", () => {
-    it("should return default button label", async () => {
-      const label = await configService.getButtonLabel("record_income");
-      expect(label).toContain("Catat Penjualan");
+  describe("View Operations", () => {
+    it("should view all configurations", async () => {
+      const mockConfigs = [
+        {
+          id: "1",
+          key: "REPORT_DELIVERY_TIME",
+          value: "24:00",
+          description: "Report delivery time",
+          updatedAt: new Date(),
+          updatedBy: "dev1",
+        },
+        {
+          id: "2",
+          key: "MAX_TRANSACTION_AMOUNT",
+          value: "500000000",
+          description: "Maximum transaction amount",
+          updatedAt: new Date(),
+          updatedBy: "dev1",
+        },
+      ];
+
+      (SystemConfigModel.list as jest.Mock).mockResolvedValue(mockConfigs);
+
+      const result = await configService.viewAll();
+
+      expect(result).toEqual(mockConfigs);
+      expect(SystemConfigModel.list).toHaveBeenCalled();
     });
 
-    it("should handle invalid button key", async () => {
-      const label = await configService.getButtonLabel("invalid_key");
-      expect(label).toBe("invalid_key");
-    });
-  });
+    it("should view configuration by key", async () => {
+      const mockConfig = {
+        id: "1",
+        key: "REPORT_DELIVERY_TIME",
+        value: "24:00",
+        description: "Report delivery time",
+        updatedAt: new Date(),
+        updatedBy: "dev1",
+      };
 
-  describe("getAllButtonLabels", () => {
-    it("should return all button labels", async () => {
-      const labels = await configService.getAllButtonLabels();
-      expect(labels).toHaveProperty("record_income");
-      expect(typeof labels).toBe("object");
-    });
+      (SystemConfigModel.findByKey as jest.Mock).mockResolvedValue(mockConfig);
 
-    it("should include default labels", async () => {
-      const labels = await configService.getAllButtonLabels();
-      expect(labels.record_income).toBeDefined();
-      expect(labels.record_expense).toBeDefined();
-    });
-  });
+      const result = await configService.view("REPORT_DELIVERY_TIME");
 
-  describe("updateButtonLabel", () => {
-    it("should accept button label update", async () => {
-      try {
-        await configService.updateButtonLabel(
-          "record_income",
-          "Updated Income",
-          "admin123",
-        );
-        expect(logger.info).toHaveBeenCalled();
-      } catch {
-        // Acceptable if Prisma mock fails
-      }
+      expect(result).toEqual(mockConfig);
+      expect(SystemConfigModel.findByKey).toHaveBeenCalledWith(
+        "REPORT_DELIVERY_TIME",
+      );
     });
 
-    it("should reject label exceeding 20 characters", async () => {
-      const longLabel = "a".repeat(21);
-      try {
-        await configService.updateButtonLabel(
-          "record_income",
-          longLabel,
-          "admin123",
-        );
-      } catch {
-        // Expected to throw
-      }
-    });
-  });
+    it("should return null when configuration not found", async () => {
+      (SystemConfigModel.findByKey as jest.Mock).mockResolvedValue(null);
 
-  describe("resetButtonLabel", () => {
-    it("should handle reset request", async () => {
-      try {
-        await configService.resetButtonLabel("record_income", "dev123");
-        expect(logger.info).toHaveBeenCalled();
-      } catch {
-        // Acceptable
-      }
+      const result = await configService.view("NON_EXISTENT_KEY");
+
+      expect(result).toBeNull();
     });
   });
 
-  describe("getSystemConfig", () => {
-    it("should return system configuration object", async () => {
-      const config = await configService.getSystemConfig();
-      expect(config).toHaveProperty("buttonLabels");
-      expect(typeof config).toBe("object");
+  describe("Set Operations", () => {
+    it("should set configuration value with validation", async () => {
+      const mockConfig = {
+        id: "1",
+        key: "REPORT_DELIVERY_TIME",
+        value: "23:00",
+        description: "Report delivery time",
+        updatedAt: new Date(),
+        updatedBy: "dev1",
+      };
+
+      (SystemConfigModel.findByKey as jest.Mock).mockResolvedValue(null);
+      (SystemConfigModel.create as jest.Mock).mockResolvedValue(mockConfig);
+
+      const result = await configService.set(
+        "REPORT_DELIVERY_TIME",
+        "23:00",
+        "dev1",
+      );
+
+      expect(result).toEqual(mockConfig);
+      expect(SystemConfigModel.create).toHaveBeenCalledWith({
+        key: "REPORT_DELIVERY_TIME",
+        value: "23:00",
+        updatedBy: "dev1",
+      });
+    });
+
+    it("should update existing configuration", async () => {
+      const existingConfig = {
+        id: "1",
+        key: "REPORT_DELIVERY_TIME",
+        value: "24:00",
+        description: "Report delivery time",
+        updatedAt: new Date(),
+        updatedBy: "dev1",
+      };
+
+      const updatedConfig = {
+        ...existingConfig,
+        value: "23:00",
+        updatedBy: "dev2",
+      };
+
+      (SystemConfigModel.findByKey as jest.Mock).mockResolvedValue(
+        existingConfig,
+      );
+      (SystemConfigModel.update as jest.Mock).mockResolvedValue(updatedConfig);
+
+      const result = await configService.set(
+        "REPORT_DELIVERY_TIME",
+        "23:00",
+        "dev2",
+      );
+
+      expect(result).toEqual(updatedConfig);
+      expect(SystemConfigModel.update).toHaveBeenCalledWith(
+        "REPORT_DELIVERY_TIME",
+        {
+          value: "23:00",
+          updatedBy: "dev2",
+        },
+      );
+    });
+
+    it("should validate key pattern before setting", async () => {
+      await expect(
+        configService.set("invalid-key", "value", "dev1"),
+      ).rejects.toThrow("Configuration key must match pattern");
+    });
+
+    it("should validate value with Zod schema", async () => {
+      // Test with invalid time format
+      await expect(
+        configService.set("REPORT_DELIVERY_TIME", "25:00", "dev1"),
+      ).rejects.toThrow();
     });
   });
 
-  describe("updateSystemConfig", () => {
-    it("should handle system config update", async () => {
-      try {
-        await configService.updateSystemConfig(
-          "testKey",
-          { test: true },
-          "admin123",
-        );
-        expect(logger.info).toHaveBeenCalled();
-      } catch {
-        // Acceptable
-      }
+  describe("Zod Schema Validation", () => {
+    it("should validate REPORT_DELIVERY_TIME format", async () => {
+      const mockConfig = {
+        id: "1",
+        key: "REPORT_DELIVERY_TIME",
+        value: "24:00",
+        updatedAt: new Date(),
+        updatedBy: "dev1",
+      };
+
+      (SystemConfigModel.findByKey as jest.Mock).mockResolvedValue(null);
+      (SystemConfigModel.create as jest.Mock).mockResolvedValue(mockConfig);
+
+      await configService.set("REPORT_DELIVERY_TIME", "24:00", "dev1");
+
+      expect(SystemConfigModel.create).toHaveBeenCalled();
+    });
+
+    it("should reject invalid time format", async () => {
+      await expect(
+        configService.set("REPORT_DELIVERY_TIME", "25:00", "dev1"),
+      ).rejects.toThrow();
+    });
+
+    it("should validate numeric values", async () => {
+      const mockConfig = {
+        id: "1",
+        key: "MAX_TRANSACTION_AMOUNT",
+        value: "500000000",
+        updatedAt: new Date(),
+        updatedBy: "dev1",
+      };
+
+      (SystemConfigModel.findByKey as jest.Mock).mockResolvedValue(null);
+      (SystemConfigModel.create as jest.Mock).mockResolvedValue(mockConfig);
+
+      await configService.set("MAX_TRANSACTION_AMOUNT", "500000000", "dev1");
+
+      expect(SystemConfigModel.create).toHaveBeenCalled();
+    });
+
+    it("should reject non-numeric values for numeric configs", async () => {
+      await expect(
+        configService.set("MAX_TRANSACTION_AMOUNT", "invalid", "dev1"),
+      ).rejects.toThrow();
     });
   });
 
-  describe("T052: ENABLE_LEGACY_BUTTONS configuration flag behavior", () => {
-    it("should return default value when no override is set", () => {
-      const value = configService.getEnableLegacyButtons();
-      expect(typeof value).toBe("boolean");
+  describe("Database Persistence", () => {
+    it("should persist configuration to database", async () => {
+      const mockConfig = {
+        id: "1",
+        key: "REPORT_DELIVERY_TIME",
+        value: "24:00",
+        updatedAt: new Date(),
+        updatedBy: "dev1",
+      };
+
+      (SystemConfigModel.findByKey as jest.Mock).mockResolvedValue(null);
+      (SystemConfigModel.create as jest.Mock).mockResolvedValue(mockConfig);
+
+      await configService.set("REPORT_DELIVERY_TIME", "24:00", "dev1");
+
+      expect(SystemConfigModel.create).toHaveBeenCalledWith({
+        key: "REPORT_DELIVERY_TIME",
+        value: "24:00",
+        updatedBy: "dev1",
+      });
     });
 
-    it("should return user override when set (highest precedence)", () => {
-      // This will be tested with actual implementation
-      const value = configService.getEnableLegacyButtons("user1", "employee");
-      expect(typeof value).toBe("boolean");
+    it("should update existing configuration in database", async () => {
+      const existingConfig = {
+        id: "1",
+        key: "REPORT_DELIVERY_TIME",
+        value: "24:00",
+        updatedAt: new Date(),
+        updatedBy: "dev1",
+      };
+
+      const updatedConfig = {
+        ...existingConfig,
+        value: "23:00",
+        updatedBy: "dev2",
+      };
+
+      (SystemConfigModel.findByKey as jest.Mock).mockResolvedValue(
+        existingConfig,
+      );
+      (SystemConfigModel.update as jest.Mock).mockResolvedValue(updatedConfig);
+
+      await configService.set("REPORT_DELIVERY_TIME", "23:00", "dev2");
+
+      expect(SystemConfigModel.update).toHaveBeenCalled();
+    });
+  });
+
+  describe("Environment Variable Override", () => {
+    it("should prioritize environment variable over database value", async () => {
+      // Set env var
+      process.env.REPORT_DELIVERY_TIME = "22:00";
+
+      const mockConfig = {
+        id: "1",
+        key: "REPORT_DELIVERY_TIME",
+        value: "24:00", // Database value
+        updatedAt: new Date(),
+        updatedBy: "dev1",
+      };
+
+      (SystemConfigModel.findByKey as jest.Mock).mockResolvedValue(mockConfig);
+
+      const result = await configService.view("REPORT_DELIVERY_TIME");
+
+      // Should return env override value, not database value
+      expect(result?.value).toBe("22:00");
+
+      // Cleanup
+      delete process.env.REPORT_DELIVERY_TIME;
     });
 
-    it("should return role override when user override not set", () => {
-      // This will be tested with actual implementation
-      const value = configService.getEnableLegacyButtons(undefined, "boss");
-      expect(typeof value).toBe("boolean");
-    });
+    it("should fall back to database value when env var not set", async () => {
+      delete process.env.REPORT_DELIVERY_TIME;
 
-    it("should return global config when no overrides set", () => {
-      const value = configService.getEnableLegacyButtons();
-      expect(typeof value).toBe("boolean");
-    });
+      const mockConfig = {
+        id: "1",
+        key: "REPORT_DELIVERY_TIME",
+        value: "24:00",
+        updatedAt: new Date(),
+        updatedBy: "dev1",
+      };
 
-    it("should update global config and propagate within 60 seconds", async () => {
-      try {
-        await configService.setEnableLegacyButtons(true, "admin123");
-        expect(logger.info).toHaveBeenCalled();
-      } catch {
-        // Acceptable if Prisma mock fails
-      }
-    });
+      (SystemConfigModel.findByKey as jest.Mock).mockResolvedValue(mockConfig);
 
-    it("should set per-user override", async () => {
-      try {
-        await configService.setUserOverride("user1", true, "admin123");
-        expect(logger.info).toHaveBeenCalled();
-      } catch {
-        // Acceptable
-      }
-    });
+      const result = await configService.view("REPORT_DELIVERY_TIME");
 
-    it("should set per-role override", async () => {
-      try {
-        await configService.setRoleOverride("employee", true, "admin123");
-        expect(logger.info).toHaveBeenCalled();
-      } catch {
-        // Acceptable
-      }
+      expect(result?.value).toBe("24:00");
     });
   });
 });

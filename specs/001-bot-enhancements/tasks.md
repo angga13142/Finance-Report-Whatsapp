@@ -176,32 +176,32 @@ description: "Task list for WhatsApp Cashflow Bot Enhancements implementation"
 
 ### Tests for User Story 5
 
-- [ ] T061 [P] [US5] Unit test for ConfigService (view, set, validation, persistence) in tests/unit/services/system/config.test.ts
-- [ ] T062 [P] [US5] Unit test for DiagnosticsService (database, Redis, WhatsApp status) in tests/unit/services/system/diagnostics.test.ts
-- [ ] T063 [P] [US5] Unit test for template validation (syntax, placeholders, escape sequences) in tests/unit/services/system/template.test.ts
-- [ ] T064 [P] [US5] Unit test for cache clear operations (pattern matching, Redis SCAN) in tests/unit/services/system/cache.test.ts
-- [ ] T065 [P] [US5] Integration test for admin commands via WhatsApp in tests/integration/bot/handlers/admin.test.ts
-- [ ] T066 [P] [US5] E2E test for admin workflow in tests/e2e/workflows/admin-commands.spec.ts
+- [x] T061 [P] [US5] Unit test for ConfigService (view, set, validation, persistence) in tests/unit/services/system/config.test.ts
+- [x] T062 [P] [US5] Unit test for DiagnosticsService (database, Redis, WhatsApp status) in tests/unit/services/system/diagnostics.test.ts
+- [x] T063 [P] [US5] Unit test for template validation (syntax, placeholders, escape sequences) in tests/unit/services/system/template.test.ts
+- [x] T064 [P] [US5] Unit test for cache clear operations (pattern matching, Redis SCAN) in tests/unit/services/system/cache.test.ts
+- [x] T065 [P] [US5] Integration test for admin commands via WhatsApp in tests/integration/bot/handlers/admin.test.ts
+- [x] T066 [P] [US5] E2E test for admin workflow in tests/e2e/workflows/admin-commands.spec.ts
 
 ### Implementation for User Story 5
 
-- [ ] T067 [US5] Enhance ConfigService with view, set operations, Zod schema validation, and database persistence with env override in src/services/system/config.ts
-- [ ] T068 [US5] Create DiagnosticsService with database, Redis, and WhatsApp client health checks (timeouts: 2s DB, 1s Redis) in src/services/system/diagnostics.ts
-- [ ] T069 [US5] Create TemplateService with list, preview, edit operations and syntax validation in src/services/system/template.ts
-- [ ] T070 [US5] Create CacheService with clear operation and pattern matching (Redis SCAN) in src/services/system/cache.ts
-- [ ] T071 [US5] Add role grant/revoke service with immediate session permission updates in src/services/user/rbac.ts or new file
-- [ ] T072 [US5] Add RBAC checks (dev-only) for all admin commands in src/bot/middleware/auth.ts
-- [ ] T073 [US5] Add audit logging for all admin operations (config.set, template.edit, role.grant, cache.clear, system.status) in admin handler
-- [ ] T074 [US5] Enhance admin handler with template commands (/template list, /template preview, /template edit) in src/bot/handlers/admin.ts
-- [ ] T075 [US5] Add role management commands (/role grant, /role revoke) in src/bot/handlers/admin.ts
-- [ ] T076 [US5] Add system diagnostics commands (/system status, /system logs) in src/bot/handlers/admin.ts
-- [ ] T077 [US5] Add configuration commands (/config view, /config set) in src/bot/handlers/admin.ts
-- [ ] T078 [US5] Add cache commands (/cache clear [pattern]) in src/bot/handlers/admin.ts
-- [ ] T079 [US5] Add command registration in message router/command parser in src/bot/handlers/command.parser.ts or appropriate file
-- [ ] T080 [US5] Add formatted response messages for admin commands in src/bot/handlers/admin.ts
-- [ ] T081 [US5] Add error handling and clear error messages for admin commands in src/bot/handlers/admin.ts
-- [ ] T082 [US5] Add configuration rollback mechanism for invalid changes in src/services/system/config.ts
-- [ ] T083 [US5] Add template edit conflict handling (optimistic locking, last-write-wins) in src/services/system/template.ts
+- [x] T067 [US5] Enhance ConfigService with view, set operations, Zod schema validation, and database persistence with env override in src/services/system/config.ts
+- [x] T068 [US5] Create DiagnosticsService with database, Redis, and WhatsApp client health checks (timeouts: 2s DB, 1s Redis) in src/services/system/diagnostics.ts
+- [x] T069 [US5] Create TemplateService with list, preview, edit operations and syntax validation in src/services/system/template.ts
+- [x] T070 [US5] Create CacheService with clear operation and pattern matching (Redis SCAN) in src/services/system/cache.ts
+- [x] T071 [US5] Add role grant/revoke service with immediate session permission updates in src/services/user/rbac.ts or new file
+- [x] T072 [US5] Add RBAC checks (dev-only) for all admin commands in src/bot/middleware/auth.ts
+- [x] T073 [US5] Add audit logging for all admin operations (config.set, template.edit, role.grant, cache.clear, system.status) in admin handler
+- [x] T074 [US5] Enhance admin handler with template commands (/template list, /template preview, /template edit) in src/bot/handlers/admin.ts
+- [x] T075 [US5] Add role management commands (/role grant, /role revoke) in src/bot/handlers/admin.ts
+- [x] T076 [US5] Add system diagnostics commands (/system status, /system logs) in src/bot/handlers/admin.ts
+- [x] T077 [US5] Add configuration commands (/config view, /config set) in src/bot/handlers/admin.ts
+- [x] T078 [US5] Add cache commands (/cache clear [pattern]) in src/bot/handlers/admin.ts
+- [x] T079 [US5] Add command registration in message router/command parser in src/bot/handlers/command.parser.ts or appropriate file
+- [x] T080 [US5] Add formatted response messages for admin commands in src/bot/handlers/admin.ts
+- [x] T081 [US5] Add error handling and clear error messages for admin commands in src/bot/handlers/admin.ts
+- [x] T082 [US5] Add configuration rollback mechanism for invalid changes in src/services/system/config.ts
+- [x] T083 [US5] Add template edit conflict handling (optimistic locking, last-write-wins) in src/services/system/template.ts
 
 **Checkpoint**: All user stories should now be independently functional
 

@@ -81,6 +81,19 @@ export const COMMANDS = {
   // Help commands
   HELP: "bantu",
   MENU: "menu",
+
+  // Admin commands (Dev only)
+  ADMIN_MENU: "admin",
+  CONFIG_VIEW: "config_view",
+  CONFIG_SET: "config_set",
+  TEMPLATE_LIST: "template_list",
+  TEMPLATE_PREVIEW: "template_preview",
+  TEMPLATE_EDIT: "template_edit",
+  ROLE_GRANT: "role_grant",
+  ROLE_REVOKE: "role_revoke",
+  SYSTEM_STATUS: "system_status",
+  SYSTEM_LOGS: "system_logs",
+  CACHE_CLEAR: "cache_clear",
 } as const;
 
 export type CommandName = (typeof COMMANDS)[keyof typeof COMMANDS];
