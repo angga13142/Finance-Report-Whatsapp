@@ -32,6 +32,6 @@ module.exports = {
   ],
   // JSON, Markdown, and other files
   "*.{json,md,yml,yaml}": ["prettier --write"],
-  // Prisma schema - use prisma format instead of prettier
-  "prisma/**/*.prisma": ["prisma format"],
+  // Prisma schema - use prettier with prettier-plugin-prisma
+  "prisma/**/*.prisma": ["prettier --write"],
 };
