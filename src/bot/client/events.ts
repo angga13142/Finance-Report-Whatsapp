@@ -1,5 +1,6 @@
 import { Client, Message } from "whatsapp-web.js";
 import { logger } from "../../lib/logger";
+import { whatsappLogger } from "../../lib/whatsapp-logger";
 import { getWhatsAppClient } from "./client";
 
 /**
@@ -8,15 +9,25 @@ import { getWhatsAppClient } from "./client";
 export function setupEventHandlers(client: Client): void {
   // Ready event - client is ready to use
   client.on("ready", () => {
+    const correlationId = whatsappLogger.logEvent("ready", {
+      wid: client.info?.wid?.user || "unknown",
+      platform: client.info?.platform || "unknown",
+    });
     logger.info("WhatsApp client is ready", {
-      wid: client.info?.wid.user,
+      correlationId,
+      wid: client.info?.wid?.user,
       platform: client.info?.platform,
     });
   });
 
   // QR code event - display QR code for authentication
   client.on("qr", (qr) => {
-    logger.info("QR code received, scan with WhatsApp mobile app");
+    const correlationId = whatsappLogger.logEvent("qr", {
+      qrLength: qr.length,
+    });
+    logger.info("QR code received, scan with WhatsApp mobile app", {
+      correlationId,
+    });
     console.log("\n=== WhatsApp QR Code ===");
     console.log("Scan this QR code with your WhatsApp mobile app:");
     console.log(qr);
@@ -25,17 +36,37 @@ export function setupEventHandlers(client: Client): void {
 
   // Authenticated event
   client.on("authenticated", () => {
-    logger.info("WhatsApp client authenticated");
+    const wid = client.info?.wid?.user || "unknown";
+    const correlationId = whatsappLogger.logEvent("authenticated", {
+      wid,
+      platform: client.info?.platform || "unknown",
+    });
+    logger.info("WhatsApp client authenticated", {
+      correlationId,
+      wid,
+    });
   });
 
   // Authentication failure event
   client.on("auth_failure", (msg) => {
-    logger.error("WhatsApp authentication failed", { error: msg });
+    const correlationId = whatsappLogger.logEvent("auth_failure", {
+      error: String(msg),
+    });
+    logger.error("WhatsApp authentication failed", {
+      correlationId,
+      error: msg,
+    });
   });
 
   // Disconnect event with reconnection logic
   client.on("disconnected", (reason) => {
-    logger.warn("WhatsApp client disconnected", { reason });
+    const correlationId = whatsappLogger.logEvent("disconnected", {
+      reason: String(reason),
+    });
+    logger.warn("WhatsApp client disconnected", {
+      correlationId,
+      reason,
+    });
     void handleDisconnection(client, reason);
   });
 
@@ -43,7 +74,18 @@ export function setupEventHandlers(client: Client): void {
   client.on("message", (message: Message) => {
     void (async () => {
       try {
+        const messageId = message.id._serialized;
+        const correlationId = whatsappLogger.logEvent("message_received", {
+          messageId,
+          from: message.from,
+          body: message.body || "",
+          hasMedia: message.hasMedia,
+          type: message.type,
+        });
+
         logger.debug("Message received", {
+          correlationId,
+          messageId,
           from: message.from,
           body: message.body?.substring(0, 100) || "", // Log first 100 chars
           hasMedia: message.hasMedia,
@@ -56,10 +98,16 @@ export function setupEventHandlers(client: Client): void {
       } catch (error) {
         const errorObj =
           error instanceof Error ? error : new Error(String(error));
+        const messageId = message.id._serialized;
+        whatsappLogger.logEvent("error", {
+          messageId,
+          error: errorObj.message,
+          stack: errorObj.stack,
+        });
         logger.error("Error handling message", {
           error: errorObj.message,
           stack: errorObj.stack,
-          messageId: message.id._serialized,
+          messageId,
         });
       }
     })();
@@ -69,7 +117,15 @@ export function setupEventHandlers(client: Client): void {
   client.on("message_create", (message: Message) => {
     // Only log if message is from us
     if (message.fromMe) {
+      const messageId = message.id?._serialized || "unknown";
+      const correlationId = whatsappLogger.logEvent("message_sent", {
+        messageId,
+        to: message.to || "unknown",
+        body: message.body || "",
+      });
       logger.debug("Message sent", {
+        correlationId,
+        messageId,
         to: message.to,
         body: message.body?.substring(0, 100),
       });
@@ -79,7 +135,12 @@ export function setupEventHandlers(client: Client): void {
   // Error event
   client.on("error", (error: unknown) => {
     const errorObj = error instanceof Error ? error : new Error(String(error));
+    const correlationId = whatsappLogger.logEvent("error", {
+      error: errorObj.message,
+      stack: errorObj.stack,
+    });
     logger.error("WhatsApp client error", {
+      correlationId,
       error: errorObj.message,
       stack: errorObj.stack,
     });
@@ -87,7 +148,15 @@ export function setupEventHandlers(client: Client): void {
 
   // Loading screen event
   client.on("loading_screen", (percent, message) => {
-    logger.debug("WhatsApp loading screen", { percent, message });
+    const correlationId = whatsappLogger.logEvent("loading_screen", {
+      percent,
+      message: String(message),
+    });
+    logger.debug("WhatsApp loading screen", {
+      correlationId,
+      percent,
+      message,
+    });
   });
 
   logger.info("WhatsApp event handlers registered");
@@ -208,7 +277,12 @@ function handleDisconnection(client: Client, reason: string): void {
  * Attempt to reconnect to WhatsApp
  */
 async function attemptReconnection(client: Client): Promise<void> {
+  const correlationId = whatsappLogger.logEvent("disconnected", {
+    reason: "reconnection_attempt",
+    attempt: sessionState.reconnectAttempts,
+  });
   logger.info("Attempting WhatsApp reconnection", {
+    correlationId,
     attempt: sessionState.reconnectAttempts,
   });
 
@@ -217,7 +291,9 @@ async function attemptReconnection(client: Client): Promise<void> {
     const state = await client.getState();
 
     if (state && String(state) === "CONNECTED") {
-      logger.info("WhatsApp already connected, reset reconnection state");
+      logger.info("WhatsApp already connected, reset reconnection state", {
+        correlationId,
+      });
       resetReconnectionState();
       return;
     }
@@ -225,14 +301,26 @@ async function attemptReconnection(client: Client): Promise<void> {
     // Try to initialize the client
     await client.initialize();
 
+    whatsappLogger.logEvent("authenticated", {
+      correlationId,
+      reason: "reconnection_success",
+    });
     logger.info("WhatsApp reconnection successful", {
+      correlationId,
       attempts: sessionState.reconnectAttempts,
     });
 
     // Reset reconnection state on success
     resetReconnectionState();
   } catch (error) {
+    const errorObj = error instanceof Error ? error : new Error(String(error));
+    whatsappLogger.logEvent("error", {
+      correlationId,
+      error: errorObj.message,
+      reason: "reconnection_failed",
+    });
     logger.error("Reconnection attempt failed", {
+      correlationId,
       attempt: sessionState.reconnectAttempts,
       error,
     });

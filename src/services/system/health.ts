@@ -120,14 +120,20 @@ export class HealthMonitoringService {
   }
 
   /**
-   * Check database health
+   * Check database health with timeout (2s per FR-025)
    */
   private static async checkDatabaseHealth(): Promise<ComponentHealth> {
     const startTime = Date.now();
+    const timeout = 2000; // 2 seconds per FR-025
 
     try {
-      // Test database connection with a simple query
-      await prisma.$queryRaw`SELECT 1 as health_check`;
+      // Test database connection with timeout
+      const healthCheckPromise = prisma.$queryRaw`SELECT 1 as health_check`;
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Database timeout")), timeout),
+      );
+
+      await Promise.race([healthCheckPromise, timeoutPromise]);
 
       const responseTime = Date.now() - startTime;
 
@@ -145,26 +151,46 @@ export class HealthMonitoringService {
         responseTime,
       };
     } catch (error) {
+      const responseTime = Date.now() - startTime;
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+
+      // Mask sensitive error details per FR-025
+      const maskedError =
+        errorMessage.includes("password") || errorMessage.includes("connection")
+          ? "Database connection failed"
+          : errorMessage;
+
       return {
         status: "unhealthy",
-        message: `Database connection failed: ${error instanceof Error ? error.message : "Unknown error"}`,
-        responseTime: Date.now() - startTime,
+        message: `Database connection failed: ${maskedError}`,
+        responseTime,
       };
     }
   }
 
   /**
-   * Check Redis health
+   * Check Redis health with timeout (1s per FR-025)
    */
   private static async checkRedisHealth(): Promise<ComponentHealth> {
     const startTime = Date.now();
+    const timeout = 1000; // 1 second per FR-025
 
     try {
-      // Test Redis connection with PING
+      // Test Redis connection with timeout
       const testKey = `health:check:${Date.now()}`;
-      await redis.set(testKey, "ok", 10);
-      const result = await redis.get(testKey);
-      await redis.del(testKey);
+      const healthCheckPromise = (async () => {
+        await redis.set(testKey, "ok", 10);
+        const result = await redis.get(testKey);
+        await redis.del(testKey);
+        return result;
+      })();
+
+      const timeoutPromise = new Promise<string>((_, reject) =>
+        setTimeout(() => reject(new Error("Redis timeout")), timeout),
+      );
+
+      const result = await Promise.race([healthCheckPromise, timeoutPromise]);
 
       const responseTime = Date.now() - startTime;
 
@@ -190,10 +216,20 @@ export class HealthMonitoringService {
         responseTime,
       };
     } catch (error) {
+      const responseTime = Date.now() - startTime;
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+
+      // Mask sensitive error details per FR-025
+      const maskedError =
+        errorMessage.includes("password") || errorMessage.includes("connection")
+          ? "Redis connection failed"
+          : errorMessage;
+
       return {
         status: "unhealthy",
-        message: `Redis connection failed: ${error instanceof Error ? error.message : "Unknown error"}`,
-        responseTime: Date.now() - startTime,
+        message: `Redis connection failed: ${maskedError}`,
+        responseTime,
       };
     }
   }

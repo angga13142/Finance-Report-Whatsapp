@@ -3,8 +3,9 @@ import { env } from "../config/env";
 
 /**
  * Sensitive data patterns for masking
+ * Exported for use in WhatsApp event logger
  */
-const SENSITIVE_PATTERNS = {
+export const SENSITIVE_PATTERNS = {
   // Phone numbers: +62XXXXXXXXXX or 0XXXXXXXXXX
   phoneNumber: /(\+62|0)\d{8,12}/g,
   // Amounts in Rupiah (e.g., "Rp 500000" or "500000")

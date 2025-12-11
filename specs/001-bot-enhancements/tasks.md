@@ -65,18 +65,18 @@ description: "Task list for WhatsApp Cashflow Bot Enhancements implementation"
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T014 [P] [US1] Integration test for Docker session persistence in tests/integration/docker/session-persistence.test.ts
-- [ ] T015 [P] [US1] Integration test for health check endpoint in tests/integration/api/health.test.ts
+- [x] T014 [P] [US1] Integration test for Docker session persistence in tests/integration/docker/session-persistence.test.ts
+- [x] T015 [P] [US1] Integration test for health check endpoint in tests/integration/api/health.test.ts
 
 ### Implementation for User Story 1
 
-- [ ] T016 [US1] Enhance LocalAuth configuration to use Docker volume path with proper permissions in src/bot/client/auth.ts
-- [ ] T017 [US1] Enhance WhatsApp client initialization to handle session restoration on container startup with retry logic (3 attempts with 5-second delays between attempts) in src/bot/client/client.ts. If all restoration attempts fail, trigger QR code authentication flow
-- [ ] T018 [US1] Add session corruption detection and recovery logic (delete corrupted files, trigger QR auth) in src/bot/client/auth.ts
-- [ ] T019 [US1] Create or enhance health check endpoint (GET /health) with WhatsApp client status in src/services/system/health.ts
-- [ ] T020 [US1] Add Express route for health check endpoint in src/index.ts or appropriate route file
-- [ ] T021 [US1] Add Docker volume permission handling (chmod/chown) on container startup if volume permissions are incorrect (UID/GID mismatch or insufficient read/write permissions detected). Check permissions on startup, attempt automatic fix (chmod 755, chown 1000:1000), and if fix fails, log error and fall back to QR code authentication
-- [ ] T022 [US1] Add logging for session restoration events (success/failure) in src/bot/client/client.ts
+- [x] T016 [US1] Enhance LocalAuth configuration to use Docker volume path with proper permissions in src/bot/client/auth.ts
+- [x] T017 [US1] Enhance WhatsApp client initialization to handle session restoration on container startup with retry logic (3 attempts with 5-second delays between attempts) in src/bot/client/client.ts. If all restoration attempts fail, trigger QR code authentication flow
+- [x] T018 [US1] Add session corruption detection and recovery logic (delete corrupted files, trigger QR auth) in src/bot/client/auth.ts
+- [x] T019 [US1] Create or enhance health check endpoint (GET /health) with WhatsApp client status in src/services/system/health.ts
+- [x] T020 [US1] Add Express route for health check endpoint in src/index.ts or appropriate route file
+- [x] T021 [US1] Add Docker volume permission handling (chmod/chown) on container startup if volume permissions are incorrect (UID/GID mismatch or insufficient read/write permissions detected). Check permissions on startup, attempt automatic fix (chmod 755, chown 1000:1000), and if fix fails, log error and fall back to QR code authentication
+- [x] T022 [US1] Add logging for session restoration events (success/failure) in src/bot/client/client.ts
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
@@ -90,20 +90,20 @@ description: "Task list for WhatsApp Cashflow Bot Enhancements implementation"
 
 ### Tests for User Story 2
 
-- [ ] T023 [P] [US2] Unit test for WhatsApp event logger with correlation ID generation in tests/unit/lib/whatsapp-logger.test.ts
-- [ ] T024 [P] [US2] Unit test for sensitive data masking in WhatsApp logs in tests/unit/lib/whatsapp-logger.test.ts
-- [ ] T025 [P] [US2] Integration test for WhatsApp event logging (QR, auth, disconnect, message events) in tests/integration/bot/client/events-logging.test.ts
+- [x] T023 [P] [US2] Unit test for WhatsApp event logger with correlation ID generation in tests/unit/lib/whatsapp-logger.test.ts
+- [x] T024 [P] [US2] Unit test for sensitive data masking in WhatsApp logs in tests/unit/lib/whatsapp-logger.test.ts
+- [x] T025 [P] [US2] Integration test for WhatsApp event logging (QR, auth, disconnect, message events) in tests/integration/bot/client/events-logging.test.ts
 
 ### Implementation for User Story 2
 
-- [ ] T026 [US2] Create WhatsApp event logger wrapper around Winston with structured JSON format in src/lib/whatsapp-logger.ts
-- [ ] T027 [US2] Enhance WhatsApp client event handlers to use new logger with correlation IDs in src/bot/client/events.ts
-- [ ] T028 [US2] Add correlation ID generation per message flow (UUID v4) and persistence across related log entries in src/lib/whatsapp-logger.ts
-- [ ] T029 [US2] Enhance sensitive data masking for WhatsApp events (phone numbers, message content) using existing SENSITIVE_PATTERNS in src/lib/whatsapp-logger.ts
-- [ ] T030 [US2] Add log level assignment (ERROR for failures, WARN for reconnections, INFO for success, DEBUG for raw events) in src/lib/whatsapp-logger.ts
-- [ ] T031 [US2] Add log file rotation configuration (5MB size limit, 5 rotated files) in src/lib/logger.ts
-- [ ] T032 [US2] Add async log write queue for high-volume message processing with retry mechanism (3 retries, exponential backoff) in src/lib/whatsapp-logger.ts
-- [ ] T033 [US2] Add logging for all WhatsApp events: QR generation, authentication success/failure, disconnection, message receive, message send, message send failure in src/bot/client/events.ts
+- [x] T026 [US2] Create WhatsApp event logger wrapper around Winston with structured JSON format in src/lib/whatsapp-logger.ts
+- [x] T027 [US2] Enhance WhatsApp client event handlers to use new logger with correlation IDs in src/bot/client/events.ts
+- [x] T028 [US2] Add correlation ID generation per message flow (UUID v4) and persistence across related log entries in src/lib/whatsapp-logger.ts
+- [x] T029 [US2] Enhance sensitive data masking for WhatsApp events (phone numbers, message content) using existing SENSITIVE_PATTERNS in src/lib/whatsapp-logger.ts
+- [x] T030 [US2] Add log level assignment (ERROR for failures, WARN for reconnections, INFO for success, DEBUG for raw events) in src/lib/whatsapp-logger.ts
+- [x] T031 [US2] Add log file rotation configuration (5MB size limit, 5 rotated files) in src/lib/logger.ts
+- [x] T032 [US2] Add async log write queue for high-volume message processing with retry mechanism (3 retries, exponential backoff) in src/lib/whatsapp-logger.ts
+- [x] T033 [US2] Add logging for all WhatsApp events: QR generation, authentication success/failure, disconnection, message receive, message send, message send failure in src/bot/client/events.ts
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 

@@ -81,6 +81,7 @@ describe("ReportModel", () => {
           },
         ],
         generatedAt: new Date(),
+        archivedAt: null,
       };
 
       mockPrismaInstance.report.create.mockResolvedValue(mockReport);
@@ -137,6 +138,7 @@ describe("ReportModel", () => {
         netCashflow: new Decimal(0),
         deliveryStatus: null,
         generatedAt: new Date(),
+        archivedAt: null,
       };
 
       mockPrismaInstance.report.create.mockResolvedValue(mockReport);
@@ -166,6 +168,7 @@ describe("ReportModel", () => {
         netCashflow: new Decimal(500000),
         deliveryStatus: null,
         generatedAt: new Date(),
+        archivedAt: null,
       };
 
       mockPrismaInstance.report.findUnique.mockResolvedValue(mockReport);
@@ -203,6 +206,7 @@ describe("ReportModel", () => {
           netCashflow: new Decimal(500000),
           deliveryStatus: null,
           generatedAt: new Date(),
+          archivedAt: null,
         },
       ];
 
@@ -236,6 +240,7 @@ describe("ReportModel", () => {
         netCashflow: new Decimal(500000),
         deliveryStatus: null,
         generatedAt: new Date(),
+        archivedAt: null,
       };
 
       mockPrismaInstance.report.findFirst.mockResolvedValue(mockReport);
@@ -283,6 +288,7 @@ describe("ReportModel", () => {
         netCashflow: new Decimal(500000),
         deliveryStatus: deliveryStatus as never,
         generatedAt: new Date(),
+        archivedAt: null,
       };
 
       mockPrismaInstance.report.update.mockResolvedValue(mockReport);
@@ -325,6 +331,7 @@ describe("ReportModel", () => {
         netCashflow: new Decimal(500000),
         deliveryStatus: deliveryStatus as never,
         generatedAt: new Date(),
+        archivedAt: null,
       };
 
       const result = ReportModel.getDeliveryStatus(mockReport);
@@ -344,6 +351,7 @@ describe("ReportModel", () => {
         netCashflow: new Decimal(500000),
         deliveryStatus: null,
         generatedAt: new Date(),
+        archivedAt: null,
       };
 
       const result = ReportModel.getDeliveryStatus(mockReport);
@@ -363,6 +371,7 @@ describe("ReportModel", () => {
         netCashflow: new Decimal(500000),
         deliveryStatus: { invalid: "format" } as never,
         generatedAt: new Date(),
+        archivedAt: null,
       };
 
       const result = ReportModel.getDeliveryStatus(mockReport);
@@ -392,6 +401,7 @@ describe("ReportModel", () => {
             },
           ] as never,
           generatedAt: new Date(),
+          archivedAt: null,
         },
       ];
 
@@ -422,6 +432,7 @@ describe("ReportModel", () => {
             },
           ] as never,
           generatedAt: new Date(),
+          archivedAt: null,
         },
       ];
 
@@ -452,6 +463,7 @@ describe("ReportModel", () => {
             },
           ] as never,
           generatedAt: new Date(),
+          archivedAt: null,
         },
       ];
 
@@ -504,6 +516,7 @@ describe("ReportModel", () => {
             },
           ] as never,
           generatedAt: new Date("2024-01-15T10:00:00Z"),
+          archivedAt: null,
         },
         {
           id: "report2",
@@ -522,7 +535,8 @@ describe("ReportModel", () => {
               retryCount: 1,
             },
           ] as never,
-          generatedAt: new Date("2024-01-16T10:00:00Z"),
+          generatedAt: new Date("2024-01-15T10:00:00Z"),
+          archivedAt: null,
         },
       ];
 
@@ -553,6 +567,7 @@ describe("ReportModel", () => {
           netCashflow: new Decimal(500000),
           deliveryStatus: null,
           generatedAt: new Date(),
+          archivedAt: null,
         },
       ];
 
@@ -594,6 +609,7 @@ describe("ReportModel", () => {
             },
           ] as never,
           generatedAt: generatedTime,
+          archivedAt: null,
         },
       ];
 

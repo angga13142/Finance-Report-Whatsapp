@@ -4,7 +4,10 @@ import { randomUUID } from "crypto";
  * Correlation ID storage for active message flows
  * Maps message ID to correlation ID for distributed tracing
  */
-const correlationStore = new Map<string, { correlationId: string; timestamp: number }>();
+const correlationStore = new Map<
+  string,
+  { correlationId: string; timestamp: number }
+>();
 
 /**
  * TTL for correlation IDs (5 minutes in milliseconds)
@@ -77,11 +80,11 @@ function cleanupExpiredCorrelations(): void {
   const now = Date.now();
   const expired: string[] = [];
 
-  for (const [messageId, entry] of correlationStore.entries()) {
+  correlationStore.forEach((entry, messageId) => {
     if (now - entry.timestamp > CORRELATION_TTL) {
       expired.push(messageId);
     }
-  }
+  });
 
   expired.forEach((messageId) => correlationStore.delete(messageId));
 
@@ -91,8 +94,12 @@ function cleanupExpiredCorrelations(): void {
   }
 }
 
-// Start cleanup interval
-if (typeof setInterval !== "undefined") {
+// Start cleanup interval (skip in test environment)
+if (
+  typeof setInterval !== "undefined" &&
+  process.env.NODE_ENV !== "test" &&
+  typeof jest === "undefined"
+) {
   setInterval(cleanupExpiredCorrelations, CLEANUP_INTERVAL);
 }
 
@@ -103,11 +110,11 @@ export function getAllCorrelationIds(): Map<string, string> {
   const result = new Map<string, string>();
   const now = Date.now();
 
-  for (const [messageId, entry] of correlationStore.entries()) {
+  correlationStore.forEach((entry, messageId) => {
     if (now - entry.timestamp <= CORRELATION_TTL) {
       result.set(messageId, entry.correlationId);
     }
-  }
+  });
 
   return result;
 }

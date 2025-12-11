@@ -1,8 +1,14 @@
 import { Client } from "whatsapp-web.js";
-import { createLocalAuth } from "./auth";
+import {
+  createLocalAuth,
+  detectSessionCorruption,
+  recoverFromSessionCorruption,
+} from "./auth";
 import { logger } from "../../lib/logger";
 import { RateLimitMiddleware } from "../middleware/rate-limit";
 import { setupPairingCodeHandler } from "./pairing";
+import { setCorrelationId } from "../../lib/correlation";
+import { env } from "../../config/env";
 
 let whatsappClient: Client | null = null;
 
@@ -73,20 +79,129 @@ export function getWhatsAppClient(): Client | null {
 }
 
 /**
- * Initialize and start WhatsApp client
+ * Initialize and start WhatsApp client with session restoration retry logic
+ * Attempts to restore session on container startup with retry (3 attempts, 5-second delays)
+ * If all restoration attempts fail, triggers QR code authentication flow
  */
 export async function initializeWhatsAppClient(): Promise<Client> {
+  const correlationId = setCorrelationId("client-init");
   const client = createWhatsAppClient();
 
+  // Check if client is already initialized
   if (client.info) {
     logger.info("WhatsApp client already initialized", {
+      correlationId,
       wid: client.info.wid.user,
     });
     return client;
   }
 
-  await client.initialize();
-  logger.info("WhatsApp client initialized");
+  // Check for session corruption before initialization
+  const isCorrupted = detectSessionCorruption(env.WHATSAPP_SESSION_PATH);
+  if (isCorrupted) {
+    logger.warn("Session corruption detected, recovering", {
+      correlationId,
+      sessionPath: env.WHATSAPP_SESSION_PATH,
+    });
+    recoverFromSessionCorruption(env.WHATSAPP_SESSION_PATH);
+  }
+
+  // Attempt session restoration with retry logic (3 attempts, 5-second delays)
+  const maxRetries = 3;
+  const retryDelay = 5000; // 5 seconds
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      logger.info("Attempting WhatsApp client initialization", {
+        correlationId,
+        attempt,
+        maxRetries,
+        sessionPath: env.WHATSAPP_SESSION_PATH,
+      });
+
+      await client.initialize();
+
+      // Wait a bit to check if session was restored
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      const state = await client.getState();
+      if (String(state) === "CONNECTED") {
+        logger.info(
+          "WhatsApp client initialized successfully - session restored",
+          {
+            correlationId,
+            attempt,
+            state: String(state),
+          },
+        );
+        return client;
+      }
+
+      logger.warn("WhatsApp client initialized but not connected", {
+        correlationId,
+        attempt,
+        state,
+      });
+
+      // If not connected after initialization, might need QR code
+      if (attempt < maxRetries) {
+        logger.info("Retrying session restoration", {
+          correlationId,
+          attempt,
+          nextAttempt: attempt + 1,
+          delay: retryDelay,
+        });
+        await new Promise((resolve) => setTimeout(resolve, retryDelay));
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      logger.warn("WhatsApp client initialization attempt failed", {
+        correlationId,
+        attempt,
+        maxRetries,
+        error: lastError.message,
+      });
+
+      if (attempt < maxRetries) {
+        logger.info("Retrying session restoration after error", {
+          correlationId,
+          attempt,
+          nextAttempt: attempt + 1,
+          delay: retryDelay,
+        });
+        await new Promise((resolve) => setTimeout(resolve, retryDelay));
+      }
+    }
+  }
+
+  // All retry attempts failed - log and continue (QR code will be triggered)
+  logger.error(
+    "All session restoration attempts failed, QR code authentication will be triggered",
+    {
+      correlationId,
+      attempts: maxRetries,
+      lastError: lastError?.message,
+      sessionPath: env.WHATSAPP_SESSION_PATH,
+    },
+  );
+
+  // Initialize client anyway - it will trigger QR code authentication
+  try {
+    await client.initialize();
+    logger.info(
+      "WhatsApp client initialized - QR code authentication required",
+      {
+        correlationId,
+      },
+    );
+  } catch (error) {
+    logger.error("Failed to initialize WhatsApp client after all retries", {
+      correlationId,
+      error,
+    });
+    throw error;
+  }
 
   return client;
 }
