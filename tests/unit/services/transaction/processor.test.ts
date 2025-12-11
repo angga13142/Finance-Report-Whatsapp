@@ -47,6 +47,7 @@ describe("TransactionProcessor", () => {
         approvalBy: null,
         approvedAt: null,
         categoryId: null,
+        archivedAt: null,
       };
 
       (TransactionValidator.validateTransaction as jest.Mock).mockResolvedValue(

@@ -39,6 +39,9 @@ describe("AuthService", () => {
         createdAt: new Date(),
         lastActive: new Date(),
         authTokenHash: null,
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        lastFailedLoginAt: null,
       };
 
       const token = AuthService.generateToken(mockUser);
@@ -107,6 +110,9 @@ describe("AuthService", () => {
         createdAt: new Date(),
         lastActive: new Date(),
         authTokenHash: null,
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        lastFailedLoginAt: null,
       };
 
       (normalizePhoneNumber as jest.Mock).mockReturnValue("+62812345678");
