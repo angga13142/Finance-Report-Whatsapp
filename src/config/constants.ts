@@ -58,6 +58,9 @@ export const AMOUNT_INPUT_PATTERNS = [
 export const MIN_TRANSACTION_AMOUNT = 1;
 export const MAX_TRANSACTION_AMOUNT = 999999999999;
 
+// Transaction types (for validation)
+export const TRANSACTION_TYPES = ["income", "expense"] as const;
+
 export const COMMANDS = {
   // Transaction commands
   RECORD_SALE: "catat_penjualan",
