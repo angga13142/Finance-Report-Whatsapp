@@ -80,10 +80,12 @@ COPY --from=builder /app/package.json ./package.json
 RUN mkdir -p .wwebjs_auth logs && \
     chmod 755 .wwebjs_auth logs
 
-# Create non-root user for security
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001 && \
-    chown -R nodejs:nodejs /app
+# Create non-root user for security (UID 1000 as per requirements)
+RUN addgroup -g 1000 -S nodejs && \
+    adduser -S nodejs -u 1000 && \
+    chown -R nodejs:nodejs /app && \
+    chmod 755 /app/.wwebjs_auth && \
+    chmod 755 /app/logs
 
 # Switch to non-root user
 USER nodejs

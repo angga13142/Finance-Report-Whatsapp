@@ -287,7 +287,7 @@ Please try again with a valid amount.
 
 If a WhatsApp client doesn't support Unicode mathematical symbols, the bot automatically falls back to native WhatsApp formatting:
 
-- `*bold*` for bold text
+- `_bold_` for bold text
 - `_italic_` for italic text
 - `` `monospace` `` for monospace text
 
@@ -509,7 +509,7 @@ npm run test:coverage
 ## Next Steps
 
 - Review [data-model.md](./data-model.md) for database schema details
-- Review [contracts/commands.yaml](./contracts/commands.yaml) for complete command reference
+- Review [contracts/commands.md](./contracts/commands.md) for complete command reference
 - Review [research.md](./research.md) for technical decisions and rationale
 
 ## Support

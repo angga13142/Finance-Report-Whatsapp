@@ -17,12 +17,12 @@
 
 **Purpose**: Project initialization and Docker infrastructure setup
 
-- [ ] T001 Create docker directory structure: docker/Dockerfile, docker/docker-compose.yml, docker/.dockerignore
-- [ ] T002 [P] Create .dockerignore file in docker/ to exclude node_modules, .git, dist, etc.
-- [ ] T003 [P] Create docker-compose.yml in docker/ with whatsapp-session volume, environment variables, health check configuration
-- [ ] T004 Create Dockerfile in docker/ with Node.js 20 base image, Puppeteer/Chromium dependencies, non-root user setup (UID 1000)
-- [ ] T005 [P] Add Docker build and run scripts to package.json (docker:build, docker:up, docker:down)
-- [ ] T006 [P] Create docker/README.md with setup instructions, QR code authentication process, troubleshooting guide
+- [x] T001 Create docker directory structure: docker/Dockerfile, docker/docker-compose.yml, docker/.dockerignore
+- [x] T002 [P] Create .dockerignore file in docker/ to exclude node_modules, .git, dist, etc.
+- [x] T003 [P] Create docker-compose.yml in docker/ with whatsapp-session volume, environment variables, health check configuration
+- [x] T004 Create Dockerfile in docker/ with Node.js 20 base image, Puppeteer/Chromium dependencies, non-root user setup (UID 1000)
+- [x] T005 [P] Add Docker build and run scripts to package.json (docker:build, docker:up, docker:down)
+- [x] T006 [P] Create docker/README.md with setup instructions, QR code authentication process, troubleshooting guide
 
 ---
 
@@ -32,14 +32,14 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T007 Create Prisma migration for SystemConfiguration model in prisma/migrations/
-- [ ] T008 [P] Add indexes to AuditLog model in prisma/schema.prisma (action, targetEntity+targetId, timestamp)
-- [ ] T009 [P] Run Prisma migration to apply SystemConfiguration model and AuditLog indexes
-- [ ] T010 [P] Enhance Winston logger in src/lib/logger.ts with structured JSON format, correlation ID support, log rotation (100MB max, 14-day retention)
-- [ ] T011 [P] Create correlation ID utility in src/lib/correlation-id.ts with UUID v4 generation
-- [ ] T012 [P] Create data masking utility in src/lib/data-masker.ts for phone numbers (last 4 digits) and message content (type+length only)
-- [ ] T013 [P] Create health check endpoint in src/services/system/health.ts for PostgreSQL, Redis, WhatsApp client status
-- [ ] T014 [P] Update Express app in src/index.ts to expose health check endpoint at /health
+- [x] T007 Create Prisma migration for SystemConfiguration model in prisma/migrations/
+- [x] T008 [P] Add indexes to AuditLog model in prisma/schema.prisma (action, targetEntity+targetId, timestamp)
+- [ ] T009 [P] Run Prisma migration to apply SystemConfiguration model and AuditLog indexes (requires database connection: `npx prisma migrate deploy`)
+- [x] T010 [P] Enhance Winston logger in src/lib/logger.ts with structured JSON format, correlation ID support, log rotation (100MB max, 14-day retention)
+- [x] T011 [P] Create correlation ID utility in src/lib/correlation-id.ts with UUID v4 generation
+- [x] T012 [P] Create data masking utility in src/lib/data-masker.ts for phone numbers (last 4 digits) and message content (type+length only)
+- [x] T013 [P] Create health check endpoint in src/services/system/health.ts for PostgreSQL, Redis, WhatsApp client status
+- [x] T014 [P] Update Express app in src/index.ts to expose health check endpoint at /health
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -69,8 +69,8 @@
 - [ ] T023 [US1] Add health check configuration to docker-compose.yml that validates WhatsApp client connection status
 - [ ] T024 [US1] Update src/services/system/health.ts to return WhatsApp connection status (connected, authenticating, disconnected)
 - [ ] T025 [US1] Add QR code display to container logs in src/bot/client/auth.ts when session not found
-- [ ] T026 [US1] Test Docker volume persistence: stop container, restart, verify session restored
-- [ ] T027 [US1] Test Docker volume persistence: recreate container from new image, verify session loaded
+- [ ] T026 [US1] Manually validate Docker volume persistence: stop container, restart, verify session restored without QR code (complements T015 E2E test)
+- [ ] T027 [US1] Manually validate Docker volume persistence: recreate container from new image with same volume, verify session loaded without QR code (complements T015 E2E test)
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently. Bot can be deployed in Docker with session persistence working.
 
@@ -137,8 +137,8 @@
 - [ ] T055 [US3] Update help menu template in src/bot/ui/messages.ts to use toMonospace() for commands
 - [ ] T056 [US3] Update all message templates in src/bot/ui/ to use font conversion utilities for consistent visual hierarchy
 - [ ] T057 [US3] Add emoji prefixes to message templates: ✅ for success, ❌ for error, 💰 for financial data, 📊 for reports
-- [ ] T058 [US3] Verify font conversion performance: measure conversion time per message, ensure <5ms overhead
-- [ ] T059 [US3] Test graceful fallback: verify messages degrade to native formatting when Unicode not supported
+- [ ] T058 [US3] Verify font conversion performance: run performance benchmark on 1000 messages, measure conversion time per message, verify p95 <5ms, p99 <10ms overhead (SC-006, FR-023)
+- [ ] T059 [US3] Test graceful fallback: send formatted message to WhatsApp client that doesn't support Unicode mathematical symbols, verify messages degrade to native formatting (_bold_, _italic_, `monospace`) when character mapping returns undefined/null (FR-018, SC-005)
 
 **Checkpoint**: At this point, User Story 3 should be fully functional and testable independently. All messages use Unicode font formatting with graceful fallback.
 
@@ -174,7 +174,7 @@
 - [ ] T074 [US4] Integrate phone number normalization in src/services/user/service.ts using existing normalizePhoneNumber() from src/lib/validation.ts
 - [ ] T075 [US4] Add role validation in src/services/user/service.ts against Prisma UserRole enum (dev, boss, employee, investor)
 - [ ] T076 [US4] Implement audit logging in src/services/user/service.ts for all user management operations (add, update, delete, activate, deactivate) to AuditLog model
-- [ ] T077 [US4] Add error response formatting in src/bot/handlers/user.ts per contracts/commands.yaml (permission denied, invalid phone, invalid role, duplicate user, validation errors)
+- [ ] T077 [US4] Add error response formatting in src/bot/handlers/user.ts per contracts/commands.md (permission denied, invalid phone, invalid role, duplicate user, validation errors)
 - [ ] T078 [US4] Implement access revocation logic in src/bot/middleware/auth.ts: check isActive flag, deny access on next command after deactivation
 - [ ] T079 [US4] Add Redis cache invalidation in src/services/user/service.ts for user list and user data on create/update/delete operations
 - [ ] T080 [US4] Test user management commands: verify RBAC enforcement, phone normalization, role validation, audit logging
@@ -219,7 +219,7 @@
 - [ ] T101 [US5] Create configuration service in src/services/system/config.ts with Zod schema validation, immediate application, sensitive value masking
 - [ ] T102 [US5] Enhance RBAC middleware in src/bot/middleware/auth.ts to enforce dev role requirement for all admin commands
 - [ ] T103 [US5] Implement audit logging in src/services/system/ for all admin operations (template edit, config set, cache clear, etc.) to AuditLog model
-- [ ] T104 [US5] Add error response formatting in src/bot/handlers/admin.ts per contracts/commands.yaml (permission denied, validation errors, not found)
+- [ ] T104 [US5] Add error response formatting in src/bot/handlers/admin.ts per contracts/commands.md (permission denied, validation errors, not found)
 - [ ] T105 [US5] Implement template validation in src/services/system/template.ts: check for required placeholders in format {{variableName}}, validate placeholder names match expected variables
 - [ ] T106 [US5] Ensure template edits don't affect messages in send queue: new templates take effect only for messages generated after save operation completes
 - [ ] T107 [US5] Test admin commands: verify dev role enforcement, template validation, config validation, audit logging
@@ -237,7 +237,17 @@
 - [ ] T110 [P] Create docker/README.md with troubleshooting guide for common Docker issues (permissions, session persistence, health checks)
 - [ ] T111 [P] Update quickstart.md validation: test all Docker commands, QR code authentication, command examples
 - [ ] T112 [P] Add performance benchmarks: verify font conversion <5ms, user ops <2s, admin <10s, startup <60s
+  - [ ] T112a [P] Measure font conversion performance: run benchmark on 1000 messages, verify p95 <5ms, p99 <10ms (SC-006)
+  - [ ] T112b [P] Measure user management operations: time add/update/delete/activate/deactivate operations, verify p95 <2s (SC-007)
+  - [ ] T112c [P] Measure admin diagnostics: time /system status, /system logs, /system metrics commands, verify p95 <10s (SC-009)
+  - [ ] T112d [P] Measure container startup time: cold boot to WhatsApp "ready" state, verify <60s with existing session (SC-002)
 - [ ] T113 [P] Add security review: verify sensitive data masking, RBAC enforcement, input validation, SQL injection prevention
+  - [ ] T113a [P] Verify sensitive data masking: phone numbers (last 4 digits), message content (type+length only), API keys masked in logs (FR-011, FR-042)
+  - [ ] T113b [P] Verify RBAC enforcement: user management commands restricted to dev/boss roles, admin commands restricted to dev role (FR-026, FR-034)
+  - [ ] T113c [P] Verify input validation: phone number normalization, role enum validation, template placeholder validation, Zod schema validation (FR-027, FR-028, FR-036, FR-043)
+  - [ ] T113d [P] Verify SQL injection prevention: all database operations use Prisma parameterized queries, no raw SQL with user input (Constraints Security)
+  - [ ] T113e [P] Verify OWASP Top 10 compliance: check for injection, broken authentication, sensitive data exposure, XXE, broken access control, security misconfiguration, XSS, insecure deserialization, using components with known vulnerabilities, insufficient logging
+  - [ ] T113f [P] Verify audit logging coverage: all user management and admin operations logged to AuditLog with actor identification (FR-030, FR-046, SC-012)
 - [ ] T114 [P] Add comprehensive integration tests for all user stories working together in tests/integration/full-workflow.test.ts
 - [ ] T115 [P] Code cleanup and refactoring: ensure all code follows 4-layer architecture, TypeScript strict mode, naming conventions
 - [ ] T116 [P] Add error handling improvements: ensure all error paths are handled gracefully with user-friendly messages
@@ -380,7 +390,7 @@ With multiple developers:
 
 ## Summary
 
-**Total Tasks**: 120
+**Total Tasks**: 120 (plus 10 subtasks: T112a-T112d, T113a-T113f)
 
 - **Phase 1 (Setup)**: 6 tasks
 - **Phase 2 (Foundational)**: 8 tasks
@@ -389,7 +399,7 @@ With multiple developers:
 - **Phase 5 (US3 - Fonts)**: 18 tasks (3 tests + 15 implementation)
 - **Phase 6 (US4 - User Management)**: 22 tasks (5 tests + 17 implementation)
 - **Phase 7 (US5 - Admin)**: 27 tasks (5 tests + 22 implementation)
-- **Phase 8 (Polish)**: 12 tasks
+- **Phase 8 (Polish)**: 12 tasks (plus 10 subtasks: T112a-T112d, T113a-T113f)
 
 **Task Count per User Story**:
 

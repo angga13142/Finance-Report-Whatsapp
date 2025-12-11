@@ -58,24 +58,25 @@ enum RecommendationPriority {
 
 // Users entity
 model User {
-  id                    String    @id @default(uuid()) @db.Uuid
-  phoneNumber           String    @unique @map("phone_number") @db.VarChar(20)
-  name                  String?   @db.VarChar(255)
-  role                  UserRole  @default(employee)
-  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  lastActive            DateTime? @map("last_active") @db.Timestamptz(6)
-  isActive              Boolean   @default(true) @map("is_active")
-  authTokenHash         String?   @map("auth_token_hash") @db.VarChar(255)
-  failedLoginAttempts   Int       @default(0) @map("failed_login_attempts")
-  lockedUntil           DateTime? @map("locked_until") @db.Timestamptz(6)
-  lastFailedLoginAt     DateTime? @map("last_failed_login_at") @db.Timestamptz(6)
+  id                  String    @id @default(uuid()) @db.Uuid
+  phoneNumber         String    @unique @map("phone_number") @db.VarChar(20)
+  name                String?   @db.VarChar(255)
+  role                UserRole  @default(employee)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  lastActive          DateTime? @map("last_active") @db.Timestamptz(6)
+  isActive            Boolean   @default(true) @map("is_active")
+  authTokenHash       String?   @map("auth_token_hash") @db.VarChar(255)
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until") @db.Timestamptz(6)
+  lastFailedLoginAt   DateTime? @map("last_failed_login_at") @db.Timestamptz(6)
 
   // Relations
-  transactions         Transaction[]
-  sessions             UserSession[]
-  auditLogs            AuditLog[]
-  createdCategories    Category[]    @relation("CategoryCreator")
-  approvedTransactions Transaction[] @relation("TransactionApprover")
+  transactions          Transaction[]
+  sessions              UserSession[]
+  auditLogs             AuditLog[]
+  createdCategories     Category[]            @relation("CategoryCreator")
+  approvedTransactions  Transaction[]         @relation("TransactionApprover")
+  updatedConfigurations SystemConfiguration[] @relation("SystemConfigurationUpdater")
 
   @@index([role])
   @@index([isActive])
@@ -179,14 +180,14 @@ model UserSession {
 
 // AuditLogs entity
 model AuditLog {
-  id                 String   @id @default(uuid()) @db.Uuid
-  userId             String?  @map("user_id") @db.Uuid
-  action             String   @db.VarChar(100)
-  details            Json?    @db.JsonB
-  timestamp          DateTime @default(now()) @db.Timestamptz(6)
-  ipAddress          String?  @map("ip_address") @db.VarChar(45)
-  affectedEntityId   String?  @map("affected_entity_id") @db.Uuid
-  affectedEntityType String?  @map("affected_entity_type") @db.VarChar(50)
+  id                 String    @id @default(uuid()) @db.Uuid
+  userId             String?   @map("user_id") @db.Uuid
+  action             String    @db.VarChar(100)
+  details            Json?     @db.JsonB
+  timestamp          DateTime  @default(now()) @db.Timestamptz(6)
+  ipAddress          String?   @map("ip_address") @db.VarChar(45)
+  affectedEntityId   String?   @map("affected_entity_id") @db.Uuid
+  affectedEntityType String?   @map("affected_entity_type") @db.VarChar(50)
   archivedAt         DateTime? @map("archived_at") @db.Timestamptz(6)
 
   // Relations
@@ -196,10 +197,30 @@ model AuditLog {
   @@index([action])
   @@index([timestamp])
   @@index([affectedEntityId])
+  @@index([affectedEntityType, affectedEntityId])
   @@index([userId, timestamp(sort: Desc)])
   @@index([action, timestamp(sort: Desc)])
   @@index([archivedAt])
   @@map("audit_logs")
+}
+
+// SystemConfiguration entity
+model SystemConfiguration {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  type      String   @db.VarChar(50)
+  schema    String?  @db.Text
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relations
+  updater User? @relation("SystemConfigurationUpdater", fields: [updatedBy], references: [id], onDelete: SetNull)
+
+  @@index([key])
+  @@index([updatedAt])
+  @@map("system_configurations")
 }
 
 // Recommendations entity

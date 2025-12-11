@@ -200,6 +200,7 @@ export class HealthMonitoringService {
 
   /**
    * Check WhatsApp client health
+   * Returns connection status: connected, authenticating, disconnected
    */
   private static async checkWhatsAppHealth(): Promise<ComponentHealth> {
     const startTime = Date.now();
@@ -212,34 +213,50 @@ export class HealthMonitoringService {
           status: "unhealthy",
           message: "WhatsApp client not initialized",
           responseTime: Date.now() - startTime,
+          details: { status: "disconnected" },
         };
       }
 
       // Check client state
       const state = await client.getState();
+      const stateStr = String(state);
 
       const responseTime = Date.now() - startTime;
 
-      if (String(state) !== "CONNECTED") {
-        return {
-          status: "degraded",
-          message: `WhatsApp client state: ${String(state)}`,
-          responseTime,
-          details: { state },
-        };
+      // Map WhatsApp client states to connection status
+      let connectionStatus: "connected" | "authenticating" | "disconnected";
+      let healthStatus: "healthy" | "degraded" | "unhealthy";
+
+      if (stateStr === "CONNECTED") {
+        connectionStatus = "connected";
+        healthStatus = "healthy";
+      } else if (
+        stateStr === "PAIRING" ||
+        stateStr === "OPENING" ||
+        stateStr === "QR_READY"
+      ) {
+        connectionStatus = "authenticating";
+        healthStatus = "degraded";
+      } else {
+        connectionStatus = "disconnected";
+        healthStatus = "unhealthy";
       }
 
       return {
-        status: "healthy",
-        message: "WhatsApp client is connected",
+        status: healthStatus,
+        message: `WhatsApp client status: ${connectionStatus}`,
         responseTime,
-        details: { state },
+        details: {
+          state: stateStr,
+          status: connectionStatus,
+        },
       };
     } catch (error) {
       return {
         status: "unhealthy",
         message: `WhatsApp client check failed: ${error instanceof Error ? error.message : "Unknown error"}`,
         responseTime: Date.now() - startTime,
+        details: { status: "disconnected" },
       };
     }
   }

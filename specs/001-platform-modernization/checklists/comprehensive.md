@@ -13,14 +13,14 @@
 - [x] CHK003 - Are file permission requirements for Docker volumes specified with concrete UID/GID values or documented defaults? [Clarity, Spec §FR-003] ✅ Validated: FR-003 now specifies UID 1000, permissions 755/644, and chown requirement
 - [x] CHK004 - Are all WhatsApp client event types that must be logged explicitly listed? [Completeness, Spec §FR-013] ✅ Validated: FR-013 lists 8 event types: qr_code_generated, authenticated, ready, disconnected, message_received, message_sent, message_ack, auth_failure
 - [x] CHK005 - Are all font conversion functions (toBold, toItalic, toMonospace, toScript, toBoldItalic) specified with clear input/output requirements? [Completeness, Spec §FR-015] ✅ Validated: FR-015 lists all 5 functions with library location
-- [x] CHK006 - Are all user management commands (/user add, list, update, delete, activate, deactivate) documented with complete syntax? [Completeness, Spec §FR-025] ✅ Validated: FR-025 lists all 6 commands with syntax; contracts/commands.yaml has full details
-- [x] CHK007 - Are all admin commands (template, config, system, cache operations) listed with required parameters? [Completeness, Spec §FR-034] ✅ Validated: FR-034 lists all 12 admin commands; contracts/commands.yaml has full details
+- [x] CHK006 - Are all user management commands (/user add, list, update, delete, activate, deactivate) documented with complete syntax? [Completeness, Spec §FR-025] ✅ Validated: FR-025 lists all 6 commands with syntax; contracts/commands.md has full details
+- [x] CHK007 - Are all admin commands (template, config, system, cache operations) listed with required parameters? [Completeness, Spec §FR-034] ✅ Validated: FR-034 lists all 12 admin commands; contracts/commands.md has full details
 - [x] CHK008 - Are requirements defined for all message template types that must use font formatting? [Completeness, Spec §FR-019] ✅ Validated: FR-019 specifies "All message templates in src/bot/ui/"
 - [x] CHK009 - Are audit log requirements specified for all user management operations (add, update, delete, activate, deactivate)? [Completeness, Spec §FR-030] ✅ Validated: FR-030 specifies all operations with required fields
 - [x] CHK010 - Are audit log requirements specified for all admin operations (template edit, config set, cache clear, etc.)? [Completeness, Spec §FR-046] ✅ Validated: FR-046 specifies "All admin operations" with full context
 - [x] CHK011 - Are requirements defined for all health check endpoints (PostgreSQL, Redis, WhatsApp client)? [Completeness, Spec §FR-004, §FR-039] ✅ Validated: FR-004 specifies health check endpoint; FR-039 specifies all three services
-- [x] CHK012 - Are all error response formats specified for user management command failures? [Gap, Spec §FR-025] ✅ Fixed: FR-025 now references contracts/commands.yaml which contains all error response formats
-- [x] CHK013 - Are all error response formats specified for admin command failures? [Gap, Spec §FR-034] ✅ Fixed: FR-034 now references contracts/commands.yaml which contains all error response formats
+- [x] CHK012 - Are all error response formats specified for user management command failures? [Gap, Spec §FR-025] ✅ Fixed: FR-025 now references contracts/commands.md which contains all error response formats
+- [x] CHK013 - Are all error response formats specified for admin command failures? [Gap, Spec §FR-034] ✅ Fixed: FR-034 now references contracts/commands.md which contains all error response formats
 
 ## Requirement Clarity
 
@@ -164,9 +164,9 @@
 4. **FR-012**: Specified UUID v4 format for correlation ID generation
 5. **FR-016**: Added specific Unicode ranges for Bold, Italic, and Monospace font styles
 6. **FR-018**: Added specific detection method and fallback behavior for Unicode conversion
-7. **FR-025**: Added reference to contracts/commands.yaml for error response formats
+7. **FR-025**: Added reference to contracts/commands.md for error response formats
 8. **FR-031**: Specified "next command attempt" timing for access revocation
-9. **FR-034**: Added reference to contracts/commands.yaml for error response formats
+9. **FR-034**: Added reference to contracts/commands.md for error response formats
 10. **FR-036**: Added specific validation rules and timing ("next message sent after save")
 11. **FR-038**: Added specific cache key patterns for session invalidation
 12. **FR-039**: Added specific aggregation method (parallel with 5-second timeout)
@@ -188,7 +188,7 @@
 
 ### Key Improvements
 
-1. **Error Response Formats**: Added references to contracts/commands.yaml in FR-025 and FR-034
+1. **Error Response Formats**: Added references to contracts/commands.md in FR-025 and FR-034
 2. **Unicode Font Ranges**: Specified exact Unicode code point ranges for each font style
 3. **Timing Specifications**: Clarified all "immediately" and "gracefully" terms with specific behaviors
 4. **File Permissions**: Specified concrete permission values (755/644) and UID (1000)

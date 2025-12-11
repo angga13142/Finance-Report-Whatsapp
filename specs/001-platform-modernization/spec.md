@@ -118,7 +118,7 @@ As a developer (dev role), I need to edit message templates, modify system confi
 
 ## Requirements _(mandatory)_
 
-**Note**: Error response formats for all WhatsApp commands are defined in `contracts/commands.yaml`. This document provides the complete specification of error messages, success responses, and command syntax.
+**Note**: Error response formats for all WhatsApp commands are defined in `contracts/commands.md`. This document provides the complete specification of error messages, success responses, and command syntax.
 
 ### Functional Requirements
 
@@ -157,11 +157,11 @@ As a developer (dev role), I need to edit message templates, modify system confi
 
 #### Dynamic User Management
 
-- **FR-025**: System MUST provide WhatsApp commands: `/user add <phone> <name> <role>`, `/user list [role]`, `/user update <phone> <field> <value>`, `/user delete <phone>`, `/user activate <phone>`, `/user deactivate <phone>`. Error response formats are defined in contracts/commands.yaml
+- **FR-025**: System MUST provide WhatsApp commands: `/user add <phone> <name> <role>`, `/user list [role]`, `/user update <phone> <field> <value>`, `/user delete <phone>`, `/user activate <phone>`, `/user deactivate <phone>`. Error response formats are defined in contracts/commands.md
 - **FR-026**: User management commands MUST only be accessible to users with dev or boss roles (RBAC enforcement in middleware)
 - **FR-027**: Phone number validation MUST normalize international formats (+628xxx, 08xxx, 628xxx) to a canonical format (E.164) using existing normalizePhoneNumber() function
 - **FR-028**: Role validation MUST check against Prisma UserRole enum (dev, boss, employee, investor) and reject invalid roles
-- **FR-029**: System MUST prevent duplicate user creation (same phone number) and respond with clear error message. Error response format: `❌ User already exists with phone number: <phone>` (see contracts/commands.yaml)
+- **FR-029**: System MUST prevent duplicate user creation (same phone number) and respond with clear error message. Error response format: `❌ User already exists with phone number: <phone>` (see contracts/commands.md)
 - **FR-030**: All user management operations MUST be logged to AuditLog model with: timestamp, actor (user who executed command), action (add/update/delete/activate/deactivate), target (affected user), and old/new values
 - **FR-031**: User deactivation MUST immediately revoke access (active sessions denied on next command). Timing: Access revocation takes effect on the next command attempt after deactivation, with no grace period. Redis cache MUST be invalidated immediately upon deactivation.
 - **FR-032**: `/user list` command MUST support optional role filter and display: phone number (last 4 digits visible), full name, role, active status, created date
@@ -169,7 +169,7 @@ As a developer (dev role), I need to edit message templates, modify system confi
 
 #### Developer Superuser Capabilities
 
-- **FR-034**: System MUST provide admin commands accessible only to dev role: `/template list`, `/template edit <name>`, `/template preview <name>`, `/role grant <phone> <role>`, `/role revoke <phone> <role>`, `/system status`, `/system logs [lines]`, `/system metrics`, `/config view <key>`, `/config set <key> <value>`, `/cache clear [pattern]`, `/cache inspect <key>`. Error response formats are defined in contracts/commands.yaml
+- **FR-034**: System MUST provide admin commands accessible only to dev role: `/template list`, `/template edit <name>`, `/template preview <name>`, `/role grant <phone> <role>`, `/role revoke <phone> <role>`, `/system status`, `/system logs [lines]`, `/system metrics`, `/config view <key>`, `/config set <key> <value>`, `/cache clear [pattern]`, `/cache inspect <key>`. Error response formats are defined in contracts/commands.md
 - **FR-035**: `/template list` MUST display all message templates from src/bot/ui/ with their names, file paths, and usage descriptions
 - **FR-036**: `/template edit <name>` MUST validate template syntax (check for required placeholder variables in format `{{variableName}}`, validate placeholder names match expected variables, reject if required placeholders are missing), save to database, and apply immediately (next message sent after save operation completes) without container restart
 - **FR-037**: `/template preview <name>` MUST render the template with sample data and display the formatted output for review

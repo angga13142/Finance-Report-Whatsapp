@@ -1,5 +1,7 @@
 import * as winston from "winston";
 import { env } from "../config/env";
+import { getCorrelationId } from "./correlation-id";
+import { maskPhoneNumber, maskMessageContent } from "./data-masker";
 
 /**
  * Sensitive data patterns for masking
@@ -32,10 +34,9 @@ function maskSensitiveData(data: unknown): unknown {
   if (typeof data === "string") {
     let masked = data;
 
-    // Mask phone numbers
+    // Mask phone numbers using data-masker utility
     masked = masked.replace(SENSITIVE_PATTERNS.phoneNumber, (match: string) => {
-      const lastFour = match.slice(-4);
-      return `+62 ****${lastFour}`;
+      return maskPhoneNumber(match);
     });
 
     // Mask amounts (keep only Rp prefix)
@@ -103,8 +104,14 @@ function maskSensitiveData(data: unknown): unknown {
         if (typeof value === "string") {
           // Mask the value
           if (keyLower.includes("phone")) {
-            const lastFour = String(value).slice(-4);
-            masked[key] = `+62 ****${lastFour}`;
+            masked[key] = maskPhoneNumber(String(value));
+          } else if (
+            keyLower.includes("message") ||
+            keyLower.includes("content")
+          ) {
+            const messageType =
+              (data as Record<string, unknown>).type?.toString() || "text";
+            masked[key] = maskMessageContent(String(value), messageType);
           } else if (keyLower.includes("amount")) {
             masked[key] = "Rp ******.***";
           } else if (
@@ -134,27 +141,66 @@ function maskSensitiveData(data: unknown): unknown {
 }
 
 /**
+ * Structured JSON format with correlation ID support
+ */
+const structuredJsonFormat = winston.format.combine(
+  winston.format.timestamp({ format: "iso" }),
+  winston.format.errors({ stack: true }),
+  winston.format((info) => {
+    // Add correlation ID from context if available
+    const correlationId = getCorrelationId();
+    if (correlationId) {
+      info.correlationId = correlationId;
+    }
+
+    // Ensure structured format: timestamp, level, eventType, correlationId, metadata
+    const infoRecord = info as Record<string, unknown>;
+    const metadata: Record<string, unknown> = {
+      message: info.message,
+      ...infoRecord,
+    };
+
+    // Remove redundant fields from metadata
+    delete metadata.timestamp;
+    delete metadata.level;
+    delete metadata.eventType;
+    delete metadata.correlationId;
+    delete metadata.message;
+
+    const structured: Record<string, unknown> = {
+      timestamp: info.timestamp,
+      level: info.level.toUpperCase(),
+      eventType: (infoRecord.eventType as string) || "log",
+      correlationId: (infoRecord.correlationId as string) || null,
+      metadata,
+    };
+
+    // Mask sensitive data
+    const masked = maskSensitiveData(structured);
+
+    // Return as TransformableInfo
+    return masked as winston.Logform.TransformableInfo;
+  })(),
+  winston.format.printf((info) => {
+    return JSON.stringify(info);
+  }),
+);
+
+/**
  * Winston logger configuration with sensitive data masking
  * Outputs structured JSON logs for production, simple format for development
  */
 export const logger = winston.createLogger({
-  level: env.LOG_LEVEL,
+  level: env.LOG_LEVEL.toUpperCase(),
   format:
     env.LOG_FORMAT === "json"
-      ? winston.format.combine(
-          winston.format.timestamp(),
-          winston.format.errors({ stack: true }),
-          // Custom format to mask sensitive data before JSON encoding
-          winston.format.printf((info) => {
-            const masked = maskSensitiveData(info);
-            return JSON.stringify(masked);
-          }),
-        )
+      ? structuredJsonFormat
       : winston.format.combine(
           winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
           winston.format.errors({ stack: true }),
           winston.format.colorize(),
           winston.format.printf((info) => {
+            const correlationId = getCorrelationId();
             const masked = maskSensitiveData(info);
             const { timestamp, level, message, ...meta } = masked as Record<
               string,
@@ -166,7 +212,10 @@ export const logger = winston.createLogger({
             const timestampStr = String(timestamp);
             const levelStr = String(level);
             const messageStr = String(message);
-            return `${timestampStr} [${levelStr}]: ${messageStr} ${metaStr}`;
+            const correlationStr = correlationId
+              ? `[correlationId: ${correlationId}]`
+              : "";
+            return `${timestampStr} [${levelStr}]${correlationStr}: ${messageStr} ${metaStr}`;
           }),
         ),
   defaultMeta: {
@@ -179,18 +228,20 @@ export const logger = winston.createLogger({
       handleExceptions: true,
       handleRejections: true,
     }),
-    // File transport for errors
+    // File transport for errors with rotation (100MB max, 14-day retention)
     new winston.transports.File({
       filename: "logs/error.log",
       level: "error",
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
+      maxsize: 100 * 1024 * 1024, // 100MB
+      maxFiles: 14, // Retain last 14 days
+      tailable: true,
     }),
-    // File transport for all logs
+    // File transport for all logs with rotation (100MB max, 14-day retention)
     new winston.transports.File({
       filename: "logs/combined.log",
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
+      maxsize: 100 * 1024 * 1024, // 100MB
+      maxFiles: 14, // Retain last 14 days
+      tailable: true,
     }),
   ],
   // Don't exit on handled exceptions
