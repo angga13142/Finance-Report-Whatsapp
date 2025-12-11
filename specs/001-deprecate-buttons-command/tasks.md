@@ -83,24 +83,24 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T025 [P] [US2] Unit test for report command parser ("lihat laporan hari ini", "lihat laporan minggu ini") in tests/unit/bot/handlers/command.parser.test.ts
-- [ ] T026 [P] [US2] Unit test for financial summary service with role-based filtering in tests/unit/services/system/financial-summary.test.ts
-- [ ] T027 [P] [US2] Unit test for financial data caching (30-60s TTL, cache hit/miss) in tests/unit/services/system/financial-summary.test.ts
-- [ ] T028 [US2] Integration test for financial report generation with caching in tests/integration/services/financial-data.test.ts
-- [ ] T029 [US2] Integration test for role-based data filtering (Employee/Boss/Investor) in tests/integration/services/financial-data.test.ts
+- [x] T025 [P] [US2] Unit test for report command parser ("lihat laporan hari ini", "lihat laporan minggu ini") in tests/unit/bot/handlers/command.parser.test.ts
+- [x] T026 [P] [US2] Unit test for financial summary service with role-based filtering in tests/unit/services/system/financial-summary.test.ts
+- [x] T027 [P] [US2] Unit test for financial data caching (30-60s TTL, cache hit/miss) in tests/unit/services/system/financial-summary.test.ts
+- [x] T028 [US2] Integration test for financial report generation with caching in tests/integration/services/financial-data.test.ts
+- [x] T029 [US2] Integration test for role-based data filtering (Employee/Boss/Investor) in tests/integration/services/financial-data.test.ts
 
 ### Implementation for User Story 2
 
-- [ ] T030 [P] [US2] Create financial summary service in src/services/system/financial-summary.ts with aggregation logic (balance, income, expenses, cashflow)
-- [ ] T031 [US2] Implement financial data caching in src/services/system/financial-summary.ts with Redis (30-60s TTL, cache key format: financial:summary:{userId}:{dateRange})
-- [ ] T032 [US2] Implement role-based data filtering in src/services/system/financial-summary.ts (Employee: own only, Boss: all, Investor: aggregated only)
-- [ ] T033 [US2] Implement pending transaction separation logic in src/services/system/financial-summary.ts (exclude from balance/trends, show separately)
-- [ ] T034 [P] [US2] Implement trend calculation (percentage changes, period comparisons) in src/services/system/financial-summary.ts
-- [ ] T035 [US2] Implement report command handlers for date ranges ("hari ini", "minggu ini", "bulan ini") in src/bot/handlers/command.ts
-- [ ] T036 [P] [US2] Implement formatted report message generation in src/bot/ui/message.formatter.ts with 📊 emoji, financial metrics, and trend indicators
-- [ ] T037 [US2] Implement formatted financial summary display in src/bot/ui/message.formatter.ts with Indonesian Rupiah formatting (Rp 500.000), thousand separators
-- [ ] T038 [US2] Integrate financial summary service with report command handlers in src/bot/handlers/command.ts
-- [ ] T039 [US2] Implement on-demand cache refresh mechanism ("refresh", "update" commands bypass cache) in src/services/system/financial-summary.ts
+- [x] T030 [P] [US2] Create financial summary service in src/services/system/financial-summary.ts with aggregation logic (balance, income, expenses, cashflow)
+- [x] T031 [US2] Implement financial data caching in src/services/system/financial-summary.ts with Redis (30-60s TTL, cache key format: financial:summary:{userId}:{dateRange})
+- [x] T032 [US2] Implement role-based data filtering in src/services/system/financial-summary.ts (Employee: own only, Boss: all, Investor: aggregated only)
+- [x] T033 [US2] Implement pending transaction separation logic in src/services/system/financial-summary.ts (exclude from balance/trends, show separately)
+- [x] T034 [P] [US2] Implement trend calculation (percentage changes, period comparisons) in src/services/system/financial-summary.ts
+- [x] T035 [US2] Implement report command handlers for date ranges ("hari ini", "minggu ini", "bulan ini") in src/bot/handlers/command.ts
+- [x] T036 [P] [US2] Implement formatted report message generation in src/bot/ui/message.formatter.ts with 📊 emoji, financial metrics, and trend indicators
+- [x] T037 [US2] Implement formatted financial summary display in src/bot/ui/message.formatter.ts with Indonesian Rupiah formatting (Rp 500.000), thousand separators
+- [x] T038 [US2] Integrate financial summary service with report command handlers in src/bot/handlers/command.ts
+- [x] T039 [US2] Implement on-demand cache refresh mechanism ("refresh", "update" commands bypass cache) in src/services/system/financial-summary.ts
 
 **Checkpoint**: User Story 2 should be fully functional - Users can view financial reports via commands independently
 

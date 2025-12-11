@@ -138,3 +138,41 @@ export function formatDate(
 ): string {
   return formatDateWITA(date, format);
 }
+
+/**
+ * Get date range for this week in WITA (Monday to Sunday)
+ */
+export function getWeekRangeWITA(date?: Date | DateTime): {
+  start: Date;
+  end: Date;
+} {
+  const dt = date
+    ? (date instanceof Date ? DateTime.fromJSDate(date) : date).setZone(
+        TIMEZONE,
+      )
+    : nowWITA();
+
+  const start = dt.startOf("week").toUTC().toJSDate();
+  const end = dt.endOf("week").toUTC().toJSDate();
+
+  return { start, end };
+}
+
+/**
+ * Get date range for this month in WITA (first day to last day)
+ */
+export function getMonthRangeWITA(date?: Date | DateTime): {
+  start: Date;
+  end: Date;
+} {
+  const dt = date
+    ? (date instanceof Date ? DateTime.fromJSDate(date) : date).setZone(
+        TIMEZONE,
+      )
+    : nowWITA();
+
+  const start = dt.startOf("month").toUTC().toJSDate();
+  const end = dt.endOf("month").toUTC().toJSDate();
+
+  return { start, end };
+}

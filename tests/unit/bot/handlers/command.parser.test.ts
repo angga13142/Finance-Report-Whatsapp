@@ -213,4 +213,64 @@ describe("Command Parser", () => {
       expect(result?.recognizedIntent).toBe(COMMANDS.VIEW_BALANCE);
     });
   });
+
+  describe("T025: Report command parser", () => {
+    it("should recognize 'lihat laporan hari ini' as VIEW_REPORT_TODAY", () => {
+      const result = parser.parseCommand(
+        "lihat laporan hari ini",
+        "user1",
+        "employee",
+      );
+      expect(result).not.toBeNull();
+      expect(result?.recognizedIntent).toBe(COMMANDS.VIEW_REPORT_TODAY);
+      expect(result?.confidence).toBeGreaterThanOrEqual(CONFIDENCE_THRESHOLD);
+    });
+
+    it("should recognize 'lihat laporan minggu ini' as VIEW_REPORT_WEEK", () => {
+      const result = parser.parseCommand(
+        "lihat laporan minggu ini",
+        "user1",
+        "employee",
+      );
+      expect(result).not.toBeNull();
+      expect(result?.recognizedIntent).toBe(COMMANDS.VIEW_REPORT_WEEK);
+      expect(result?.confidence).toBeGreaterThanOrEqual(CONFIDENCE_THRESHOLD);
+    });
+
+    it("should recognize 'lihat laporan bulan ini' as VIEW_REPORT_MONTH", () => {
+      const result = parser.parseCommand(
+        "lihat laporan bulan ini",
+        "user1",
+        "employee",
+      );
+      expect(result).not.toBeNull();
+      expect(result?.recognizedIntent).toBe(COMMANDS.VIEW_REPORT_MONTH);
+      expect(result?.confidence).toBeGreaterThanOrEqual(CONFIDENCE_THRESHOLD);
+    });
+
+    it("should recognize 'laporan' as VIEW_REPORT_TODAY (synonym)", () => {
+      const result = parser.parseCommand("laporan", "user1", "employee");
+      expect(result).not.toBeNull();
+      expect(result?.recognizedIntent).toBe(COMMANDS.VIEW_REPORT_TODAY);
+      expect(result?.confidence).toBeGreaterThanOrEqual(CONFIDENCE_THRESHOLD);
+    });
+
+    it("should recognize 'll' as VIEW_REPORT_TODAY (abbreviation)", () => {
+      const result = parser.parseCommand("ll", "user1", "employee");
+      expect(result).not.toBeNull();
+      expect(result?.recognizedIntent).toBe(COMMANDS.VIEW_REPORT_TODAY);
+      expect(result?.confidence).toBeGreaterThanOrEqual(0.95); // Abbreviation confidence
+    });
+
+    it("should handle typos in report commands", () => {
+      const result = parser.parseCommand(
+        "lihat laporn hari ini",
+        "user1",
+        "employee",
+      );
+      expect(result).not.toBeNull();
+      expect(result?.recognizedIntent).toBe(COMMANDS.VIEW_REPORT_TODAY);
+      expect(result?.confidence).toBeGreaterThan(0.3); // Fuzzy match
+    });
+  });
 });

@@ -16,11 +16,19 @@ import {
   formatTransactionConfirmation,
   formatCategoryList,
   formatErrorMessage,
+  formatFinancialReport,
 } from "../ui/message.formatter";
 import { CategoryModel } from "../../models/category";
 import { TransactionProcessor } from "../../services/transaction/processor";
 import { TransactionValidator } from "../../services/transaction/validator";
 import { TransactionModel } from "../../models/transaction";
+import { FinancialSummaryService } from "../../services/system/financial-summary";
+import {
+  getDayRangeWITA,
+  getWeekRangeWITA,
+  getMonthRangeWITA,
+  formatDateWITA,
+} from "../../lib/date";
 
 /**
  * Parsed command structure
@@ -1285,6 +1293,17 @@ export class CommandHandler {
           await this.handleViewBalanceCommand(message, userId, userRole);
           return true;
 
+        case COMMANDS.VIEW_REPORT_TODAY:
+        case COMMANDS.VIEW_REPORT_WEEK:
+        case COMMANDS.VIEW_REPORT_MONTH:
+          await this.handleViewReportCommand(
+            message,
+            userId,
+            userRole,
+            parsed.recognizedIntent,
+          );
+          return true;
+
         case COMMANDS.HELP:
         case COMMANDS.MENU:
           await this.handleHelpCommand(message, userId, userRole, []);
@@ -1733,6 +1752,86 @@ export class CommandHandler {
     } catch (error) {
       logger.error("Error getting pending amount", { error, userId });
       return 0;
+    }
+  }
+
+  /**
+   * T035: Handle view report command for date ranges
+   * T038: Integrate financial summary service with report command handlers
+   */
+  private static async handleViewReportCommand(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    command: string,
+  ): Promise<void> {
+    try {
+      // Determine date range from command
+      let dateRange: string;
+      let startDate: Date;
+      let endDate: Date;
+
+      if (command === COMMANDS.VIEW_REPORT_TODAY) {
+        ({ start: startDate, end: endDate } = getDayRangeWITA());
+        dateRange = formatDateWITA(startDate, "dd MMMM yyyy");
+      } else if (command === COMMANDS.VIEW_REPORT_WEEK) {
+        ({ start: startDate, end: endDate } = getWeekRangeWITA());
+        dateRange = `${formatDateWITA(startDate, "dd MMM")} - ${formatDateWITA(endDate, "dd MMM yyyy")}`;
+      } else if (command === COMMANDS.VIEW_REPORT_MONTH) {
+        ({ start: startDate, end: endDate } = getMonthRangeWITA());
+        dateRange = formatDateWITA(startDate, "MMMM yyyy");
+      } else {
+        // Default to today
+        ({ start: startDate, end: endDate } = getDayRangeWITA());
+        dateRange = formatDateWITA(startDate, "dd MMMM yyyy");
+      }
+
+      // Check for refresh flag in message body
+      const messageBody = message.body.toLowerCase().trim();
+      const refresh =
+        messageBody.includes("refresh") || messageBody.includes("update");
+
+      // Get financial summary
+      const summary = await FinancialSummaryService.getFinancialSummary(
+        userId,
+        userRole,
+        startDate,
+        endDate,
+        refresh, // T039: On-demand cache refresh mechanism
+      );
+
+      // Format and send report
+      const reportMessage = formatFinancialReport({
+        balance: summary.balance,
+        income: summary.income,
+        expenses: summary.expenses,
+        cashflow: summary.cashflow,
+        pendingCount: summary.pendingCount,
+        dateRange,
+        trends: summary.trendData
+          ? {
+              incomeChange: summary.trendData.incomeChange,
+              expenseChange: summary.trendData.expenseChange,
+              cashflowChange: summary.trendData.cashflowChange,
+            }
+          : undefined,
+      });
+
+      await message.reply(reportMessage);
+
+      // Log command execution
+      this.logCommand(userId, message.body, command, 1.0);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      logger.error("Error handling view report command", {
+        error: errorMessage,
+        userId,
+        command,
+      });
+      await message.reply(
+        "❌ Terjadi kesalahan saat mengambil laporan. Silakan coba lagi.",
+      );
     }
   }
 

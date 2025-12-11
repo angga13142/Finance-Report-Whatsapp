@@ -109,6 +109,12 @@ export const COMMAND_SYNONYMS: Record<string, CommandName> = {
   report: COMMANDS.VIEW_REPORT_TODAY,
   "lihat report": COMMANDS.VIEW_REPORT_TODAY,
   "view report": COMMANDS.VIEW_REPORT_TODAY,
+  "lihat laporan hari ini": COMMANDS.VIEW_REPORT_TODAY,
+  "lihat laporan minggu ini": COMMANDS.VIEW_REPORT_WEEK,
+  "lihat laporan bulan ini": COMMANDS.VIEW_REPORT_MONTH,
+  "laporan hari ini": COMMANDS.VIEW_REPORT_TODAY,
+  "laporan minggu ini": COMMANDS.VIEW_REPORT_WEEK,
+  "laporan bulan ini": COMMANDS.VIEW_REPORT_MONTH,
 
   // Balance synonyms
   saldo: COMMANDS.VIEW_BALANCE,

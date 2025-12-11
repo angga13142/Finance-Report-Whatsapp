@@ -166,32 +166,43 @@ export interface FinancialReportData {
   };
 }
 
+/**
+ * T036: Format financial report message with 📊 emoji, financial metrics, and trend indicators
+ * T037: Format financial summary display with Indonesian Rupiah formatting (Rp 500.000), thousand separators
+ */
 export function formatFinancialReport(data: FinancialReportData): string {
   let message = `📊 *Laporan Keuangan*\n`;
-  message += `Periode: ${data.dateRange}\n\n`;
+  message += `Periode: ${data.dateRange}\n`;
+  message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
 
-  message += `💰 Saldo: ${formatCurrency(data.balance)}\n`;
-  message += `📈 Pendapatan: ${formatCurrency(data.income)}\n`;
-  message += `📉 Pengeluaran: ${formatCurrency(data.expenses)}\n`;
-  message += `💵 Arus Kas: ${formatCurrency(data.cashflow)}\n`;
+  // Financial metrics with emoji indicators
+  message += `💰 *Saldo:* ${formatCurrency(data.balance)}\n`;
+  message += `📈 *Pendapatan:* ${formatCurrency(data.income)}\n`;
+  message += `📉 *Pengeluaran:* ${formatCurrency(data.expenses)}\n`;
+  message += `💵 *Arus Kas:* ${formatCurrency(data.cashflow)}\n`;
 
+  // Pending transactions (separated from balance/trends per T033)
   if (data.pendingCount && data.pendingCount > 0) {
     message += `\n⏳ *Pending:* ${data.pendingCount} transaksi`;
   }
 
+  // Trend indicators (T034: percentage changes, period comparisons)
   if (data.trends) {
-    message += `\n\n*Trend:*\n`;
+    message += `\n\n*📊 Trend vs Periode Sebelumnya:*\n`;
     if (data.trends.incomeChange !== undefined) {
       const trendEmoji = data.trends.incomeChange >= 0 ? "📈" : "📉";
-      message += `${trendEmoji} Pendapatan: ${data.trends.incomeChange >= 0 ? "+" : ""}${data.trends.incomeChange.toFixed(1)}%\n`;
+      const sign = data.trends.incomeChange >= 0 ? "+" : "";
+      message += `${trendEmoji} Pendapatan: ${sign}${data.trends.incomeChange.toFixed(1)}%\n`;
     }
     if (data.trends.expenseChange !== undefined) {
       const trendEmoji = data.trends.expenseChange >= 0 ? "📈" : "📉";
-      message += `${trendEmoji} Pengeluaran: ${data.trends.expenseChange >= 0 ? "+" : ""}${data.trends.expenseChange.toFixed(1)}%\n`;
+      const sign = data.trends.expenseChange >= 0 ? "+" : "";
+      message += `${trendEmoji} Pengeluaran: ${sign}${data.trends.expenseChange.toFixed(1)}%\n`;
     }
     if (data.trends.cashflowChange !== undefined) {
       const trendEmoji = data.trends.cashflowChange >= 0 ? "📈" : "📉";
-      message += `${trendEmoji} Arus Kas: ${data.trends.cashflowChange >= 0 ? "+" : ""}${data.trends.cashflowChange.toFixed(1)}%\n`;
+      const sign = data.trends.cashflowChange >= 0 ? "+" : "";
+      message += `${trendEmoji} Arus Kas: ${sign}${data.trends.cashflowChange.toFixed(1)}%\n`;
     }
   }
 
