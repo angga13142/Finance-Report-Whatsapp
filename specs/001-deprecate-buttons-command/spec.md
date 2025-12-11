@@ -262,7 +262,7 @@ During the transition period, users who prefer buttons or have technical limitat
 
 #### Error Handling and User Guidance (FR-041 to FR-045)
 
-- **FR-041** (High): System MUST provide helpful error messages for unrecognized commands. When confidence <70%, show explicit offer: "Tidak yakin dengan: '[command]'\n\nGunakan tombol untuk lanjut?" with Yes/No options, allowing user to choose buttons or confirm command. When confidence ≥70%, list top 3 command suggestions with brief descriptions. All help output is role-filtered, showing only commands available to user's role with indicators like "🔒 (Boss only)"
+- **FR-041** (High): System MUST provide helpful error messages for unrecognized commands. When confidence ≥70%, execute command automatically. When confidence <70%, show explicit offer: "Tidak yakin dengan: '[command]'\n\nGunakan tombol untuk lanjut?" with Yes/No options, allowing user to choose buttons or confirm command, or list top 3 command suggestions with brief descriptions. All help output is role-filtered, showing only commands available to user's role with indicators like "🔒 (Boss only)"
 - **FR-042** (Medium): System MUST offer contextual suggestions based on user's current workflow state when they enter invalid commands (e.g., suggesting amount input during transaction entry)
 - **FR-043** (High): System MUST handle command parsing errors gracefully, asking user to rephrase or providing examples of correct command syntax
 - **FR-044** (Medium): System MUST provide "help" or "bantuan" command that displays comprehensive command reference tailored to user's role and current context. Help output is role-filtered showing only available commands (Employee: transaction/report commands; Boss: approval/summary commands; Investor: financial-reports only). Each command includes brief description and role indicator (e.g., "🔒 Boss only")
@@ -302,7 +302,7 @@ This section documents clarifications made during specification review that mate
 
 - **Q: Pending Transaction Display** → **A**: Pending transactions shown separately with "⏳ Pending:" label, never included in balance/report calculations. Maintains financial accuracy and prevents confusion from incomplete transactions.
 
-- **Q: Low-Confidence Command Handling** → **A**: When confidence <70%, system shows explicit offer: "Tidak yakin dengan: '[command]'\n\nGunakan tombol untuk lanjut?" instead of silent fallback. Users control fallback decision.
+- **Q: Low-Confidence Command Handling** → **A**: When confidence ≥70%, system executes command automatically. When confidence <70%, system shows explicit offer: "Tidak yakin dengan: '[command]'\n\nGunakan tombol untuk lanjut?" with Yes/No options or suggestions, instead of silent fallback. Users control fallback decision.
 
 - **Q: Role-Based Help Display** → **A**: Help command shows only commands available to user's role with role indicators (e.g., "🔒 Boss only"). Reduces cognitive load and prevents confusion from unavailable commands.
 

@@ -18,7 +18,7 @@
 **Purpose**: Project initialization and dependency installation
 
 - [x] T001 Install fuse.js dependency for fuzzy command matching in package.json
-- [x] T002 [P] Verify existing zod@^3.22.0 and redis@^4.6.0 dependencies are installed
+- [x] T002 [P] Verify existing zod@^3.22.4 and redis@^4.6.0 dependencies are installed
 - [x] T003 [P] Add ENABLE_LEGACY_BUTTONS environment variable to .env.example file
 
 ---
@@ -29,12 +29,12 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Create command constants definitions in src/config/constants.ts with COMMANDS object, COMMAND_SYNONYMS mapping, COMMAND_ABBREVIATIONS mapping (cp→catat_penjualan, ll→lihat_laporan per FR-009), and CONFIDENCE_THRESHOLD constant (70% per FR-041)
-- [ ] T005 [P] Add ENABLE_LEGACY_BUTTONS configuration flag to src/config/env.ts with boolean schema validation and default true
-- [ ] T006 [P] Extend src/services/system/config.ts to support runtime ENABLE_LEGACY_BUTTONS flag updates with 60-second propagation guarantee and per-user/per-role override support (precedence: user override > role override > global config per FR-036)
-- [ ] T007 Extend src/lib/redis.ts with conversation context management functions (getContext, setContext, updateContext, clearContext) with 1800s TTL support
-- [ ] T008 [P] Create command parser in src/bot/handlers/command.parser.ts with fuse.js integration for fuzzy matching and confidence scoring (NOTE: This is a NEW file; existing src/bot/handlers/command.ts contains CommandHandler class for legacy commands and will be extended, not replaced)
-- [ ] T009 [P] Create message formatter utility in src/bot/ui/message.formatter.ts with emoji indicators, Markdown formatting, and pagination support
+- [x] T004 Create command constants definitions in src/config/constants.ts with COMMANDS object, COMMAND_SYNONYMS mapping, COMMAND_ABBREVIATIONS mapping (cp→catat_penjualan, ll→lihat_laporan per FR-009), and CONFIDENCE_THRESHOLD constant (70% per FR-041)
+- [x] T005 [P] Add ENABLE_LEGACY_BUTTONS configuration flag to src/config/env.ts with boolean schema validation and default true
+- [x] T006 [P] Extend src/services/system/config.ts to support runtime ENABLE_LEGACY_BUTTONS flag updates with 60-second propagation guarantee and per-user/per-role override support (precedence: user override > role override > global config per FR-036)
+- [x] T007 Extend src/lib/redis.ts with conversation context management functions (getContext, setContext, updateContext, clearContext) with 1800s TTL support
+- [x] T008 [P] Create command parser in src/bot/handlers/command.parser.ts with fuse.js integration for fuzzy matching and confidence scoring (NOTE: This is a NEW file; existing src/bot/handlers/command.ts contains CommandHandler class for legacy commands and will be extended, not replaced)
+- [x] T009 [P] Create message formatter utility in src/bot/ui/message.formatter.ts with emoji indicators, Markdown formatting, and pagination support
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -124,7 +124,7 @@
 ### Implementation for User Story 3
 
 - [ ] T044 [US3] Implement command parser suggestion logic for unrecognized commands (top 3 matches with descriptions) in src/bot/handlers/command.parser.ts
-- [ ] T045 [US3] Implement confidence-based error handling (<70% show explicit offer with button fallback option, ≥70% show suggestions) in src/bot/handlers/command.ts
+- [ ] T045 [US3] Implement confidence-based error handling (≥70% auto-execute command, <70% show explicit offer with button fallback option or suggestions) in src/bot/handlers/command.ts
 - [ ] T046 [US3] Implement help command handler ("bantu", "help") in src/bot/handlers/command.ts with role-filtered command list
 - [ ] T047 [US3] Create role-based command mapping in src/config/constants.ts defining available commands per role (Employee, Boss, Investor, Dev)
 - [ ] T048 [P] [US3] Implement formatted help message generation in src/bot/ui/message.formatter.ts with emoji indicators and role labels (🔒 Boss only)

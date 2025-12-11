@@ -20,10 +20,10 @@ This guide provides quick setup instructions for implementing the command-based 
 ### 1. Install Dependencies
 
 ```bash
-npm install fuse.js@^7.0.0
+npm install fuse.js@^7.1.0
 ```
 
-**Note**: `zod@^3.22.0` already installed, `redis@^4.6.0` already installed
+**Note**: `zod@^3.22.4` already installed, `redis@^4.6.0` already installed
 
 ### 2. Add Environment Variable
 

@@ -314,8 +314,8 @@
 
 **Command Processing**:
 
-- `fuse.js@^7.0.0` - Fuzzy string matching for typo tolerance
-- `zod@^3.22.0` - Schema validation for command parameters
+- `fuse.js@^7.1.0` - Fuzzy string matching for typo tolerance
+- `zod@^3.22.4` - Schema validation for command parameters
 
 **Caching & State**:
 

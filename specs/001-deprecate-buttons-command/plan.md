@@ -11,7 +11,7 @@ This feature deprecates button-based interactions in favor of text command inter
 ## Technical Context
 
 **Language/Version**: TypeScript 5.0+, Node.js 20.0.0+  
-**Primary Dependencies**: whatsapp-web.js@^1.34.2, fuse.js@^7.0.0 (fuzzy matching), zod@^3.22.0 (validation), redis@^4.6.0 (session context), winston@^3.11.0 (logging)  
+**Primary Dependencies**: whatsapp-web.js@^1.34.2, fuse.js@^7.1.0 (fuzzy matching), zod@^3.22.4 (validation), redis@^4.6.0 (session context), winston@^3.11.0 (logging)  
 **Storage**: PostgreSQL 15+ (transactional data), Redis 7.x (conversation context, financial cache), LocalAuth filesystem (`.wwebjs_auth/` for WhatsApp session)  
 **Testing**: Jest 29.x (unit/integration), Playwright 1.4+ (E2E for WhatsApp interactions)  
 **Target Platform**: Linux server (Docker container), headless Chromium via Puppeteer for WhatsApp Web automation  

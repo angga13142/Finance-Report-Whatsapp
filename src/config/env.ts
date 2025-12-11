@@ -108,6 +108,13 @@ const envSchema = z.object({
     .transform(Number)
     .pipe(z.number().int().positive())
     .default("16"),
+
+  // Button Deprecation Feature Flag
+  ENABLE_LEGACY_BUTTONS: z
+    .string()
+    .transform((val) => val === "true" || val === "1")
+    .pipe(z.boolean())
+    .default("true"),
 });
 
 export type Env = z.infer<typeof envSchema>;
