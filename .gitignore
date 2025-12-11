@@ -13,6 +13,7 @@ build/
 .env
 .env.local
 .env.*.local
+.wwebjs_auth_test/
 
 # Logs
 logs/
