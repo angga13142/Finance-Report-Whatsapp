@@ -1,140 +1,193 @@
 /**
- * Application constants
+ * Command constants and configuration
+ * Defines canonical command names, synonyms, abbreviations, and confidence thresholds
  */
 
-export const APP_NAME = "WhatsApp Cashflow Bot";
-export const APP_VERSION = "1.0.0";
+import { env } from "./env";
 
-// User Roles
+// User roles (with uppercase accessors for backward compatibility)
 export const USER_ROLES = {
-  DEV: "dev",
-  BOSS: "boss",
   EMPLOYEE: "employee",
+  BOSS: "boss",
   INVESTOR: "investor",
+  DEV: "dev",
 } as const;
 
-export type UserRole = (typeof USER_ROLES)[keyof typeof USER_ROLES];
+// Type helper for UserRole
+export type UserRoleType = (typeof USER_ROLES)[keyof typeof USER_ROLES];
 
-// Transaction Types
+// Menu states for session management
+export const MENU_STATES = {
+  MAIN: "main",
+  TRANSACTION_TYPE: "transaction_type",
+  TRANSACTION: "transaction",
+  CATEGORY_SELECTION: "category_selection",
+  CATEGORY: "category",
+  AMOUNT_INPUT: "amount_input",
+  AMOUNT: "amount",
+  DESCRIPTION_INPUT: "description_input",
+  CONFIRMATION: "confirmation",
+  CONFIRM: "confirm",
+  REPORT_VIEW: "report_view",
+  PROFILE: "profile",
+  SETTINGS: "settings",
+  ADMIN: "admin",
+} as const;
+
+// UI constraints
+export const MAX_BUTTON_LABEL_LENGTH = 20;
+export const MAX_LIST_ITEMS = 100;
+
+// Timezone
+export const TIMEZONE = env.TZ || "Asia/Makassar";
+
+// Session timeout (from env)
+export const SESSION_TIMEOUT_MS = env.SESSION_TIMEOUT_MS;
+
+// Phone number validation regex (Indonesian format)
+export const PHONE_NUMBER_REGEX = /^(\+62|0)[0-9]{9,12}$/;
+
+// Amount input patterns for parsing
+export const AMOUNT_INPUT_PATTERNS = [
+  /^Rp\s*([\d.,]+)$/i,
+  /^([\d.,]+)\s*rupiah$/i,
+  /^([\d.,]+)$/,
+] as const;
+
+// Transaction amount limits
+export const MIN_TRANSACTION_AMOUNT = 1;
+export const MAX_TRANSACTION_AMOUNT = 999999999999;
+
+// Transaction types (for validation)
 export const TRANSACTION_TYPES = {
   INCOME: "income",
   EXPENSE: "expense",
 } as const;
 
-export type TransactionType =
-  (typeof TRANSACTION_TYPES)[keyof typeof TRANSACTION_TYPES];
+export const COMMANDS = {
+  // Transaction commands
+  RECORD_SALE: "catat_penjualan",
+  RECORD_EXPENSE: "catat_pengeluaran",
 
-// Approval Status
-export const APPROVAL_STATUS = {
-  APPROVED: "approved",
-  PENDING: "pending",
-  REJECTED: "rejected",
+  // Report commands
+  VIEW_REPORT_TODAY: "lihat_laporan_hari_ini",
+  VIEW_REPORT_WEEK: "lihat_laporan_minggu_ini",
+  VIEW_REPORT_MONTH: "lihat_laporan_bulan_ini",
+
+  // Balance commands
+  VIEW_BALANCE: "lihat_saldo",
+  CHECK_BALANCE: "cek_saldo",
+
+  // Help commands
+  HELP: "bantu",
+  MENU: "menu",
 } as const;
 
-export type ApprovalStatus =
-  (typeof APPROVAL_STATUS)[keyof typeof APPROVAL_STATUS];
+export type CommandName = (typeof COMMANDS)[keyof typeof COMMANDS];
 
-// Report Types
-export const REPORT_TYPES = {
-  DAILY: "daily",
-  WEEKLY: "weekly",
-  MONTHLY: "monthly",
-  CUSTOM: "custom",
+/**
+ * Command synonyms mapping
+ * Maps alternative command text to canonical command names
+ */
+export const COMMAND_SYNONYMS: Record<string, CommandName> = {
+  // Record sale synonyms
+  tambah: COMMANDS.RECORD_SALE,
+  input: COMMANDS.RECORD_SALE,
+  masukkan: COMMANDS.RECORD_SALE,
+  "record sale": COMMANDS.RECORD_SALE,
+  "tambah penjualan": COMMANDS.RECORD_SALE,
+  "input penjualan": COMMANDS.RECORD_SALE,
+
+  // Record expense synonyms
+  "catat pengeluaran": COMMANDS.RECORD_EXPENSE,
+  "tambah pengeluaran": COMMANDS.RECORD_EXPENSE,
+  "input pengeluaran": COMMANDS.RECORD_EXPENSE,
+  "record expense": COMMANDS.RECORD_EXPENSE,
+
+  // Report synonyms
+  laporan: COMMANDS.VIEW_REPORT_TODAY,
+  report: COMMANDS.VIEW_REPORT_TODAY,
+  "lihat report": COMMANDS.VIEW_REPORT_TODAY,
+  "view report": COMMANDS.VIEW_REPORT_TODAY,
+  "lihat laporan hari ini": COMMANDS.VIEW_REPORT_TODAY,
+  "lihat laporan minggu ini": COMMANDS.VIEW_REPORT_WEEK,
+  "lihat laporan bulan ini": COMMANDS.VIEW_REPORT_MONTH,
+  "laporan hari ini": COMMANDS.VIEW_REPORT_TODAY,
+  "laporan minggu ini": COMMANDS.VIEW_REPORT_WEEK,
+  "laporan bulan ini": COMMANDS.VIEW_REPORT_MONTH,
+
+  // Balance synonyms
+  saldo: COMMANDS.VIEW_BALANCE,
+  balance: COMMANDS.VIEW_BALANCE,
+  "cek saldo": COMMANDS.CHECK_BALANCE,
+  "check balance": COMMANDS.CHECK_BALANCE,
+
+  // Help synonyms
+  bantuan: COMMANDS.HELP,
+  tolong: COMMANDS.HELP,
+  help: COMMANDS.HELP,
 } as const;
 
-export type ReportType = (typeof REPORT_TYPES)[keyof typeof REPORT_TYPES];
-
-// Recommendation Types
-export const RECOMMENDATION_TYPES = {
-  EXPENSE_SPIKE: "expense_spike",
-  REVENUE_DECLINE: "revenue_decline",
-  CASHFLOW_WARNING: "cashflow_warning",
-  EMPLOYEE_INACTIVITY: "employee_inactivity",
-  TARGET_VARIANCE: "target_variance",
+/**
+ * Command abbreviations mapping
+ * Maps short abbreviations to canonical command names (per FR-009)
+ */
+export const COMMAND_ABBREVIATIONS: Record<string, CommandName> = {
+  cp: COMMANDS.RECORD_SALE, // "catat penjualan"
+  ll: COMMANDS.VIEW_REPORT_TODAY, // "lihat laporan"
 } as const;
 
-export type RecommendationType =
-  (typeof RECOMMENDATION_TYPES)[keyof typeof RECOMMENDATION_TYPES];
+/**
+ * Confidence threshold for command recognition (per FR-041)
+ * Commands with confidence ≥70% are auto-executed
+ * Commands with confidence <70% require user confirmation or show suggestions
+ */
+export const CONFIDENCE_THRESHOLD = 0.7;
 
-// Recommendation Priority
-export const RECOMMENDATION_PRIORITY = {
-  CRITICAL: "critical",
-  HIGH: "high",
-  MEDIUM: "medium",
-  LOW: "low",
-} as const;
-
-export type RecommendationPriority =
-  (typeof RECOMMENDATION_PRIORITY)[keyof typeof RECOMMENDATION_PRIORITY];
-
-// Timezone
-export const TIMEZONE = "Asia/Makassar"; // WITA (UTC+8)
-
-// Session Management
-export const SESSION_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
-export const SESSION_CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
-
-// Button Interface
-export const MAX_BUTTONS_PER_ROW = 3;
-export const MAX_BUTTON_LABEL_LENGTH = 20;
-export const MAX_LIST_ITEMS = 100;
-
-// Transaction Limits
-export const MIN_TRANSACTION_AMOUNT = 0.01;
-export const MAX_TRANSACTION_AMOUNT = 500_000_000; // Rp 500M
-
-// Rate Limiting
-export const DEFAULT_RATE_LIMIT_MESSAGES_PER_MINUTE = 15;
-export const DEFAULT_BUTTON_DEBOUNCE_MS = 3000;
-
-// Report Generation
-export const REPORT_GENERATION_TIME = "23:55"; // 5 minutes before delivery
-export const REPORT_DELIVERY_TIME = "24:00";
-export const REPORT_RETRY_ATTEMPTS = 3;
-export const REPORT_RETRY_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
-
-// Recommendation Thresholds
-export const EXPENSE_SPIKE_THRESHOLD = 0.3; // 30%
-export const REVENUE_DECLINE_THRESHOLD = 0.15; // 15%
-export const NEGATIVE_CASHFLOW_DAYS = 3;
-export const CONFIDENCE_SCORE_THRESHOLD = 80; // 80% for proactive alerts
-
-// Data Retention (in days)
-export const TRANSACTION_RETENTION_DAYS = 7 * 365; // 7 years
-export const REPORT_RETENTION_DAYS = 7 * 365; // 7 years
-export const AUDIT_LOG_RETENTION_DAYS = 7 * 365; // 7 years
-export const RECOMMENDATION_RETENTION_DAYS = 90; // 90 days
-
-// Phone Number Format (Indonesian)
-export const PHONE_NUMBER_REGEX = /^(\+?62|0)[0-9]{9,12}$/;
-
-// Amount Format Patterns
-export const AMOUNT_INPUT_PATTERNS = [
-  /^\d+$/, // 500000
-  /^\d{1,3}(\.\d{3})+$/, // 500.000
-  /^\d{1,3}(,\d{3})+$/, // 500,000
-];
-
-// Menu States
-export const MENU_STATES = {
-  MAIN: "main",
-  TRANSACTION: "transaction",
-  CATEGORY: "category",
-  AMOUNT: "amount",
-  CONFIRM: "confirm",
-  REPORT: "report",
-  ADMIN: "admin",
-} as const;
-
-export type MenuState = (typeof MENU_STATES)[keyof typeof MENU_STATES];
-
-// Error Messages (Indonesian)
-export const ERROR_MESSAGES = {
-  INVALID_INPUT: "Input tidak valid. Silakan coba lagi.",
-  UNAUTHORIZED: "Anda tidak memiliki izin untuk melakukan aksi ini.",
-  NOT_FOUND: "Data tidak ditemukan.",
-  DUPLICATE_TRANSACTION: "Transaksi serupa sudah ada dalam 1 menit terakhir.",
-  INVALID_AMOUNT: "Jumlah harus lebih dari 0 dan kurang dari Rp 500.000.000.",
-  SESSION_EXPIRED: "Sesi Anda telah berakhir. Silakan mulai lagi.",
-  RATE_LIMIT_EXCEEDED: "Terlalu banyak permintaan. Silakan tunggu sebentar.",
+/**
+ * Role-based command availability mapping
+ * Defines which commands are available to each role
+ */
+export const ROLE_COMMANDS: Record<string, CommandName[]> = {
+  employee: [
+    COMMANDS.RECORD_SALE,
+    COMMANDS.RECORD_EXPENSE,
+    COMMANDS.VIEW_REPORT_TODAY,
+    COMMANDS.VIEW_REPORT_WEEK,
+    COMMANDS.VIEW_REPORT_MONTH,
+    COMMANDS.VIEW_BALANCE,
+    COMMANDS.CHECK_BALANCE,
+    COMMANDS.HELP,
+    COMMANDS.MENU,
+  ],
+  boss: [
+    COMMANDS.RECORD_SALE,
+    COMMANDS.RECORD_EXPENSE,
+    COMMANDS.VIEW_REPORT_TODAY,
+    COMMANDS.VIEW_REPORT_WEEK,
+    COMMANDS.VIEW_REPORT_MONTH,
+    COMMANDS.VIEW_BALANCE,
+    COMMANDS.CHECK_BALANCE,
+    COMMANDS.HELP,
+    COMMANDS.MENU,
+  ],
+  investor: [
+    COMMANDS.VIEW_REPORT_TODAY,
+    COMMANDS.VIEW_REPORT_WEEK,
+    COMMANDS.VIEW_REPORT_MONTH,
+    COMMANDS.VIEW_BALANCE,
+    COMMANDS.HELP,
+    COMMANDS.MENU,
+  ],
+  dev: [
+    COMMANDS.RECORD_SALE,
+    COMMANDS.RECORD_EXPENSE,
+    COMMANDS.VIEW_REPORT_TODAY,
+    COMMANDS.VIEW_REPORT_WEEK,
+    COMMANDS.VIEW_REPORT_MONTH,
+    COMMANDS.VIEW_BALANCE,
+    COMMANDS.CHECK_BALANCE,
+    COMMANDS.HELP,
+    COMMANDS.MENU,
+  ],
 } as const;

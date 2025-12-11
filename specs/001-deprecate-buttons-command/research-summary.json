@@ -1,0 +1,248 @@
+{
+  "research_session": {
+    "date": "2025-12-11",
+    "scope": "whatsapp-web.js v1.34.2 configuration, installation, and production deployment",
+    "context": "Button Deprecation & Command-Based UI Feature Specification",
+    "status": "Complete - Ready for Phase 1"
+  },
+
+  "research_scope": "whatsapp-web.js v1.34.2 - Installation prerequisites, Authentication strategies (NoAuth/LocalAuth/RemoteAuth), Puppeteer configuration, System dependencies for headless/Docker environments, Production deployment best practices, Security considerations, Error handling and recovery",
+
+  "sources": [
+    {
+      "url": "https://wwebjs.dev/guide/installation.html",
+      "type": "installation",
+      "authority": "Official",
+      "key_findings": [
+        "Node.js v18+ required (project uses v20.0.0 - fully compatible)",
+        "Puppeteer v24.32.1 auto-installed with whatsapp-web.js",
+        "Linux/headless systems require 25+ system dependencies (gconf-service, libgbm-dev, libasound2, etc.)",
+        "Package managers supported: npm, yarn, pnpm",
+        "Installation command: npm install whatsapp-web.js"
+      ]
+    },
+    {
+      "url": "https://wwebjs.dev/guide/creating-your-bot/authentication.html",
+      "type": "configuration",
+      "authority": "Official",
+      "key_findings": [
+        "Three authentication strategies: NoAuth, LocalAuth, RemoteAuth",
+        "CRITICAL: LocalAuth incompatible with ephemeral filesystems (Heroku, serverless, temp Docker volumes)",
+        "LocalAuth uses persistent .wwebjs_auth directory on filesystem",
+        "RemoteAuth supports MongoDB and AWS S3 backends for distributed deployments",
+        "RemoteAuth requires ~60 seconds for initial session save (listen to remote_session_saved event)",
+        "Headless/root execution REQUIRES: --no-sandbox and --disable-setuid-sandbox flags",
+        "Platform compatibility: LocalAuth (persistent FS), RemoteAuth (all platforms including Heroku)"
+      ]
+    },
+    {
+      "url": "https://wwebjs.dev/guide/creating-your-bot/",
+      "type": "implementation",
+      "authority": "Official",
+      "key_findings": [
+        "QR code regenerated every 30 seconds until scanned (using qrcode-terminal package)",
+        "Message event: message_create (recommended) or message",
+        "Reply method: message.reply() or client.sendMessage()",
+        "Startup flow: initialize() → QR gen → scan → ready event",
+        "Chromium launch: 5-15 seconds typical",
+        "qrcode-terminal package for terminal QR display"
+      ]
+    },
+    {
+      "url": "https://docs.wwebjs.dev/",
+      "type": "best-practice",
+      "authority": "Official",
+      "key_findings": [
+        "Feature matrix shows buttons ❌ DEPRECATED and lists ❌ DEPRECATED (aligns with spec!)",
+        "Text messaging ✅ fully supported - perfect for command-based UI",
+        "Media handling: images, audio, documents, video (Chrome required)",
+        "Multi-device support: ✅ supported",
+        "API classes: Client, Message, Chat, Contact, Channel, GroupChat",
+        "Events: qr, authenticated, ready, message_create, disconnected, auth_failure, change_state",
+        "WhatsApp Web version: v2.3000.1017054665"
+      ]
+    }
+  ],
+
+  "installation_best_practices": {
+    "prerequisites": [
+      "Node.js v20.0.0+ (project compatible)",
+      "npm/yarn/pnpm package manager",
+      "For Linux/headless: 25+ system dependencies (gconf-service, libgbm-dev, libasound2, libatk1.0-0, libc6, libcairo2, libcups2, libdbus-1-3, libexpat1, libfontconfig1, libgcc1, libgconf-2-4, libgdk-pixbuf2.0-0, libglib2.0-0, libgtk-3-0, libnspr4, libpango-1.0-0, libpangocairo-1.0-0, libstdc++6, libx11-6, libx11-xcb1, libxcb1, libxcomposite1, libxcursor1, libxdamage1, libxext6, libxfixes3, libxi6, libxrandr2, libxrender1, libxss1, libxtst6, ca-certificates, fonts-liberation, libappindicator1, libnss3, lsb-release, xdg-utils, wget)",
+      "For persistent storage (LocalAuth): dedicated volume or managed storage service"
+    ],
+
+    "step_by_step": [
+      "Initialize project: npm init -y",
+      "Install primary library: npm install whatsapp-web.js",
+      "Install QR display: npm install qrcode-terminal",
+      "Choose authentication: Install wwebjs-mongo mongoose (RemoteAuth) OR use LocalAuth",
+      "Create main.js entry point with Client initialization",
+      "Configure puppeteer args for headless: --no-sandbox, --disable-setuid-sandbox, --disable-dev-shm-usage",
+      "Setup event listeners: qr, ready, message_create, disconnected, auth_failure",
+      "Run: npm start (will display QR code)",
+      "Scan QR with WhatsApp mobile device",
+      "Wait for 'Client is ready!' message",
+      "Begin processing commands"
+    ],
+
+    "configuration": [
+      "MANDATORY for production: Use RemoteAuth strategy (not LocalAuth) for cloud/distributed deployments",
+      "MANDATORY for Docker/headless: Include puppeteer args: --no-sandbox, --disable-setuid-sandbox",
+      "MANDATORY: Listen to remote_session_saved event before considering session persisted",
+      "MANDATORY: Implement auto-reconnection with exponential backoff on disconnection",
+      "RECOMMENDED: Use MongoDB Atlas for managed session storage (encrypted at rest by default)",
+      "RECOMMENDED: Store MONGODB_URI in environment variables (never hardcode)",
+      "RECOMMENDED: Implement health check endpoint for deployment monitoring",
+      "RECOMMENDED: Use Winston or similar for structured logging with context",
+      "RECOMMENDED: Set Puppeteer headless: true for server/Docker deployments",
+      "OPTIONAL: Enable message rate limiting (3sec/message) to avoid WhatsApp detection"
+    ]
+  },
+
+  "authentication_strategies": {
+    "comparison": {
+      "NoAuth": {
+        "session_persistence": "None",
+        "qr_required_per": "Every restart",
+        "use_case": "Development/testing only",
+        "cloud_compatible": true,
+        "production_viable": false,
+        "complexity": "Minimal",
+        "recommendation": "NOT RECOMMENDED for production"
+      },
+      "LocalAuth": {
+        "session_persistence": "Filesystem (.wwebjs_auth/)",
+        "qr_required_per": "One-time only",
+        "use_case": "Single-instance deployments (VPS, dedicated servers)",
+        "cloud_compatible": false,
+        "production_viable": "Only with persistent filesystems",
+        "complexity": "Low",
+        "blockers": [
+          "NOT compatible with Heroku (ephemeral dyno)",
+          "NOT compatible with serverless (Lambda, Cloud Functions)",
+          "NOT compatible with ephemeral Docker volumes",
+          "REQUIRES persistent storage (EBS, Persistent Disks, etc.)"
+        ],
+        "recommendation": "Use ONLY for single-instance with persistent filesystem"
+      },
+      "RemoteAuth": {
+        "session_persistence": "Database (MongoDB, AWS S3, custom)",
+        "qr_required_per": "One-time only",
+        "use_case": "Cloud deployments, distributed systems, multiple instances",
+        "cloud_compatible": true,
+        "production_viable": true,
+        "complexity": "Medium",
+        "platforms_supported": [
+          "AWS (EC2, ECS, Fargate)",
+          "Azure (App Service, AKS)",
+          "Google Cloud (Compute Engine, Cloud Run)",
+          "Heroku",
+          "Self-hosted Kubernetes",
+          "Any platform with database access"
+        ],
+        "recommendation": "STRONGLY RECOMMENDED for all production environments"
+      }
+    }
+  },
+
+  "production_considerations": [
+    "CRITICAL RISK: WhatsApp explicitly prohibits bots/unofficial clients - account ban possible without warning",
+    "Use RemoteAuth + MongoDB for cloud deployments (not LocalAuth with ephemeral filesystem)",
+    "Implement exponential backoff auto-reconnection (start 5sec, max 5min)",
+    "Monitor WhatsApp Web version compatibility (currently: v2.3000.1017054665)",
+    "Include --no-sandbox and --disable-setuid-sandbox in Puppeteer args for Docker/headless",
+    "Listen to all client events (qr, ready, disconnected, auth_failure, change_state, error)",
+    "Alert on TOS_BLOCK state change (indicates account at risk)",
+    "Implement rate limiting: max 1 message per 3 seconds per chat",
+    "Use message queue (Bull.js) for burst traffic handling",
+    "Log QR generation attempts for audit trail (security)",
+    "Backup MongoDB session store (automatic with MongoDB Atlas)",
+    "Monitor memory usage (200-500MB Chromium + 100MB Node.js = ~700MB minimum)",
+    "Implement graceful shutdown: await client.destroy() on SIGTERM",
+    "Use health check endpoint for load balancer/orchestration validation",
+    "Monitor delivery success rate (target: >99%)",
+    "Implement retry logic for failed message delivery (3 retries at 5min intervals)",
+    "Never commit .wwebjs_auth/ or credentials to version control",
+    "Use secrets management (environment variables, AWS Secrets Manager, etc.)",
+    "Rotate MONGODB_URI and API credentials periodically",
+    "Enable MongoDB encryption at rest (Atlas default)",
+    "IP whitelist MongoDB access (network security)",
+    "Implement request validation for command processing",
+    "Sanitize user input from WhatsApp messages",
+    "Log all transaction commands for compliance/audit",
+    "Consider alternative official channels (WhatsApp Business API) for critical features"
+  ],
+
+  "external_tools_used": [
+    {
+      "tool": "whatsapp-web.js",
+      "version": "1.34.2",
+      "reason": "Primary library for WhatsApp Web automation via Puppeteer"
+    },
+    {
+      "tool": "qrcode-terminal",
+      "version": "latest",
+      "reason": "Terminal QR code display for initial authentication"
+    },
+    {
+      "tool": "wwebjs-mongo",
+      "version": "latest",
+      "reason": "MongoDB session store backend for RemoteAuth strategy (recommended)"
+    },
+    {
+      "tool": "mongoose",
+      "version": "latest",
+      "reason": "MongoDB driver for database connectivity"
+    },
+    {
+      "tool": "wwebjs-aws-s3",
+      "version": "latest",
+      "reason": "AWS S3 session store backend (alternative to MongoDB)"
+    },
+    {
+      "tool": "@aws-sdk/client-s3",
+      "version": "latest",
+      "reason": "AWS SDK for S3 operations (if using S3 backend)"
+    },
+    {
+      "tool": "winston",
+      "version": "latest",
+      "reason": "Recommended: Structured logging with context (not required but best practice)"
+    },
+    {
+      "tool": "dotenv",
+      "version": "latest",
+      "reason": "Environment variable management for credentials"
+    },
+    {
+      "tool": "bull",
+      "version": "latest",
+      "reason": "Optional: Message queue for rate limiting and burst handling"
+    }
+  ],
+
+  "recommendations": [
+    "FOR FINANCE APPLICATION: Use RemoteAuth + MongoDB Atlas architecture for enterprise-grade reliability",
+    "Deploy in Docker container with health checks and graceful shutdown handling",
+    "Implement comprehensive logging (Winston) with context: userId, command, result, latency",
+    "Monitor WhatsApp API changes and library updates (monthly security review)",
+    "Maintain alternative contact method for critical transactions (backup communication)",
+    "Implement request rate limiting per user (max 10 commands/min) to prevent abuse",
+    "Cache financial summaries (30-60 second TTL) to reduce database load",
+    "Use message confirmation (read receipts) for transaction commands",
+    "Implement command retry logic with user notification on failure",
+    "Store command/transaction audit logs for compliance (6+ months retention)",
+    "Regular security audits of session storage and credential management",
+    "Load test with expected concurrent user count (50-100 typical for single instance)",
+    "Plan for WhatsApp feature deprecation (buttons/lists already deprecated - validate spec direction)",
+    "Consider multi-language support (currently Indonesian - may expand)",
+    "Implement transaction idempotency (prevent duplicate processing from retried messages)",
+    "Use database transactions for multi-step financial operations",
+    "Validate all command inputs against schema (Zod recommended)",
+    "Implement circuit breaker for database connectivity issues",
+    "Monitor deployment logs for auth_failure events (requires manual intervention)",
+    "Use CloudWatch/Application Insights for production monitoring",
+    "Implement canary deployments for safe feature rollout"
+  ]
+}

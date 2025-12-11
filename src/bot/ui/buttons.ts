@@ -2,15 +2,25 @@ import { Buttons } from "whatsapp-web.js";
 import { UserRole } from "@prisma/client";
 import { RBACService } from "../../services/user/rbac";
 import { USER_ROLES, MAX_BUTTON_LABEL_LENGTH } from "../../config/constants";
+import { configService } from "../../services/system/config";
 
 /**
  * Button menu generation utilities
  */
 export class ButtonMenu {
   /**
-   * Generate main menu buttons based on user role
+   * T056: Generate main menu buttons based on user role
+   * Checks ENABLE_LEGACY_BUTTONS flag before rendering buttons
    */
-  static generateMainMenu(role: UserRole): Buttons {
+  static generateMainMenu(role: UserRole, userId?: string): Buttons | null {
+    // T056: Check ENABLE_LEGACY_BUTTONS flag before rendering buttons
+    const enableLegacyButtons = configService.getEnableLegacyButtons(
+      userId,
+      role,
+    );
+    if (!enableLegacyButtons) {
+      return null; // Buttons disabled, return null to indicate no buttons should be rendered
+    }
     const buttonSpecs: Array<{ id?: string; body: string }> = [];
 
     // Transaction buttons (for users who can create transactions)

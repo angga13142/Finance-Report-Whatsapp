@@ -1,0 +1,407 @@
+openapi: 3.0.0
+info:
+  title: Command Processing API
+  description: Internal API contracts for command recognition, parsing, and execution
+  version: 1.0.0
+
+paths:
+  /command/parse:
+    post:
+      summary: Parse user text input into recognized command
+      description: Analyzes raw user input and returns recognized command intent with confidence score
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParseCommandRequest"
+      responses:
+        "200":
+          description: Command successfully parsed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParsedCommand"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /command/execute:
+    post:
+      summary: Execute recognized command
+      description: Executes parsed command and returns formatted response
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExecuteCommandRequest"
+      responses:
+        "200":
+          description: Command executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommandResponse"
+        "400":
+          description: Invalid command or parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /financial/summary:
+    get:
+      summary: Get financial summary with caching
+      description: Retrieves financial data summary with Redis caching support
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: dateRange
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [today, week, month, custom]
+        - name: forceRefresh
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Financial summary retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialSummary"
+        "404":
+          description: User or data not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /context/get:
+    get:
+      summary: Get user conversation context
+      description: Retrieves current conversation context from Redis
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Context retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversationContext"
+        "404":
+          description: No active context
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /context/update:
+    post:
+      summary: Update conversation context
+      description: Creates or updates user conversation context in Redis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConversationContext"
+      responses:
+        "200":
+          description: Context updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversationContext"
+
+  /context/clear:
+    delete:
+      summary: Clear conversation context
+      description: Removes user conversation context
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Context cleared
+        "404":
+          description: No context to clear
+
+  /message/format:
+    post:
+      summary: Format command response message
+      description: Formats response data into WhatsApp message with Markdown and emoji
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FormatMessageRequest"
+      responses:
+        "200":
+          description: Message formatted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FormattedMessage"
+
+components:
+  schemas:
+    ParseCommandRequest:
+      type: object
+      required:
+        - rawText
+        - userId
+      properties:
+        rawText:
+          type: string
+          description: Raw user input text
+          example: "catat penjualan"
+        userId:
+          type: string
+          description: User identifier
+        userRole:
+          type: string
+          enum: [dev, boss, employee, investor]
+          description: User role for role-filtered command recognition
+
+    ParsedCommand:
+      type: object
+      required:
+        - recognizedIntent
+        - confidence
+        - rawText
+      properties:
+        recognizedIntent:
+          type: string
+          description: Canonical command name
+          example: "catat_penjualan"
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Recognition confidence score
+          example: 0.95
+        rawText:
+          type: string
+          description: Original user input
+        parameters:
+          type: object
+          description: Extracted command parameters
+          additionalProperties: true
+        suggestions:
+          type: array
+          items:
+            type: string
+          description: Alternative command suggestions (if confidence < 0.7)
+        requiresConfirmation:
+          type: boolean
+          description: Whether user confirmation required (confidence < 0.7)
+
+    ExecuteCommandRequest:
+      type: object
+      required:
+        - parsedCommand
+        - userId
+      properties:
+        parsedCommand:
+          $ref: "#/components/schemas/ParsedCommand"
+        userId:
+          type: string
+        context:
+          $ref: "#/components/schemas/ConversationContext"
+
+    CommandResponse:
+      type: object
+      required:
+        - formattedText
+        - timestamp
+      properties:
+        formattedText:
+          type: string
+          maxLength: 4096
+          description: Formatted WhatsApp message
+        emojiIndicators:
+          type: array
+          items:
+            type: string
+          description: Emoji prefixes used
+        financialData:
+          $ref: "#/components/schemas/FinancialSummary"
+        suggestions:
+          type: array
+          items:
+            type: string
+          description: Follow-up command suggestions
+        isPaginated:
+          type: boolean
+          default: false
+        pageNumber:
+          type: number
+        totalPages:
+          type: number
+        timestamp:
+          type: string
+          format: date-time
+
+    FinancialSummary:
+      type: object
+      required:
+        - balance
+        - income
+        - expenses
+        - cashflow
+        - calculatedAt
+      properties:
+        balance:
+          type: number
+          format: decimal
+          description: Current balance (Rp, confirmed transactions only)
+        income:
+          type: number
+          format: decimal
+        expenses:
+          type: number
+          format: decimal
+        cashflow:
+          type: number
+          format: decimal
+        pendingCount:
+          type: number
+          description: Count of pending approval transactions
+        trendData:
+          type: object
+          properties:
+            incomeChange:
+              type: number
+              description: Percentage change in income
+            expenseChange:
+              type: number
+            cashflowChange:
+              type: number
+        calculatedAt:
+          type: string
+          format: date-time
+        isCached:
+          type: boolean
+          description: Whether data came from cache
+        cacheAge:
+          type: number
+          description: Cache age in seconds
+
+    ConversationContext:
+      type: object
+      required:
+        - userId
+        - lastActivity
+        - expiresAt
+      properties:
+        userId:
+          type: string
+        workflowType:
+          type: string
+          enum: [transaction_entry, report_view, null]
+          nullable: true
+        currentStep:
+          type: number
+          minimum: 1
+        enteredData:
+          type: object
+          additionalProperties: true
+        pendingTransaction:
+          type: object
+          properties:
+            amount:
+              type: number
+            category:
+              type: string
+            type:
+              type: string
+              enum: [income, expense]
+        lastActivity:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+
+    FormatMessageRequest:
+      type: object
+      required:
+        - messageType
+        - data
+      properties:
+        messageType:
+          type: string
+          enum:
+            [balance, report, transaction_confirmation, help, error, suggestion]
+        data:
+          type: object
+          additionalProperties: true
+          description: Message-specific data
+        financialData:
+          $ref: "#/components/schemas/FinancialSummary"
+        role:
+          type: string
+          enum: [dev, boss, employee, investor]
+
+    FormattedMessage:
+      type: object
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          maxLength: 4096
+        emojiIndicators:
+          type: array
+          items:
+            type: string
+        isPaginated:
+          type: boolean
+        pages:
+          type: array
+          items:
+            type: string
+          description: Paginated message parts
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          enum:
+            [
+              validation_error,
+              command_not_found,
+              execution_failed,
+              context_expired,
+            ]
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true

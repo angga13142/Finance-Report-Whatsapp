@@ -1,7 +1,41 @@
 import { Message } from "whatsapp-web.js";
 import { logger } from "../../lib/logger";
 import { UserModel } from "../../models/user";
-import type { UserRole } from "@prisma/client";
+import type { UserRole, TransactionType } from "@prisma/client";
+import { parseCommand, getCommandSuggestions } from "./command.parser";
+import {
+  COMMANDS,
+  ROLE_COMMANDS,
+  USER_ROLES,
+  CONFIDENCE_THRESHOLD,
+  type CommandName,
+} from "../../config/constants";
+import {
+  getContext,
+  setContext,
+  updateContext,
+  clearContext,
+  type ConversationContext,
+} from "../../lib/redis";
+import {
+  formatBalanceMessage,
+  formatTransactionConfirmation,
+  formatCategoryList,
+  formatErrorMessage,
+  formatFinancialReport,
+  formatHelpMessage,
+} from "../ui/message.formatter";
+import { CategoryModel } from "../../models/category";
+import { TransactionProcessor } from "../../services/transaction/processor";
+import { TransactionValidator } from "../../services/transaction/validator";
+import { TransactionModel } from "../../models/transaction";
+import { FinancialSummaryService } from "../../services/system/financial-summary";
+import {
+  getDayRangeWITA,
+  getWeekRangeWITA,
+  getMonthRangeWITA,
+  formatDateWITA,
+} from "../../lib/date";
 
 /**
  * Parsed command structure
@@ -481,7 +515,7 @@ export class CommandHandler {
   }
 
   /**
-   * Handle /help command
+   * T046: Handle help command with role-filtered command list
    */
   private static async handleHelpCommand(
     message: Message,
@@ -489,41 +523,66 @@ export class CommandHandler {
     userRole: UserRole,
     _args: string[],
   ): Promise<void> {
-    logger.info("Handling /help command", { userId, userRole });
+    logger.info("Handling help command", { userId, userRole });
 
-    let response = `📖 *Panduan WhatsApp Cashflow Bot*\n\n`;
+    // Get available commands for this role
+    const availableCommands = ROLE_COMMANDS[userRole] || [];
 
-    response += `🔘 *Command Utama:*\n`;
-    response += `• \`/start\` - Informasi awal\n`;
-    response += `• \`/menu\` - Tampilkan menu utama\n`;
-    response += `• \`/help\` - Panduan ini\n\n`;
+    // Build help commands list with descriptions
+    const helpCommands: Array<{
+      command: string;
+      description: string;
+      roleRestricted?: boolean;
+      roleLabel?: string;
+    }> = [];
 
-    response += `📝 *Command Transaksi:*\n`;
-    response += `• \`/catat\` - Catat transaksi baru\n`;
-    response += `• Format: /catat [income/expense] [jumlah] [kategori] [deskripsi]\n`;
-    response += `• Contoh: \`/catat income 500000 Sales Pembayaran Client A\`\n\n`;
+    // Command descriptions mapping
+    const commandDescriptions: Record<CommandName, string> = {
+      [COMMANDS.RECORD_SALE]: "Catat penjualan baru",
+      [COMMANDS.RECORD_EXPENSE]: "Catat pengeluaran baru",
+      [COMMANDS.VIEW_REPORT_TODAY]: "Lihat laporan hari ini",
+      [COMMANDS.VIEW_REPORT_WEEK]: "Lihat laporan minggu ini",
+      [COMMANDS.VIEW_REPORT_MONTH]: "Lihat laporan bulan ini",
+      [COMMANDS.VIEW_BALANCE]: "Lihat saldo saat ini",
+      [COMMANDS.CHECK_BALANCE]: "Cek saldo",
+      [COMMANDS.HELP]: "Tampilkan bantuan",
+      [COMMANDS.MENU]: "Tampilkan menu utama",
+    };
 
-    response += `📊 *Command Laporan:*\n`;
-    response += `• \`/laporan\` - Menu laporan\n`;
-    response += `• \`/laporan daily\` - Laporan harian\n`;
-    response += `• \`/laporan weekly\` - Laporan mingguan\n`;
-    response += `• \`/laporan monthly\` - Laporan bulanan\n\n`;
+    // Command display names (user-friendly)
+    const commandDisplayNames: Record<CommandName, string> = {
+      [COMMANDS.RECORD_SALE]: "catat penjualan",
+      [COMMANDS.RECORD_EXPENSE]: "catat pengeluaran",
+      [COMMANDS.VIEW_REPORT_TODAY]: "lihat laporan hari ini",
+      [COMMANDS.VIEW_REPORT_WEEK]: "lihat laporan minggu ini",
+      [COMMANDS.VIEW_REPORT_MONTH]: "lihat laporan bulan ini",
+      [COMMANDS.VIEW_BALANCE]: "lihat saldo",
+      [COMMANDS.CHECK_BALANCE]: "cek saldo",
+      [COMMANDS.HELP]: "bantu",
+      [COMMANDS.MENU]: "menu",
+    };
 
-    response += `💡 *Command Rekomendasi:*\n`;
-    response += `• \`/rekomendasi\` - List rekomendasi aktif\n`;
-    response += `• \`/detail <ID>\` - Detail rekomendasi\n`;
-    response += `• \`/dismiss <ID>\` - Dismiss rekomendasi\n`;
-    response += `• \`/discuss <ID>\` - Diskusi dengan tim\n\n`;
+    // Build help commands list
+    for (const cmd of availableCommands) {
+      // Check if command is restricted to specific roles
+      const isRestricted =
+        userRole === USER_ROLES.BOSS &&
+        (cmd === COMMANDS.RECORD_SALE || cmd === COMMANDS.RECORD_EXPENSE);
 
-    response += `🔢 *Shortcut Angka:*\n`;
-    response += `Ketik angka (1, 2, 3, dst) untuk memilih menu\n\n`;
+      helpCommands.push({
+        command: commandDisplayNames[cmd],
+        description: commandDescriptions[cmd],
+        roleRestricted: isRestricted,
+        roleLabel: isRestricted ? "Boss only" : undefined,
+      });
+    }
 
-    response += `💬 *Tips:*\n`;
-    response += `• Gunakan button untuk navigasi lebih mudah\n`;
-    response += `• Command bisa pakai bahasa Indonesia atau English\n`;
-    response += `• Ketik /menu untuk kembali ke menu utama\n`;
+    // Format and send help message
+    const helpMessage = formatHelpMessage(helpCommands);
+    await message.reply(helpMessage);
 
-    await message.reply(response);
+    // Log help command usage
+    this.logCommand(userId, message.body || "help", COMMANDS.HELP, 1.0);
   }
 
   /**
@@ -678,7 +737,7 @@ export class CommandHandler {
       `✅ Transaksi dicatat:\n• Type: ${type}\n• Amount: Rp ${amount.toLocaleString("id-ID")}\n• Category: ${category}\n• Description: ${description}\n\n_Menunggu approval..._`,
     );
 
-    // TODO: Create transaction via TransactionProcessor
+    // Transaction creation handled by TransactionProcessor in handleTransactionWorkflow
     logger.info("Transaction recorded via command", {
       userId,
       type,
@@ -1210,6 +1269,780 @@ export class CommandHandler {
       enabled: enable,
       by: userRole,
     });
+  }
+
+  /**
+   * T016: Route command using new command parser
+   * T068: Add performance monitoring for response times (simple <2s, data retrieval <5s)
+   * Maps parsed intents from command.parser.ts to handler functions
+   */
+  static async routeCommandWithParser(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+  ): Promise<boolean> {
+    const startTime = Date.now();
+    const rawText = message.body?.trim() || "";
+    if (!rawText) {
+      return false;
+    }
+
+    // Parse using new command parser
+    const parsed = parseCommand(rawText, userId, userRole);
+    if (!parsed) {
+      return false;
+    }
+
+    // Log command (T024)
+    this.logCommand(
+      userId,
+      rawText,
+      parsed.recognizedIntent,
+      parsed.confidence,
+    );
+
+    // Route based on recognized intent
+    try {
+      switch (parsed.recognizedIntent) {
+        case COMMANDS.RECORD_SALE:
+          await this.handleTransactionEntryCommand(
+            message,
+            userId,
+            userRole,
+            "income",
+          );
+          return true;
+
+        case COMMANDS.RECORD_EXPENSE:
+          await this.handleTransactionEntryCommand(
+            message,
+            userId,
+            userRole,
+            "expense",
+          );
+          return true;
+
+        case COMMANDS.VIEW_BALANCE:
+        case COMMANDS.CHECK_BALANCE:
+          await this.handleViewBalanceCommand(message, userId, userRole);
+          return true;
+
+        case COMMANDS.VIEW_REPORT_TODAY:
+        case COMMANDS.VIEW_REPORT_WEEK:
+        case COMMANDS.VIEW_REPORT_MONTH:
+          await this.handleViewReportCommand(
+            message,
+            userId,
+            userRole,
+            parsed.recognizedIntent,
+          );
+          return true;
+
+        case COMMANDS.HELP:
+        case COMMANDS.MENU:
+          await this.handleHelpCommand(message, userId, userRole, []);
+          return true;
+
+        default:
+          // T045: Confidence-based error handling
+          // ≥70% auto-execute (already handled above), <70% show suggestions
+          if (parsed.confidence < CONFIDENCE_THRESHOLD) {
+            const suggestions = getCommandSuggestions(rawText, 3);
+
+            // T051: Log unrecognized command for analytics
+            this.logCommand(userId, rawText, "unrecognized", parsed.confidence);
+
+            await message.reply(
+              formatErrorMessage({
+                unrecognizedCommand: rawText,
+                suggestions: suggestions.map((s) => ({
+                  command: s.command,
+                  description: s.description,
+                })),
+                showButtonFallback: true,
+              }),
+            );
+            return true;
+          }
+
+          // T051: Log unrecognized command even if confidence is high but command not found
+          this.logCommand(userId, rawText, "unrecognized", parsed.confidence);
+
+          // T068: Performance monitoring
+          {
+            const responseTime = Date.now() - startTime;
+            logger.info("Command executed", {
+              userId,
+              command: "unrecognized",
+              rawText,
+              confidence: parsed.confidence,
+              responseTime,
+              result: "not_found",
+            });
+          }
+
+          return false;
+      }
+
+      // T068: Performance monitoring for successful command execution
+      // parsed is guaranteed to be non-null here due to early return check above
+      const responseTime = Date.now() - startTime;
+      const dataRetrievalCommands = [
+        COMMANDS.VIEW_REPORT_TODAY,
+        COMMANDS.VIEW_REPORT_WEEK,
+        COMMANDS.VIEW_REPORT_MONTH,
+        COMMANDS.VIEW_BALANCE,
+        COMMANDS.CHECK_BALANCE,
+      ] as string[];
+      const isDataRetrieval = dataRetrievalCommands.includes(
+        parsed!.recognizedIntent,
+      );
+
+      const targetTime = isDataRetrieval ? 5000 : 2000; // 5s for data retrieval, 2s for simple
+
+      // T070: Structured logging with context (userId, command, result, latency)
+      logger.info("Command executed", {
+        userId,
+        command: parsed!.recognizedIntent,
+        rawText,
+        confidence: parsed!.confidence,
+        responseTime,
+        targetTime,
+        isDataRetrieval,
+        result: "success",
+      });
+
+      if (responseTime > targetTime) {
+        logger.warn("Command response time exceeds target", {
+          userId,
+          command: parsed!.recognizedIntent,
+          responseTime,
+          targetTime,
+          isDataRetrieval,
+        });
+      }
+
+      return true;
+    } catch (error) {
+      const responseTime = Date.now() - startTime;
+      // T070: Structured logging with context for errors
+      logger.error("Error routing command with parser", {
+        error: error instanceof Error ? error.message : String(error),
+        userId,
+        command: parsed?.recognizedIntent || "unknown",
+        rawText,
+        responseTime,
+        result: "error",
+      });
+      await message.reply(
+        "❌ Terjadi kesalahan saat memproses perintah. Silakan coba lagi.",
+      );
+      return true;
+    }
+  }
+
+  /**
+   * Handle transaction workflow step (public method for message.ts)
+   */
+  static async handleTransactionWorkflow(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    context: ConversationContext,
+  ): Promise<void> {
+    await this.handleTransactionWorkflowStep(
+      message,
+      userId,
+      userRole,
+      context,
+    );
+  }
+
+  /**
+   * T017: Handle transaction entry command
+   * Initiates multi-step workflow and stores context
+   */
+  private static async handleTransactionEntryCommand(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    type: "income" | "expense",
+  ): Promise<void> {
+    const context = await getContext(userId);
+
+    // Check if user is already in a transaction workflow
+    if (context?.workflowType === "transaction_entry") {
+      // Continue existing workflow
+      await this.handleTransactionWorkflowStep(
+        message,
+        userId,
+        userRole,
+        context,
+      );
+      return;
+    }
+
+    // Start new transaction workflow
+    await setContext({
+      userId,
+      workflowType: "transaction_entry",
+      currentStep: 1,
+      enteredData: {},
+      pendingTransaction: {
+        type,
+      },
+      lastActivity: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 1800 * 1000).toISOString(),
+    });
+
+    // Get current balance for display
+    const balance = await this.calculateBalance(userId);
+    const balanceMsg = formatBalanceMessage({ balance });
+
+    // Send initial prompt
+    const typeLabel = type === "income" ? "Penjualan" : "Pengeluaran";
+    const emoji = type === "income" ? "💰" : "💸";
+    let response = `${emoji} *Catat ${typeLabel}*\n\n`;
+    response += `Masukkan jumlah ${typeLabel.toLowerCase()}:\n\n`;
+    response += balanceMsg;
+
+    await message.reply(response);
+  }
+
+  /**
+   * T018: Handle transaction workflow steps
+   * Updates context for amount input, category selection, confirmation
+   */
+  private static async handleTransactionWorkflowStep(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    context: ConversationContext,
+  ): Promise<void> {
+    const input = message.body?.trim() || "";
+    const step = context.currentStep || 1;
+
+    switch (step) {
+      case 1:
+        // Step 1: Amount input
+        await this.handleAmountInputStep(
+          message,
+          userId,
+          userRole,
+          input,
+          context,
+        );
+        break;
+
+      case 2:
+        // Step 2: Category selection
+        await this.handleCategorySelectionStep(
+          message,
+          userId,
+          userRole,
+          input,
+          context,
+        );
+        break;
+
+      case 3:
+        // Step 3: Confirmation
+        await this.handleConfirmationStep(
+          message,
+          userId,
+          userRole,
+          input,
+          context,
+        );
+        break;
+
+      default: {
+        // T049: Provide contextual suggestion based on conversation context
+        const suggestion = this._getContextualSuggestion(context);
+        const errorMsg = suggestion
+          ? `❌ Sesi tidak valid. ${suggestion}`
+          : "❌ Sesi tidak valid. Silakan mulai lagi dengan perintah baru.";
+        await message.reply(errorMsg);
+        await clearContext(userId);
+        break;
+      }
+    }
+  }
+
+  /**
+   * Handle amount input step
+   */
+  private static async handleAmountInputStep(
+    message: Message,
+    userId: string,
+    _userRole: UserRole,
+    input: string,
+    context: ConversationContext,
+  ): Promise<void> {
+    // Check for cancel
+    if (input.toLowerCase() === "batal" || input.toLowerCase() === "cancel") {
+      await clearContext(userId);
+      await message.reply("❌ Transaksi dibatalkan.");
+      return;
+    }
+
+    // Validate amount
+    const validation = TransactionValidator.validateAmount(input);
+    if (!validation.valid || !validation.parsed) {
+      // T050: Command syntax error handling with examples
+      await message.reply(
+        this.formatSyntaxErrorMessage(
+          "Format jumlah tidak valid",
+          ["500000", "500.000", "500,000", "Rp 500000", "500000 rupiah"],
+          "Masukkan jumlah dalam format angka",
+        ),
+      );
+      return;
+    }
+
+    // Update context with amount
+    // validation.parsed is already a number from TransactionValidator
+    await updateContext(userId, {
+      currentStep: 2,
+      pendingTransaction: {
+        ...context.pendingTransaction,
+        amount: validation.parsed,
+      },
+    });
+
+    // Get categories for transaction type
+    const transactionType = context.pendingTransaction?.type || "expense";
+    const categories = await CategoryModel.findByType(transactionType, true);
+
+    if (categories.length === 0) {
+      await message.reply(
+        "❌ Tidak ada kategori tersedia. Silakan hubungi admin untuk menambahkan kategori.",
+      );
+      await clearContext(userId);
+      return;
+    }
+
+    // Format category list
+    const categoryOptions = categories.map((cat) => ({
+      id: cat.id,
+      name: cat.name,
+      emoji: transactionType === "income" ? "💰" : "💸",
+    }));
+
+    const categoryMsg = formatCategoryList(
+      categoryOptions,
+      `Pilih kategori ${transactionType === "income" ? "penjualan" : "pengeluaran"}:`,
+    );
+
+    await message.reply(categoryMsg);
+  }
+
+  /**
+   * Handle category selection step
+   */
+  private static async handleCategorySelectionStep(
+    message: Message,
+    userId: string,
+    _userRole: UserRole,
+    input: string,
+    context: ConversationContext,
+  ): Promise<void> {
+    // Check for cancel
+    if (input.toLowerCase() === "batal" || input.toLowerCase() === "cancel") {
+      await clearContext(userId);
+      await message.reply("❌ Transaksi dibatalkan.");
+      return;
+    }
+
+    const transactionType = context.pendingTransaction?.type || "expense";
+    const categories = await CategoryModel.findByType(transactionType, true);
+
+    // Try to parse as number (category index)
+    const categoryIndex = parseInt(input, 10) - 1;
+    let selectedCategory: { id: string; name: string } | null = null;
+
+    if (
+      !isNaN(categoryIndex) &&
+      categoryIndex >= 0 &&
+      categoryIndex < categories.length
+    ) {
+      selectedCategory = categories[categoryIndex];
+    } else {
+      // Try to find by name
+      const found = categories.find(
+        (cat) => cat.name.toLowerCase() === input.toLowerCase(),
+      );
+      if (found) {
+        selectedCategory = found;
+      }
+    }
+
+    if (!selectedCategory) {
+      // T050: Command syntax error handling with examples
+      // T049: Contextual suggestion for category selection
+      const categoryNames = categories
+        .slice(0, 5)
+        .map((cat, idx) => `${idx + 1}. ${cat.name}`)
+        .join("\n");
+      await message.reply(
+        this.formatSyntaxErrorMessage(
+          "Kategori tidak valid",
+          categoryNames.split("\n"),
+          "Pilih nomor atau nama kategori yang tersedia",
+        ) +
+          `\n\n*Kategori tersedia:*\n${categoryNames}\n\nKetik 'batal' untuk membatalkan.`,
+      );
+      return;
+    }
+
+    // Update context with category
+    await updateContext(userId, {
+      currentStep: 3,
+      pendingTransaction: {
+        ...context.pendingTransaction,
+        category: selectedCategory.name,
+      },
+    });
+
+    // Show confirmation
+    const amount = context.pendingTransaction?.amount || 0;
+    const typeLabel =
+      transactionType === "income" ? "Penjualan" : "Pengeluaran";
+    let confirmMsg = `📝 *Konfirmasi ${typeLabel}*\n\n`;
+    confirmMsg += `Jumlah: Rp ${amount.toLocaleString("id-ID")}\n`;
+    confirmMsg += `Kategori: ${selectedCategory.name}\n\n`;
+    confirmMsg += `Ketik "ya" atau "setuju" untuk menyimpan, atau "batal" untuk membatalkan.`;
+
+    await message.reply(confirmMsg);
+  }
+
+  /**
+   * Handle confirmation step
+   */
+  private static async handleConfirmationStep(
+    message: Message,
+    userId: string,
+    _userRole: UserRole,
+    input: string,
+    context: ConversationContext,
+  ): Promise<void> {
+    const confirmation = input.toLowerCase().trim();
+    const confirmKeywords = ["ya", "yes", "setuju", "ok", "confirm", "simpan"];
+
+    if (
+      confirmation === "batal" ||
+      confirmation === "cancel" ||
+      confirmation === "tidak"
+    ) {
+      await clearContext(userId);
+      await message.reply("❌ Transaksi dibatalkan.");
+      return;
+    }
+
+    if (!confirmKeywords.includes(confirmation)) {
+      await message.reply(
+        '❌ Konfirmasi tidak valid. Ketik "ya" untuk menyimpan atau "batal" untuk membatalkan.',
+      );
+      return;
+    }
+
+    // T019: Create transaction
+    const transactionType = context.pendingTransaction?.type || "expense";
+    const amount = context.pendingTransaction?.amount;
+    const category = context.pendingTransaction?.category;
+
+    if (!amount || !category) {
+      await message.reply(
+        "❌ Data transaksi tidak lengkap. Silakan mulai lagi.",
+      );
+      await clearContext(userId);
+      return;
+    }
+
+    const result = await TransactionProcessor.processTransaction({
+      userId,
+      type: transactionType as TransactionType,
+      category,
+      amount: amount.toString(),
+      description: undefined,
+    });
+
+    if (result.success && result.transaction) {
+      // Calculate new balance
+      const newBalance = await this.calculateBalance(userId);
+
+      // Send confirmation message
+      const confirmMsg = formatTransactionConfirmation({
+        amount,
+        category,
+        type: transactionType,
+        newBalance,
+      });
+
+      await message.reply(confirmMsg);
+
+      // Clear context
+      await clearContext(userId);
+    } else {
+      await message.reply(
+        `❌ Gagal menyimpan transaksi: ${result.error || "Unknown error"}`,
+      );
+      await clearContext(userId);
+    }
+  }
+
+  /**
+   * Handle view balance command
+   */
+  private static async handleViewBalanceCommand(
+    message: Message,
+    userId: string,
+    _userRole: UserRole,
+  ): Promise<void> {
+    const balance = await this.calculateBalance(userId);
+    const pendingCount = await this.getPendingTransactionCount(userId);
+    const pendingAmount = await this.getPendingTransactionAmount(userId);
+
+    const balanceMsg = formatBalanceMessage({
+      balance,
+      pendingCount,
+      pendingAmount,
+    });
+
+    await message.reply(balanceMsg);
+  }
+
+  /**
+   * Calculate current balance for user
+   * Balance = sum of all income - sum of all expenses
+   */
+  private static async calculateBalance(userId: string): Promise<number> {
+    try {
+      const transactions = await TransactionModel.findByUserId(userId);
+      let balance = 0;
+
+      for (const tx of transactions) {
+        if (tx.type === "income") {
+          balance += tx.amount.toNumber();
+        } else {
+          balance -= tx.amount.toNumber();
+        }
+      }
+
+      return balance;
+    } catch (error) {
+      logger.error("Error calculating balance", { error, userId });
+      return 0;
+    }
+  }
+
+  /**
+   * Get pending transaction count
+   */
+  private static async getPendingTransactionCount(
+    userId: string,
+  ): Promise<number> {
+    try {
+      const transactions = await TransactionModel.findByUserId(userId, {
+        limit: 1000,
+      });
+      return transactions.filter((tx) => tx.approvalStatus === "pending")
+        .length;
+    } catch (error) {
+      logger.error("Error getting pending count", { error, userId });
+      return 0;
+    }
+  }
+
+  /**
+   * Get pending transaction amount
+   */
+  private static async getPendingTransactionAmount(
+    userId: string,
+  ): Promise<number> {
+    try {
+      const transactions = await TransactionModel.findByUserId(userId, {
+        limit: 1000,
+      });
+      const pending = transactions.filter(
+        (tx) => tx.approvalStatus === "pending",
+      );
+      return pending.reduce((sum, tx) => {
+        const amount = tx.amount.toNumber();
+        return tx.type === "income" ? sum + amount : sum - amount;
+      }, 0);
+    } catch (error) {
+      logger.error("Error getting pending amount", { error, userId });
+      return 0;
+    }
+  }
+
+  /**
+   * T035: Handle view report command for date ranges
+   * T038: Integrate financial summary service with report command handlers
+   */
+  private static async handleViewReportCommand(
+    message: Message,
+    userId: string,
+    userRole: UserRole,
+    command: string,
+  ): Promise<void> {
+    try {
+      // Determine date range from command
+      let dateRange: string;
+      let startDate: Date;
+      let endDate: Date;
+
+      if (command === COMMANDS.VIEW_REPORT_TODAY) {
+        ({ start: startDate, end: endDate } = getDayRangeWITA());
+        dateRange = formatDateWITA(startDate, "dd MMMM yyyy");
+      } else if (command === COMMANDS.VIEW_REPORT_WEEK) {
+        ({ start: startDate, end: endDate } = getWeekRangeWITA());
+        dateRange = `${formatDateWITA(startDate, "dd MMM")} - ${formatDateWITA(endDate, "dd MMM yyyy")}`;
+      } else if (command === COMMANDS.VIEW_REPORT_MONTH) {
+        ({ start: startDate, end: endDate } = getMonthRangeWITA());
+        dateRange = formatDateWITA(startDate, "MMMM yyyy");
+      } else {
+        // Default to today
+        ({ start: startDate, end: endDate } = getDayRangeWITA());
+        dateRange = formatDateWITA(startDate, "dd MMMM yyyy");
+      }
+
+      // Check for refresh flag in message body
+      const messageBody = message.body.toLowerCase().trim();
+      const refresh =
+        messageBody.includes("refresh") || messageBody.includes("update");
+
+      // Get financial summary
+      const summary = await FinancialSummaryService.getFinancialSummary(
+        userId,
+        userRole,
+        startDate,
+        endDate,
+        refresh, // T039: On-demand cache refresh mechanism
+      );
+
+      // Format and send report
+      const reportMessage = formatFinancialReport({
+        balance: summary.balance,
+        income: summary.income,
+        expenses: summary.expenses,
+        cashflow: summary.cashflow,
+        pendingCount: summary.pendingCount,
+        categoryBreakdown: summary.categoryBreakdown, // T074: Category breakdown
+        savingsGoal: summary.savingsGoal, // T073: Savings goals
+        dateRange,
+        trends: summary.trendData
+          ? {
+              incomeChange: summary.trendData.incomeChange,
+              expenseChange: summary.trendData.expenseChange,
+              cashflowChange: summary.trendData.cashflowChange,
+            }
+          : undefined,
+      });
+
+      await message.reply(reportMessage);
+
+      // Log command execution
+      this.logCommand(userId, message.body, command, 1.0);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      logger.error("Error handling view report command", {
+        error: errorMessage,
+        userId,
+        command,
+      });
+      await message.reply(
+        "❌ Terjadi kesalahan saat mengambil laporan. Silakan coba lagi.",
+      );
+    }
+  }
+
+  /**
+   * T024: Log command execution
+   */
+  private static logCommand(
+    userId: string,
+    rawText: string,
+    intent: string,
+    confidence: number,
+  ): void {
+    try {
+      logger.info("Command executed", {
+        userId,
+        commandText: rawText,
+        recognizedIntent: intent,
+        confidence,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Command logging: Currently logs to Winston. CommandLog table to be added in future data model update.
+      // For now, just log to Winston
+    } catch (error) {
+      logger.error("Error logging command", {
+        error: error instanceof Error ? error.message : String(error),
+        userId,
+        rawText,
+      });
+    }
+  }
+
+  /**
+   * T049: Provide contextual suggestions based on conversation context
+   * This method can be used to provide contextual help during multi-step workflows
+   * Currently available for future use in error messages or help prompts
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private static _getContextualSuggestion(
+    context: ConversationContext,
+  ): string | null {
+    const step = context.currentStep || 1;
+    const transactionType = context.pendingTransaction?.type;
+
+    switch (step) {
+      case 1:
+        // Step 1: Amount input
+        return "Masukkan jumlah transaksi (contoh: 500000 atau 500.000)";
+      case 2: {
+        // Step 2: Category selection
+        const typeLabel =
+          transactionType === "income" ? "penjualan" : "pengeluaran";
+        return `Pilih kategori ${typeLabel} dengan mengetik nomor atau nama kategori`;
+      }
+      case 3:
+        // Step 3: Confirmation
+        return 'Ketik "ya" atau "setuju" untuk menyimpan, atau "batal" untuk membatalkan';
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * T050: Format syntax error message with examples and rephrase suggestions
+   */
+  private static formatSyntaxErrorMessage(
+    errorMessage: string,
+    examples: string[],
+    suggestion?: string,
+  ): string {
+    let message = `❌ *${errorMessage}*\n\n`;
+
+    if (suggestion) {
+      message += `💡 *Saran:* ${suggestion}\n\n`;
+    }
+
+    if (examples.length > 0) {
+      message += `*Contoh yang benar:*\n`;
+      examples.forEach((example, index) => {
+        message += `${index + 1}. ${example}\n`;
+      });
+      message += `\n`;
+    }
+
+    message += `_Ketik 'batal' untuk membatalkan._`;
+
+    return message;
   }
 
   /**

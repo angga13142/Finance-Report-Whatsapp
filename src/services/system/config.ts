@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { logger } from "../../lib/logger";
+import { env } from "../../config/env";
 
 /**
  * Configuration management service
@@ -18,6 +19,17 @@ export interface SystemConfig {
   reportSchedule?: string | Record<string, unknown>;
   notificationSettings?: Record<string, boolean | Record<string, unknown>>;
   customRules?: Record<string, Record<string, unknown>>;
+  enableLegacyButtons?: boolean;
+}
+
+export interface UserConfigOverride {
+  userId: string;
+  enableLegacyButtons?: boolean;
+}
+
+export interface RoleConfigOverride {
+  role: string;
+  enableLegacyButtons?: boolean;
 }
 
 export class ConfigService {
@@ -26,9 +38,22 @@ export class ConfigService {
   private configCache: Map<string, { value: unknown; timestamp: number }> =
     new Map();
   private readonly CACHE_TTL = 300000; // 5 minutes
+  private enableLegacyButtons: boolean = true;
+  private userOverrides: Map<string, boolean> = new Map();
+  private roleOverrides: Map<string, boolean> = new Map();
+  private lastConfigUpdate: number = Date.now();
 
   private constructor() {
     this.prisma = new PrismaClient();
+    this.enableLegacyButtons = env.ENABLE_LEGACY_BUTTONS;
+    // Start periodic config refresh to ensure 60-second propagation
+    const intervalId = setInterval(() => {
+      void this.refreshConfig(); // Explicitly void the promise to satisfy linter
+    }, 10000); // Check every 10 seconds
+    // Unref to prevent keeping process alive (allows graceful shutdown)
+    if (typeof intervalId.unref === "function") {
+      intervalId.unref();
+    }
   }
 
   static getInstance(): ConfigService {
@@ -373,6 +398,209 @@ export class ConfigService {
 
   private clearCache(): void {
     this.configCache.clear();
+  }
+
+  /**
+   * Get ENABLE_LEGACY_BUTTONS flag with override precedence:
+   * user override > role override > global config (per FR-036)
+   */
+  getEnableLegacyButtons(userId?: string, userRole?: string): boolean {
+    // Check user override first (highest precedence)
+    if (userId && this.userOverrides.has(userId)) {
+      return this.userOverrides.get(userId)!;
+    }
+
+    // Check role override second
+    if (userRole && this.roleOverrides.has(userRole)) {
+      return this.roleOverrides.get(userRole)!;
+    }
+
+    // Return global config (lowest precedence)
+    return this.enableLegacyButtons;
+  }
+
+  /**
+   * Set ENABLE_LEGACY_BUTTONS global configuration
+   * Changes propagate within 60 seconds (per FR-035)
+   */
+  async setEnableLegacyButtons(value: boolean, userId: string): Promise<void> {
+    try {
+      await this.updateSystemConfig("enable_legacy_buttons", value, userId);
+      this.enableLegacyButtons = value;
+      this.lastConfigUpdate = Date.now();
+      this.clearCache();
+
+      logger.info("ENABLE_LEGACY_BUTTONS updated", {
+        value,
+        userId,
+        timestamp: this.lastConfigUpdate,
+      });
+    } catch (error) {
+      logger.error("Failed to update ENABLE_LEGACY_BUTTONS", { value, error });
+      throw error;
+    }
+  }
+
+  /**
+   * Set per-user override for ENABLE_LEGACY_BUTTONS
+   */
+  async setUserOverride(
+    userId: string,
+    value: boolean,
+    adminUserId: string,
+  ): Promise<void> {
+    try {
+      const overrideKey = `user_override_${userId}_enable_legacy_buttons`;
+      await this.updateSystemConfig(overrideKey, value, adminUserId);
+      this.userOverrides.set(userId, value);
+      this.clearCache();
+
+      logger.info("User override set for ENABLE_LEGACY_BUTTONS", {
+        userId,
+        value,
+        adminUserId,
+      });
+    } catch (error) {
+      logger.error("Failed to set user override", { userId, value, error });
+      throw error;
+    }
+  }
+
+  /**
+   * Set per-role override for ENABLE_LEGACY_BUTTONS
+   */
+  async setRoleOverride(
+    role: string,
+    value: boolean,
+    adminUserId: string,
+  ): Promise<void> {
+    try {
+      const overrideKey = `role_override_${role}_enable_legacy_buttons`;
+      await this.updateSystemConfig(overrideKey, value, adminUserId);
+      this.roleOverrides.set(role, value);
+      this.clearCache();
+
+      logger.info("Role override set for ENABLE_LEGACY_BUTTONS", {
+        role,
+        value,
+        adminUserId,
+      });
+    } catch (error) {
+      logger.error("Failed to set role override", { role, value, error });
+      throw error;
+    }
+  }
+
+  /**
+   * Remove user override
+   */
+  async removeUserOverride(userId: string, adminUserId: string): Promise<void> {
+    try {
+      const overrideKey = `user_override_${userId}_enable_legacy_buttons`;
+      await this.prisma.$executeRaw`
+        DELETE FROM system_config 
+        WHERE config_key = ${overrideKey}
+      `;
+      this.userOverrides.delete(userId);
+      this.clearCache();
+
+      logger.info("User override removed", { userId, adminUserId });
+    } catch (error) {
+      logger.error("Failed to remove user override", { userId, error });
+      throw error;
+    }
+  }
+
+  /**
+   * Remove role override
+   */
+  async removeRoleOverride(role: string, adminUserId: string): Promise<void> {
+    try {
+      const overrideKey = `role_override_${role}_enable_legacy_buttons`;
+      await this.prisma.$executeRaw`
+        DELETE FROM system_config 
+        WHERE config_key = ${overrideKey}
+      `;
+      this.roleOverrides.delete(role);
+      this.clearCache();
+
+      logger.info("Role override removed", { role, adminUserId });
+    } catch (error) {
+      logger.error("Failed to remove role override", { role, error });
+      throw error;
+    }
+  }
+
+  /**
+   * Refresh configuration from database to ensure 60-second propagation
+   */
+  private async refreshConfig(): Promise<void> {
+    try {
+      // Only refresh if more than 10 seconds have passed since last update
+      if (Date.now() - this.lastConfigUpdate < 10000) {
+        return;
+      }
+
+      // Load global config
+      const config = await this.prisma.$queryRaw<
+        Array<{ config_value: string }>
+      >`
+        SELECT config_value 
+        FROM system_config 
+        WHERE config_key = 'enable_legacy_buttons'
+        LIMIT 1
+      `;
+
+      if (config && config.length > 0) {
+        const value =
+          config[0].config_value === "true" || config[0].config_value === "1";
+        if (value !== this.enableLegacyButtons) {
+          this.enableLegacyButtons = value;
+          this.lastConfigUpdate = Date.now();
+          logger.debug("ENABLE_LEGACY_BUTTONS refreshed from database", {
+            value,
+          });
+        }
+      }
+
+      // Load user overrides
+      const userOverrides = await this.prisma.$queryRaw<
+        Array<{ config_key: string; config_value: string }>
+      >`
+        SELECT config_key, config_value 
+        FROM system_config 
+        WHERE config_key LIKE 'user_override_%_enable_legacy_buttons'
+      `;
+
+      for (const override of userOverrides) {
+        const userId = override.config_key
+          .replace("user_override_", "")
+          .replace("_enable_legacy_buttons", "");
+        const value =
+          override.config_value === "true" || override.config_value === "1";
+        this.userOverrides.set(userId, value);
+      }
+
+      // Load role overrides
+      const roleOverrides = await this.prisma.$queryRaw<
+        Array<{ config_key: string; config_value: string }>
+      >`
+        SELECT config_key, config_value 
+        FROM system_config 
+        WHERE config_key LIKE 'role_override_%_enable_legacy_buttons'
+      `;
+
+      for (const override of roleOverrides) {
+        const role = override.config_key
+          .replace("role_override_", "")
+          .replace("_enable_legacy_buttons", "");
+        const value =
+          override.config_value === "true" || override.config_value === "1";
+        this.roleOverrides.set(role, value);
+      }
+    } catch (error) {
+      logger.warn("Failed to refresh ENABLE_LEGACY_BUTTONS config", { error });
+    }
   }
 }
 

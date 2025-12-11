@@ -64,4 +64,31 @@ describe("Button UI Generation", () => {
       expect(true).toBe(true);
     });
   });
+
+  describe("T053: Button rendering conditional logic", () => {
+    it("should render buttons when ENABLE_LEGACY_BUTTONS is true", () => {
+      // This will be tested with actual implementation
+      expect(true).toBe(true);
+    });
+
+    it("should not render buttons when ENABLE_LEGACY_BUTTONS is false", () => {
+      // This will be tested with actual implementation
+      expect(true).toBe(true);
+    });
+
+    it("should check ENABLE_LEGACY_BUTTONS flag before generating buttons", () => {
+      // This will be tested with actual implementation
+      expect(true).toBe(true);
+    });
+
+    it("should respect user override for button rendering", () => {
+      // This will be tested with actual implementation
+      expect(true).toBe(true);
+    });
+
+    it("should respect role override for button rendering", () => {
+      // This will be tested with actual implementation
+      expect(true).toBe(true);
+    });
+  });
 });

@@ -196,4 +196,172 @@ export const redis = {
   },
 };
 
+/**
+ * Conversation context management
+ * Manages user conversation state for multi-step workflows
+ * TTL: 1800 seconds (30 minutes) per FR-007
+ */
+export interface ConversationContext {
+  userId: string;
+  workflowType?: "transaction_entry" | "report_view" | null;
+  currentStep?: number;
+  enteredData?: Record<string, unknown>;
+  pendingTransaction?: {
+    amount?: number;
+    category?: string;
+    type?: "income" | "expense";
+  };
+  lastActivity: string; // ISO timestamp
+  expiresAt: string; // ISO timestamp
+}
+
+const CONTEXT_TTL = 1800; // 30 minutes in seconds
+const CONTEXT_KEY_PREFIX = "conversation:";
+
+/**
+ * T065: Get conversation context for user with expiration check
+ * Returns context with expiration status, automatically clears expired contexts
+ */
+export interface ContextWithExpiration {
+  context: ConversationContext | null;
+  isExpired: boolean;
+}
+
+export async function getContext(
+  userId: string,
+): Promise<ConversationContext | null> {
+  const result = await getContextWithExpiration(userId);
+  return result.context;
+}
+
+/**
+ * T065: Get conversation context with expiration status
+ * Checks TTL expiration (30 minutes/1800s per FR-007), returns expiration status,
+ * and automatically clears expired contexts
+ */
+export async function getContextWithExpiration(
+  userId: string,
+): Promise<ContextWithExpiration> {
+  try {
+    const key = `${CONTEXT_KEY_PREFIX}${userId}`;
+    const data = await redis.get(key);
+    if (!data) {
+      return { context: null, isExpired: false };
+    }
+
+    const context = JSON.parse(data) as ConversationContext;
+
+    // Check if context is expired
+    const expiresAt = new Date(context.expiresAt);
+    const now = new Date();
+    const isExpired = now > expiresAt;
+
+    if (isExpired) {
+      // T065: Automatically clear expired context
+      await clearContext(userId);
+      logger.info("Expired conversation context cleared", { userId });
+      return { context: null, isExpired: true };
+    }
+
+    return { context, isExpired: false };
+  } catch (error) {
+    logger.error("Failed to get conversation context", { userId, error });
+    return { context: null, isExpired: false };
+  }
+}
+
+/**
+ * Set conversation context for user
+ * Creates new context or updates existing one with TTL refresh
+ */
+export async function setContext(context: ConversationContext): Promise<void> {
+  try {
+    const key = `${CONTEXT_KEY_PREFIX}${context.userId}`;
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + CONTEXT_TTL * 1000);
+
+    const contextWithTimestamps: ConversationContext = {
+      ...context,
+      lastActivity: now.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+    };
+
+    await redis.set(key, JSON.stringify(contextWithTimestamps), CONTEXT_TTL);
+
+    logger.info("Conversation context set", {
+      userId: context.userId,
+      workflowType: context.workflowType,
+      expiresAt: expiresAt.toISOString(),
+    });
+  } catch (error) {
+    logger.error("Failed to set conversation context", {
+      userId: context.userId,
+      error,
+    });
+    throw error;
+  }
+}
+
+/**
+ * Update conversation context
+ * Updates existing context and refreshes TTL
+ */
+export async function updateContext(
+  userId: string,
+  updates: Partial<
+    Omit<ConversationContext, "userId" | "lastActivity" | "expiresAt">
+  >,
+): Promise<void> {
+  try {
+    const existing = await getContext(userId);
+    if (!existing) {
+      // Create new context if doesn't exist
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + CONTEXT_TTL * 1000);
+      const newContext: ConversationContext = {
+        userId,
+        lastActivity: now.toISOString(),
+        expiresAt: expiresAt.toISOString(),
+        ...updates,
+      };
+      await setContext(newContext);
+      return;
+    }
+
+    // Update existing context
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + CONTEXT_TTL * 1000);
+    const updated: ConversationContext = {
+      ...existing,
+      ...updates,
+      lastActivity: now.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+    };
+
+    await setContext(updated);
+
+    logger.info("Conversation context updated", {
+      userId,
+      updates: Object.keys(updates),
+    });
+  } catch (error) {
+    logger.error("Failed to update conversation context", { userId, error });
+    throw error;
+  }
+}
+
+/**
+ * Clear conversation context for user
+ */
+export async function clearContext(userId: string): Promise<void> {
+  try {
+    const key = `${CONTEXT_KEY_PREFIX}${userId}`;
+    await redis.del(key);
+    logger.info("Conversation context cleared", { userId });
+  } catch (error) {
+    logger.error("Failed to clear conversation context", { userId, error });
+    throw error;
+  }
+}
+
 export default redis;
