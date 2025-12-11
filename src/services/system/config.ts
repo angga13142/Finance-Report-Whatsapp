@@ -47,7 +47,11 @@ export class ConfigService {
     this.prisma = new PrismaClient();
     this.enableLegacyButtons = env.ENABLE_LEGACY_BUTTONS;
     // Start periodic config refresh to ensure 60-second propagation
-    setInterval(() => this.refreshConfig(), 10000); // Check every 10 seconds
+    const intervalId = setInterval(() => this.refreshConfig(), 10000); // Check every 10 seconds
+    // Unref to prevent keeping process alive (allows graceful shutdown)
+    if (typeof intervalId.unref === "function") {
+      intervalId.unref();
+    }
   }
 
   static getInstance(): ConfigService {

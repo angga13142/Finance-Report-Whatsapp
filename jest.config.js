@@ -54,6 +54,12 @@ module.exports = {
   // Global test timeout (10 seconds)
   testTimeout: 10000,
 
+  // Force exit after tests complete to prevent hanging
+  forceExit: true,
+
+  // Detect open handles to help identify leaks
+  detectOpenHandles: true,
+
   // Clear mocks automatically between tests
   clearMocks: true,
 

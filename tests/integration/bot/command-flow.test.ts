@@ -17,6 +17,7 @@ import {
   setContext,
   getContext,
   clearContext,
+  disconnectRedis,
 } from "../../../src/lib/redis";
 import { parseCommand } from "../../../src/bot/handlers/command.parser";
 import { COMMANDS } from "../../../src/config/constants";
@@ -62,13 +63,21 @@ describe("T013: Integration test for complete transaction flow", () => {
     if (skipTests) return;
 
     try {
-      // Cleanup
-      await clearContext(testUserId);
+      // Cleanup context
       if (testUserId) {
+        await clearContext(testUserId).catch(() => {});
         await prisma.user.delete({ where: { id: testUserId } }).catch(() => {});
       }
-    } catch (error) {
-      logger.warn("Command flow test cleanup failed", { error });
+    } catch (_error) {
+      logger.warn("Command flow test cleanup failed", { error: _error });
+    } finally {
+      // Close database and Redis connections
+      try {
+        await prisma.$disconnect().catch(() => {});
+        await disconnectRedis().catch(() => {});
+      } catch {
+        // Ignore disconnect errors
+      }
     }
   });
 
@@ -206,8 +215,16 @@ describe("T013: Integration test for complete transaction flow", () => {
       expiresAt: new Date(initialTime.getTime() + 1800 * 1000).toISOString(),
     });
 
-    // Wait a bit
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // Wait a bit to ensure timestamp difference
+    await new Promise<void>((resolve) => {
+      const timeout = setTimeout(() => {
+        resolve();
+      }, 100);
+      // Unref to prevent keeping process alive
+      if (typeof timeout.unref === "function") {
+        timeout.unref();
+      }
+    });
 
     // Update context (should refresh TTL)
     const context = await getContext(testUserId);
