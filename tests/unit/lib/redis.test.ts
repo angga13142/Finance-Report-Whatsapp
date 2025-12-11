@@ -36,6 +36,7 @@ jest.mock("../../../src/lib/logger", () => ({
     info: jest.fn(),
     error: jest.fn(),
     warn: jest.fn(),
+    debug: jest.fn(),
   },
 }));
 
@@ -55,6 +56,11 @@ import {
   connectRedis,
   disconnectRedis,
   redis,
+  getContext,
+  setContext,
+  updateContext,
+  clearContext,
+  type ConversationContext,
 } from "../../../src/lib/redis";
 
 describe("Redis Utilities", () => {
@@ -218,6 +224,128 @@ describe("Redis Utilities", () => {
       mockRedisClientInstance.get.mockResolvedValue("existing");
       const result = await redis.get("existing-key");
       expect(result).toBe("existing");
+    });
+  });
+
+  describe("T012: Conversation context storage/retrieval for transaction workflow", () => {
+    const mockUserId = "user123";
+    const mockContext: ConversationContext = {
+      userId: mockUserId,
+      workflowType: "transaction_entry",
+      currentStep: 1,
+      enteredData: {},
+      pendingTransaction: {
+        type: "income",
+      },
+      lastActivity: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 1800 * 1000).toISOString(),
+    };
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it("should store conversation context with TTL", async () => {
+      mockRedisClientInstance.set.mockResolvedValue("OK");
+      await setContext(mockContext);
+      expect(mockRedisClientInstance.set).toHaveBeenCalled();
+      const callArgs = mockRedisClientInstance.set.mock.calls[0];
+      expect(callArgs[0]).toContain("conversation:");
+      expect(callArgs[0]).toContain(mockUserId);
+      expect(callArgs[2]).toBe(1800); // TTL in seconds
+    });
+
+    it("should retrieve conversation context", async () => {
+      const contextJson = JSON.stringify(mockContext);
+      mockRedisClientInstance.get.mockResolvedValue(contextJson);
+      const result = await getContext(mockUserId);
+      expect(result).not.toBeNull();
+      expect(result?.userId).toBe(mockUserId);
+      expect(result?.workflowType).toBe("transaction_entry");
+      expect(result?.currentStep).toBe(1);
+    });
+
+    it("should return null when context does not exist", async () => {
+      mockRedisClientInstance.get.mockResolvedValue(null);
+      const result = await getContext("non-existent-user");
+      expect(result).toBeNull();
+    });
+
+    it("should update conversation context and refresh TTL", async () => {
+      // First, set up existing context
+      const existingContextJson = JSON.stringify(mockContext);
+      mockRedisClientInstance.get.mockResolvedValue(existingContextJson);
+      mockRedisClientInstance.set.mockResolvedValue("OK");
+
+      await updateContext(mockUserId, {
+        currentStep: 2,
+        pendingTransaction: {
+          type: "income",
+          amount: 500000,
+        },
+      });
+
+      // Should call get first to retrieve existing context
+      expect(mockRedisClientInstance.get).toHaveBeenCalled();
+      // Should call set to update with new TTL
+      expect(mockRedisClientInstance.set).toHaveBeenCalled();
+    });
+
+    it("should create new context if doesn't exist when updating", async () => {
+      mockRedisClientInstance.get.mockResolvedValue(null);
+      mockRedisClientInstance.set.mockResolvedValue("OK");
+
+      await updateContext(mockUserId, {
+        workflowType: "transaction_entry",
+        currentStep: 1,
+      });
+
+      // Should create new context
+      expect(mockRedisClientInstance.set).toHaveBeenCalled();
+    });
+
+    it("should clear conversation context", async () => {
+      mockRedisClientInstance.del.mockResolvedValue(1);
+      await clearContext(mockUserId);
+      expect(mockRedisClientInstance.del).toHaveBeenCalled();
+      const callArgs = mockRedisClientInstance.del.mock.calls[0];
+      expect(callArgs[0]).toContain("conversation:");
+      expect(callArgs[0]).toContain(mockUserId);
+    });
+
+    it("should handle errors gracefully when getting context", async () => {
+      mockRedisClientInstance.get.mockRejectedValue(new Error("Redis error"));
+      const result = await getContext(mockUserId);
+      expect(result).toBeNull();
+    });
+
+    it("should include timestamps in context", async () => {
+      mockRedisClientInstance.set.mockResolvedValue("OK");
+      await setContext(mockContext);
+      const callArgs = mockRedisClientInstance.set.mock.calls[0];
+      const storedContext = JSON.parse(callArgs[1] as string);
+      expect(storedContext.lastActivity).toBeDefined();
+      expect(storedContext.expiresAt).toBeDefined();
+      expect(new Date(storedContext.expiresAt).getTime()).toBeGreaterThan(
+        new Date(storedContext.lastActivity).getTime(),
+      );
+    });
+
+    it("should preserve pending transaction data in context", async () => {
+      const contextWithTransaction: ConversationContext = {
+        ...mockContext,
+        pendingTransaction: {
+          type: "income",
+          amount: 500000,
+          category: "Sales",
+        },
+      };
+      const contextJson = JSON.stringify(contextWithTransaction);
+      mockRedisClientInstance.get.mockResolvedValue(contextJson);
+      const result = await getContext(mockUserId);
+      expect(result?.pendingTransaction).toBeDefined();
+      expect(result?.pendingTransaction?.amount).toBe(500000);
+      expect(result?.pendingTransaction?.category).toBe("Sales");
     });
   });
 });

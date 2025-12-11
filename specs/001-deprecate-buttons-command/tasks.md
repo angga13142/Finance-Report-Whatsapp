@@ -50,24 +50,24 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T010 [P] [US1] Unit test for command parser "catat penjualan" → "catat_penjualan" intent recognition in tests/unit/bot/handlers/command.parser.test.ts
-- [ ] T011 [P] [US1] Unit test for transaction command parameter validation in tests/unit/bot/handlers/command.parser.test.ts
-- [ ] T012 [P] [US1] Unit test for conversation context storage/retrieval for transaction workflow in tests/unit/lib/redis.test.ts
-- [ ] T013 [P] [US1] Integration test for complete transaction flow: "catat penjualan" → amount → category → confirmation in tests/integration/bot/command-flow.test.ts
-- [ ] T014 [US1] E2E test for WhatsApp transaction command interaction in tests/e2e/whatsapp/command-interaction.test.ts
+- [x] T010 [P] [US1] Unit test for command parser "catat penjualan" → "catat_penjualan" intent recognition in tests/unit/bot/handlers/command.parser.test.ts
+- [x] T011 [P] [US1] Unit test for transaction command parameter validation in tests/unit/bot/handlers/command.parser.test.ts
+- [x] T012 [P] [US1] Unit test for conversation context storage/retrieval for transaction workflow in tests/unit/lib/redis.test.ts
+- [x] T013 [US1] Integration test for complete transaction flow: "catat penjualan" → amount → category → confirmation in tests/integration/bot/command-flow.test.ts
+- [x] T014 [US1] E2E test for WhatsApp transaction command interaction in tests/e2e/whatsapp/command-interaction.test.ts
 
 ### Implementation for User Story 1
 
-- [ ] T015 [P] [US1] Implement command parser logic for transaction commands ("catat penjualan", synonyms) in src/bot/handlers/command.parser.ts
-- [ ] T016 [US1] Extend existing src/bot/handlers/command.ts CommandHandler class with new routing logic that maps parsed intents from command.parser.ts to handler functions, integrating with existing aliasMap structure
-- [ ] T017 [US1] Implement transaction entry command handler in src/bot/handlers/command.ts that initiates multi-step workflow and stores context using conversation context from Redis
-- [ ] T018 [US1] Implement conversation context updates for transaction entry workflow (amount input, category selection, confirmation) in src/bot/handlers/command.ts
-- [ ] T019 [US1] Integrate command handler with existing TransactionHandler for actual transaction creation in src/bot/handlers/command.ts
-- [ ] T020 [P] [US1] Implement formatted balance message generation in src/bot/ui/message.formatter.ts showing current balance with 💰 emoji
-- [ ] T021 [US1] Implement formatted transaction confirmation message in src/bot/ui/message.formatter.ts with ✅ emoji, amount, category, and updated balance
-- [ ] T022 [US1] Implement formatted category list message in src/bot/ui/message.formatter.ts with numbered options and emoji indicators
-- [ ] T023 [US1] Update src/bot/handlers/message.ts to detect text commands and route to command handler when ENABLE_LEGACY_BUTTONS is false or command detected
-- [ ] T024 [US1] Implement command logging for all transaction commands in src/bot/handlers/command.ts (timestamp, user, command text, intent, result)
+- [x] T015 [P] [US1] Implement command parser logic for transaction commands ("catat penjualan", synonyms) in src/bot/handlers/command.parser.ts
+- [x] T016 [US1] Extend existing src/bot/handlers/command.ts CommandHandler class with new routing logic that maps parsed intents from command.parser.ts to handler functions, integrating with existing aliasMap structure
+- [x] T017 [US1] Implement transaction entry command handler in src/bot/handlers/command.ts that initiates multi-step workflow and stores context using conversation context from Redis
+- [x] T018 [US1] Implement conversation context updates for transaction entry workflow (amount input, category selection, confirmation) in src/bot/handlers/command.ts
+- [x] T019 [US1] Integrate command handler with existing TransactionHandler for actual transaction creation in src/bot/handlers/command.ts
+- [x] T020 [P] [US1] Implement formatted balance message generation in src/bot/ui/message.formatter.ts showing current balance with 💰 emoji
+- [x] T021 [US1] Implement formatted transaction confirmation message in src/bot/ui/message.formatter.ts with ✅ emoji, amount, category, and updated balance
+- [x] T022 [US1] Implement formatted category list message in src/bot/ui/message.formatter.ts with numbered options and emoji indicators
+- [x] T023 [US1] Update src/bot/handlers/message.ts to detect text commands and route to command handler when ENABLE_LEGACY_BUTTONS is false or command detected
+- [x] T024 [US1] Implement command logging for all transaction commands in src/bot/handlers/command.ts (timestamp, user, command text, intent, result)
 
 **Checkpoint**: User Story 1 should be fully functional - Employee can record transactions via text commands independently
 

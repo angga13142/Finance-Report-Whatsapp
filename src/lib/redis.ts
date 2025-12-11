@@ -255,7 +255,7 @@ export async function setContext(context: ConversationContext): Promise<void> {
 
     await redis.set(key, JSON.stringify(contextWithTimestamps), CONTEXT_TTL);
 
-    logger.debug("Conversation context set", {
+    logger.info("Conversation context set", {
       userId: context.userId,
       workflowType: context.workflowType,
       expiresAt: expiresAt.toISOString(),
@@ -307,7 +307,7 @@ export async function updateContext(
 
     await setContext(updated);
 
-    logger.debug("Conversation context updated", {
+    logger.info("Conversation context updated", {
       userId,
       updates: Object.keys(updates),
     });
@@ -324,7 +324,7 @@ export async function clearContext(userId: string): Promise<void> {
   try {
     const key = `${CONTEXT_KEY_PREFIX}${userId}`;
     await redis.del(key);
-    logger.debug("Conversation context cleared", { userId });
+    logger.info("Conversation context cleared", { userId });
   } catch (error) {
     logger.error("Failed to clear conversation context", { userId, error });
     throw error;

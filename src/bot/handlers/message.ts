@@ -9,6 +9,9 @@ import { ButtonMenu } from "../ui/buttons";
 import { MessageFormatter } from "../ui/messages";
 import { getWhatsAppClient } from "../client/client";
 import { MENU_STATES } from "../../config/constants";
+import { CommandHandler } from "./command";
+import { configService } from "../../services/system/config";
+import { getContext } from "../../lib/redis";
 
 /**
  * Text message routing handler
@@ -40,15 +43,67 @@ export class MessageHandler {
       const user = authMessage.user;
       const body = message.body?.trim().toLowerCase() || "";
 
-      // Check if it's a button callback (button responses come as text)
-      if (this.isButtonResponse(message, user)) {
+      // T023: Check ENABLE_LEGACY_BUTTONS flag and route commands
+      const enableLegacyButtons = await configService.getEnableLegacyButtons(
+        user.id,
+        user.role,
+      );
+
+      // Check if it's a button callback (only if buttons enabled)
+      if (enableLegacyButtons && this.isButtonResponse(message, user)) {
         await ButtonHandler.handleButton(message);
         return;
       }
 
-      // Handle text commands
+      // T023: Check for conversation context first (command-based workflow)
+      const context = await getContext(user.id);
+      if (context?.workflowType === "transaction_entry") {
+        // User is in command-based transaction workflow
+        // Handle workflow step directly (amount, category, confirmation)
+        await CommandHandler.handleTransactionWorkflow(
+          message,
+          user.id,
+          user.role,
+          context,
+        );
+        return;
+      }
+
+      // T023: Try new command parser for text commands
+      // Only parse if it looks like a command (not just numbers or simple text)
+      const looksLikeCommand =
+        body.startsWith("/") ||
+        body.length > 3 ||
+        /^(catat|lihat|cek|bantu|menu|help|tambah|input)/i.test(body);
+
+      if (looksLikeCommand) {
+        const handled = await CommandHandler.routeCommandWithParser(
+          message,
+          user.id,
+          user.role,
+        );
+        if (handled) {
+          return;
+        }
+      }
+
+      // Fallback to legacy command handler (if buttons enabled and not handled by new parser)
       if (body.startsWith("/")) {
         await this.handleCommand(user, body, message);
+        return;
+      }
+
+      // If buttons disabled and no command recognized, show guidance
+      if (!enableLegacyButtons && !looksLikeCommand) {
+        await message.reply(
+          "ℹ️ *Gunakan perintah teks*\n\n" +
+            "Contoh perintah:\n" +
+            "• catat penjualan\n" +
+            "• catat pengeluaran\n" +
+            "• lihat saldo\n" +
+            "• lihat laporan hari ini\n\n" +
+            "Ketik 'bantu' untuk melihat semua perintah.",
+        );
         return;
       }
 
