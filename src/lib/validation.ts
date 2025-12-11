@@ -32,25 +32,25 @@ export function validatePhoneNumber(phoneNumber: string): boolean {
  * @returns Normalized phone number
  */
 export function normalizePhoneNumber(phoneNumber: string): string {
-  validatePhoneNumber(phoneNumber);
+  if (!phoneNumber || typeof phoneNumber !== "string") {
+    throw new Error("Phone number is required");
+  }
 
-  // Remove spaces and special characters
-  const cleaned = phoneNumber.replace(/[\s\-()]/g, "");
+  // Remove WhatsApp suffix (@c.us) and spaces/special characters first
+  let cleaned = phoneNumber.replace(/@c\.us/g, "").replace(/[\s\-()]/g, "");
 
   // Convert 0 prefix to +62
   if (cleaned.startsWith("0")) {
-    return "+62" + cleaned.substring(1);
-  }
-
-  // Add + if starts with 62 but no +
-  if (cleaned.startsWith("62") && !cleaned.startsWith("+62")) {
-    return "+" + cleaned;
-  }
-
-  // Ensure +62 prefix
-  if (!cleaned.startsWith("+62")) {
+    cleaned = "+62" + cleaned.substring(1);
+  } else if (cleaned.startsWith("62") && !cleaned.startsWith("+62")) {
+    // Add + if starts with 62 but no +
+    cleaned = "+" + cleaned;
+  } else if (!cleaned.startsWith("+62")) {
     throw new Error("Phone number must start with +62, 62, or 0");
   }
+
+  // Validate the normalized number
+  validatePhoneNumber(cleaned);
 
   return cleaned;
 }
