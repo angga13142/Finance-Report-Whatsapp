@@ -193,7 +193,22 @@ export class ButtonHandler {
     await SessionManager.clearSession(user.id);
     await SessionManager.setSession(user.id, { menu: MENU_STATES.MAIN });
 
-    const menu = ButtonMenu.generateMainMenu(user.role);
+    // T056: Check ENABLE_LEGACY_BUTTONS flag before generating buttons
+    const menu = ButtonMenu.generateMainMenu(user.role, user.id);
+    if (!menu) {
+      // T058: Clear messaging when buttons disabled
+      await message.reply(
+        "⚠️ *Tombol tidak tersedia*\n\n" +
+          "Sistem sekarang menggunakan perintah teks.\n\n" +
+          "*Contoh perintah:*\n" +
+          "• catat penjualan\n" +
+          "• catat pengeluaran\n" +
+          "• lihat saldo\n" +
+          "• lihat laporan hari ini\n\n" +
+          "Ketik 'bantu' untuk melihat semua perintah.",
+      );
+      return;
+    }
     const welcomeMsg = MessageFormatter.formatWelcomeMessage(
       user.role,
       user.name ?? undefined,

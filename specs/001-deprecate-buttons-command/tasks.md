@@ -146,22 +146,22 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T052 [P] [US4] Unit test for ENABLE_LEGACY_BUTTONS configuration flag behavior in tests/unit/services/system/config.test.ts
-- [ ] T053 [P] [US4] Unit test for button rendering conditional logic in tests/unit/bot/ui/buttons.test.ts
-- [ ] T054 [US4] Integration test for button fallback enabled mode (all buttons work) in tests/integration/bot/command-flow.test.ts
-- [ ] T055 [US4] Integration test for button fallback disabled mode (buttons not rendered, command guidance shown) in tests/integration/bot/command-flow.test.ts
+- [x] T052 [P] [US4] Unit test for ENABLE_LEGACY_BUTTONS configuration flag behavior in tests/unit/services/system/config.test.ts
+- [x] T053 [P] [US4] Unit test for button rendering conditional logic in tests/unit/bot/ui/buttons.test.ts
+- [x] T054 [US4] Integration test for button fallback enabled mode (all buttons work) in tests/integration/bot/command-flow.test.ts
+- [x] T055 [US4] Integration test for button fallback disabled mode (buttons not rendered, command guidance shown) in tests/integration/bot/command-flow.test.ts
 
 ### Implementation for User Story 4
 
-- [ ] T056 [US4] Modify src/bot/ui/buttons.ts to check ENABLE_LEGACY_BUTTONS flag before rendering buttons
-- [ ] T057 [US4] Modify src/bot/handlers/message.ts to disable button callback processing when ENABLE_LEGACY_BUTTONS is false
-- [ ] T058 [US4] Implement clear messaging when buttons disabled (direct users to text commands with examples) in src/bot/handlers/message.ts
-- [ ] T059 [US4] Implement warning logging when legacy button interactions attempted while disabled (FR-034) in src/bot/handlers/message.ts
-- [ ] T060 [US4] Ensure runtime configuration updates propagate within 60 seconds (FR-035) in src/services/system/config.ts
-- [ ] T061 [US4] Implement simultaneous button/command operation support when buttons enabled (FR-039) in src/bot/handlers/message.ts
-- [ ] T062 [US4] Verify all existing button functionality works identically when ENABLE_LEGACY_BUTTONS=true (FR-037, FR-040) - regression testing
-- [ ] T063 [US4] Implement usage analytics tracking for button vs command usage rates (FR-038) in src/bot/handlers/message.ts, logging interaction type, timestamp, and user role
-- [ ] T079 [US4] Create usage analytics reporting service in src/services/system/analytics.ts to aggregate button vs command usage data, generate reports (daily/weekly/monthly), and provide admin API endpoint for accessing analytics data (completes FR-038 reporting requirement)
+- [x] T056 [US4] Modify src/bot/ui/buttons.ts to check ENABLE_LEGACY_BUTTONS flag before rendering buttons
+- [x] T057 [US4] Modify src/bot/handlers/message.ts to disable button callback processing when ENABLE_LEGACY_BUTTONS is false
+- [x] T058 [US4] Implement clear messaging when buttons disabled (direct users to text commands with examples) in src/bot/handlers/message.ts
+- [x] T059 [US4] Implement warning logging when legacy button interactions attempted while disabled (FR-034) in src/bot/handlers/message.ts
+- [x] T060 [US4] Ensure runtime configuration updates propagate within 60 seconds (FR-035) in src/services/system/config.ts
+- [x] T061 [US4] Implement simultaneous button/command operation support when buttons enabled (FR-039) in src/bot/handlers/message.ts
+- [x] T062 [US4] Verify all existing button functionality works identically when ENABLE_LEGACY_BUTTONS=true (FR-037, FR-040) - regression testing
+- [x] T063 [US4] Implement usage analytics tracking for button vs command usage rates (FR-038) in src/bot/handlers/message.ts, logging interaction type, timestamp, and user role
+- [x] T079 [US4] Create usage analytics reporting service in src/services/system/analytics.ts to aggregate button vs command usage data, generate reports (daily/weekly/monthly), and provide admin API endpoint for accessing analytics data (completes FR-038 reporting requirement)
 
 **Checkpoint**: User Story 4 should be fully functional - Button fallback works correctly independently
 

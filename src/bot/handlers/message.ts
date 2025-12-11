@@ -49,10 +49,43 @@ export class MessageHandler {
         user.role,
       );
 
-      // Check if it's a button callback (only if buttons enabled)
-      if (enableLegacyButtons && this.isButtonResponse(message, user)) {
-        await ButtonHandler.handleButton(message);
-        return;
+      // T057: Check if it's a button callback (only if buttons enabled)
+      if (this.isButtonResponse(message, user)) {
+        if (enableLegacyButtons) {
+          // T061: Simultaneous button/command operation support when buttons enabled
+          await ButtonHandler.handleButton(message);
+          // T063: Track button usage analytics
+          this.trackInteractionAnalytics(user.id, user.role, "button");
+          // T079: Use analytics service for tracking
+          const { AnalyticsService } =
+            await import("../../services/system/analytics");
+          await AnalyticsService.recordInteraction(
+            user.id,
+            user.role,
+            "button",
+          );
+          return;
+        } else {
+          // T059: Warning logging when legacy button interactions attempted while disabled
+          logger.warn("Legacy button interaction attempted while disabled", {
+            userId: user.id,
+            userRole: user.role,
+            messageBody: message.body,
+            timestamp: new Date().toISOString(),
+          });
+          // T058: Clear messaging when buttons disabled
+          await message.reply(
+            "⚠️ *Tombol tidak tersedia*\n\n" +
+              "Sistem sekarang menggunakan perintah teks.\n\n" +
+              "*Contoh perintah:*\n" +
+              "• catat penjualan\n" +
+              "• catat pengeluaran\n" +
+              "• lihat saldo\n" +
+              "• lihat laporan hari ini\n\n" +
+              "Ketik 'bantu' untuk melihat semua perintah.",
+          );
+          return;
+        }
       }
 
       // T023: Check for conversation context first (command-based workflow)
@@ -83,6 +116,16 @@ export class MessageHandler {
           user.role,
         );
         if (handled) {
+          // T063: Track command usage analytics
+          this.trackInteractionAnalytics(user.id, user.role, "command");
+          // T079: Use analytics service for tracking
+          const { AnalyticsService } =
+            await import("../../services/system/analytics");
+          await AnalyticsService.recordInteraction(
+            user.id,
+            user.role,
+            "command",
+          );
           return;
         }
       }
@@ -179,11 +222,27 @@ export class MessageHandler {
       user.role,
       user.name ?? undefined,
     );
-    const menu = ButtonMenu.generateMainMenu(user.role);
+
+    // T056: Check ENABLE_LEGACY_BUTTONS flag before generating buttons
+    const menu = ButtonMenu.generateMainMenu(user.role, user.id);
 
     try {
       await client.sendMessage(message.from, welcomeMsg);
-      await client.sendMessage(message.from, menu);
+      if (menu) {
+        // T056: Only send buttons if enabled
+        await client.sendMessage(message.from, menu);
+      } else {
+        // T058: Clear messaging when buttons disabled
+        const commandGuidance =
+          "ℹ️ *Gunakan perintah teks*\n\n" +
+          "Contoh perintah:\n" +
+          "• catat penjualan\n" +
+          "• catat pengeluaran\n" +
+          "• lihat saldo\n" +
+          "• lihat laporan hari ini\n\n" +
+          "Ketik 'bantu' untuk melihat semua perintah.";
+        await client.sendMessage(message.from, commandGuidance);
+      }
     } catch (error) {
       logger.error("Error sending welcome message", { error });
       // Fallback to text
@@ -454,6 +513,35 @@ export class MessageHandler {
   /**
    * Check if message is a button response
    */
+  /**
+   * T063: Track interaction analytics for button vs command usage rates
+   * Logs interaction type, timestamp, and user role (per FR-038)
+   */
+  private static trackInteractionAnalytics(
+    userId: string,
+    userRole: string,
+    interactionType: "button" | "command",
+  ): void {
+    try {
+      logger.info("Interaction analytics", {
+        userId,
+        userRole,
+        interactionType,
+        timestamp: new Date().toISOString(),
+      });
+
+      // TODO: Store in analytics table when data model is ready
+      // For now, just log to Winston
+      // T079: Analytics reporting service will aggregate this data
+    } catch (error) {
+      logger.error("Error tracking interaction analytics", {
+        error: error instanceof Error ? error.message : String(error),
+        userId,
+        interactionType,
+      });
+    }
+  }
+
   private static isButtonResponse(message: Message, _user: User): boolean {
     const body = message.body?.trim() || "";
 
